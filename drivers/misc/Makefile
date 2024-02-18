@@ -79,3 +79,4 @@ obj-$(CONFIG_FPR_FPC)		+= fpr_FingerprintCard/
 #ifdef VENDOR_EDIT//Qingjun.Wang@BSP.Haptic,add 2020/03/17 for vib aw8697
 obj-$(CONFIG_AW8697_HAPTIC)     += aw8697_haptic/
 #endif
+obj-y                           += qrc/
