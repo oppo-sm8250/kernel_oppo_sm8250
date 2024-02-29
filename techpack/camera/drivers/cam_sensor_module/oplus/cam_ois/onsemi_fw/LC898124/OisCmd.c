@@ -200,7 +200,7 @@ UINT32	TneGvc( void )
 	INT32			SlMeasureAveValueA , SlMeasureAveValueB ;
 	
 	
-	//•½‹Ï’l‘ª’è
+	//å¹³å‡å€¤æ¸¬å®š
 	
 	MesFil124( THROUGH ) ;					// Set Measure Filter
 
@@ -227,7 +227,7 @@ TRACE("GY_AVEOFT = %08xh \n",(unsigned int)SlMeasureAveValueB) ;
 	
 	SlMeasureAveValueA = ( SlMeasureAveValueA >> 16 ) & 0x0000FFFF ;
 	SlMeasureAveValueB = ( SlMeasureAveValueB >> 16 ) & 0x0000FFFF ;
-	// EP1‚Å‚Í”½“]ˆ—‚µ‚È‚¢B
+	// EP1ã§ã¯åè»¢å‡¦ç†ã—ãªã„ã€‚
 //	SlMeasureAveValueA = 0x00010000 - SlMeasureAveValueA ;
 //	SlMeasureAveValueB = 0x00010000 - SlMeasureAveValueB ;
 	
@@ -660,12 +660,12 @@ UINT32	TneCen( UINT8 UcTneAxs, ADJ_HALL* ptr, UINT8 UcSrvSwtich )
 	}
 	BeforeControl=0;	
 #if  ( (SELECT_VENDOR&0x02) == 0x02 )	//JAHWA
-	UcTofRst	= SUCCESS ;				/* b’è‚ÅOK‚É‚·‚é */
+	UcTofRst	= SUCCESS ;				/* æš«å®šã§OKã«ã™ã‚‹ */
 	while ( UlTneRst && (UINT32)UcTmeOut )
 	{
 		if ( UcTmeOut == 1 && (UcSrvSwtich != ON) ){
 TRACE("1st PtoP =%08x \n", ((UINT16)0xFFFF - (StTneVal.StDwdVal.UsHigVal + StTneVal.StDwdVal.UsLowVal)) ) ;	
-			// ‰‰ñ‚ÌPtp‚ÅŠù‚ÉTarget Range‚É“ü‚Á‚Ä‚¢‚é‚È‚çI—¹B
+			// åˆå›ã®Ptpã§æ—¢ã«Target Rangeã«å…¥ã£ã¦ã„ã‚‹ãªã‚‰çµ‚äº†ã€‚
 			if((( (UINT16)0xFFFF - ( StTneVal.StDwdVal.UsHigVal + StTneVal.StDwdVal.UsLowVal )) < ptr->TargetMax )
 			&& (( (UINT16)0xFFFF - ( StTneVal.StDwdVal.UsHigVal + StTneVal.StDwdVal.UsLowVal )) > ptr->TargetMin ) ) {
 				UlTneRst	= (UINT32)SUCCESS ;
@@ -674,7 +674,7 @@ TRACE("1st PtoP =%08x \n", ((UINT16)0xFFFF - (StTneVal.StDwdVal.UsHigVal + StTne
 		}
 
 		if( UcTofRst == FAILURE ) {
-			UcTofRst	= SUCCESS ;				/* b’è‚ÅOK‚É‚·‚é */
+			UcTofRst	= SUCCESS ;				/* æš«å®šã§OKã«ã™ã‚‹ */
 		}else{
 			UlValNow = ( (UINT16)0xFFFF - ( StTneVal.StDwdVal.UsHigVal + StTneVal.StDwdVal.UsLowVal ));
 			if( UcTneAxs == X_DIR )			UsValNow = StAdjPar.StHalAdj.UsHlxMxa;
@@ -740,7 +740,7 @@ TRACE("new BIAS=%04x \n", UsBiasVal) ;
 #else
 
 	TneOff( StTneVal, UcTneAxs ) ;
-	UcTofRst	= SUCCESS ;				/* b’è‚ÅOK‚É‚·‚é */
+	UcTofRst	= SUCCESS ;				/* æš«å®šã§OKã«ã™ã‚‹ */
 
 	while ( UlTneRst && (UINT32)UcTmeOut )
 	{
@@ -1121,33 +1121,33 @@ void	SetSinWavePara( UINT8 UcTableVal ,  UINT8 UcMethodVal )
 	UlFreqDat = CucFreqVal[ UcTableVal ] ;	
 	
 	if( UcMethodVal == 255/*CIRCWAVE*/) {
-		RamWrite32A( SinWave_Phase	,	0x60000000 ) ;		// ³Œ·”g‚ÌˆÊ‘Š—Ê
-		RamWrite32A( CosWave_Phase 	,	0x00000000 );		// ³Œ·”g‚ÌˆÊ‘Š—Ê
+		RamWrite32A( SinWave_Phase	,	0x60000000 ) ;		// æ­£å¼¦æ³¢ã®ä½ç›¸é‡
+		RamWrite32A( CosWave_Phase 	,	0x00000000 );		// æ­£å¼¦æ³¢ã®ä½ç›¸é‡
 	}else{
-		RamWrite32A( SinWave_Phase	,	0x60000000 ) ;		// ³Œ·”g‚ÌˆÊ‘Š—Ê
-		RamWrite32A( CosWave_Phase 	,	0x60000000 );		// ³Œ·”g‚ÌˆÊ‘Š—Ê
+		RamWrite32A( SinWave_Phase	,	0x60000000 ) ;		// æ­£å¼¦æ³¢ã®ä½ç›¸é‡
+		RamWrite32A( CosWave_Phase 	,	0x60000000 );		// æ­£å¼¦æ³¢ã®ä½ç›¸é‡
 	}
 
-	if( UlFreqDat == 0xFFFFFFFF )			/* Sine”g’†~ */
+	if( UlFreqDat == 0xFFFFFFFF )			/* Sineæ³¢ä¸­æ­¢ */
 	{
-		RamWrite32A( SinWave_Offset		,	0x00000000 ) ;									// ”­¶ü”g”‚ÌƒIƒtƒZƒbƒg‚ğİ’è
-		RamWrite32A( SinWave_Phase		,	0x60000000 ) ;									// ³Œ·”g‚ÌˆÊ‘Š—Ê
+		RamWrite32A( SinWave_Offset		,	0x00000000 ) ;									// ç™ºç”Ÿå‘¨æ³¢æ•°ã®ã‚ªãƒ•ã‚»ãƒƒãƒˆã‚’è¨­å®š
+		RamWrite32A( SinWave_Phase		,	0x60000000 ) ;									// æ­£å¼¦æ³¢ã®ä½ç›¸é‡
 
-		RamWrite32A( CosWave_Offset		,	0x00000000 );									// ”­¶ü”g”‚ÌƒIƒtƒZƒbƒg‚ğİ’è
-		RamWrite32A( CosWave_Phase 		,	0x60000000 );									// ³Œ·”g‚ÌˆÊ‘Š—Ê
+		RamWrite32A( CosWave_Offset		,	0x00000000 );									// ç™ºç”Ÿå‘¨æ³¢æ•°ã®ã‚ªãƒ•ã‚»ãƒƒãƒˆã‚’è¨­å®š
+		RamWrite32A( CosWave_Phase 		,	0x60000000 );									// æ­£å¼¦æ³¢ã®ä½ç›¸é‡
 
 		RamWrite32A( SinWaveC_Regsiter	,	0x00000000 ) ;									// Sine Wave Stop
-		SetTransDataAdr124( SinWave_OutAddr	,	0x00000000 ) ;		// o—ÍæƒAƒhƒŒƒX
-		SetTransDataAdr124( CosWave_OutAddr	,	0x00000000 );		// o—ÍæƒAƒhƒŒƒX
+		SetTransDataAdr124( SinWave_OutAddr	,	0x00000000 ) ;		// å‡ºåŠ›å…ˆã‚¢ãƒ‰ãƒ¬ã‚¹
+		SetTransDataAdr124( CosWave_OutAddr	,	0x00000000 );		// å‡ºåŠ›å…ˆã‚¢ãƒ‰ãƒ¬ã‚¹
 		RamWrite32A( HALL_RAM_HXOFF1		,	0x00000000 ) ;				// DelayRam Clear
 		RamWrite32A( HALL_RAM_HYOFF1		,	0x00000000 ) ;				// DelayRam Clear
 	}else{
-		RamWrite32A( SinWave_Offset		,	UlFreqDat ) ;									// ”­¶ü”g”‚ÌƒIƒtƒZƒbƒg‚ğİ’è
-		RamWrite32A( CosWave_Offset		,	UlFreqDat );									// ”­¶ü”g”‚ÌƒIƒtƒZƒbƒg‚ğİ’è
+		RamWrite32A( SinWave_Offset		,	UlFreqDat ) ;									// ç™ºç”Ÿå‘¨æ³¢æ•°ã®ã‚ªãƒ•ã‚»ãƒƒãƒˆã‚’è¨­å®š
+		RamWrite32A( CosWave_Offset		,	UlFreqDat );									// ç™ºç”Ÿå‘¨æ³¢æ•°ã®ã‚ªãƒ•ã‚»ãƒƒãƒˆã‚’è¨­å®š
 
 		RamWrite32A( SinWaveC_Regsiter	,	0x00000001 ) ;									// Sine Wave Start
-		SetTransDataAdr124( SinWave_OutAddr	,	(UINT32)HALL_RAM_HXOFF1 ) ;		// o—ÍæƒAƒhƒŒƒX
-		SetTransDataAdr124( CosWave_OutAddr	,	(UINT32)HALL_RAM_HYOFF1 ) ;		// o—ÍæƒAƒhƒŒƒX
+		SetTransDataAdr124( SinWave_OutAddr	,	(UINT32)HALL_RAM_HXOFF1 ) ;		// å‡ºåŠ›å…ˆã‚¢ãƒ‰ãƒ¬ã‚¹
+		SetTransDataAdr124( CosWave_OutAddr	,	(UINT32)HALL_RAM_HYOFF1 ) ;		// å‡ºåŠ›å…ˆã‚¢ãƒ‰ãƒ¬ã‚¹
 
 	}
 }
@@ -1255,7 +1255,7 @@ void	TneFin( ADJ_LOPGAN* ptr )
 			if( UlMinimumValueA >= abs(SlMeasureAveValueA) ) {
 				UlMinimumValueA = abs(SlMeasureAveValueA) ;
 				UsAdxMin = UsAdxOff ;
-				// û‘©‚ğ‘‚ß‚é‚½‚ß‚ÉAo—Í’l‚É”ä—á‚³‚¹‚é
+				// åæŸã‚’æ—©ã‚ã‚‹ãŸã‚ã«ã€å‡ºåŠ›å€¤ã«æ¯”ä¾‹ã•ã›ã‚‹
 				if( SlMeasureAveValueA > 0 )
 					UsAdxOff = (INT16)UsAdxOff + (SlMeasureAveValueA >> 17) + 1 ;
 				else
@@ -1272,7 +1272,7 @@ void	TneFin( ADJ_LOPGAN* ptr )
 			if( UlMinimumValueB >= abs(SlMeasureAveValueB) ) {
 				UlMinimumValueB = abs(SlMeasureAveValueB) ;
 				UsAdyMin = UsAdyOff ;
-				// û‘©‚ğ‘‚ß‚é‚½‚ß‚ÉAo—Í’l‚É”ä—á‚³‚¹‚é
+				// åæŸã‚’æ—©ã‚ã‚‹ãŸã‚ã«ã€å‡ºåŠ›å€¤ã«æ¯”ä¾‹ã•ã›ã‚‹
 				if( SlMeasureAveValueB > 0 )
 					UsAdyOff = (INT16)UsAdyOff + (SlMeasureAveValueB >> 17) + 1 ;
 				else
@@ -1511,7 +1511,7 @@ UINT16	TneADO( )
 //TRACE( "MAX AFTER Y\t=\t0x%04X\r\n", y_max_after ) ;
 //TRACE( "MIN AFTER Y\t=\t0x%04X\r\n", y_min_after ) ;
 
-	// ƒ}[ƒWƒ“‚ª‚Ü‚Á‚½‚­‚È‚¢‚à‚Ì‚Í•s—Ç‚Æ‚·‚é
+	// ãƒãƒ¼ã‚¸ãƒ³ãŒã¾ã£ãŸããªã„ã‚‚ã®ã¯ä¸è‰¯ã¨ã™ã‚‹
 	if (x_max_after < gout_x) {
 		UsSts = 1 ;
 	}
@@ -1525,7 +1525,7 @@ UINT16	TneADO( )
 		UsSts = 4 ;
 	}
 	else {
-		// ƒ}[ƒWƒ“ƒI[ƒo[‚Å‚ ‚ê‚ÎAADOFFSET‚ğXV‚·‚é
+		// ãƒãƒ¼ã‚¸ãƒ³ã‚ªãƒ¼ãƒãƒ¼ã§ã‚ã‚Œã°ã€ADOFFSETã‚’æ›´æ–°ã™ã‚‹
 		if (x_max_after < gout_x_marginp) {
 			x_off -= (gout_x_marginp - x_max_after);
 //TRACE( "UPDATE ADOFF X\t=\t0x%04X\r\n", x_off ) ;
@@ -1697,7 +1697,7 @@ UINT32	TneZeroServo( UINT8 ucposture , float DegreeGap )
 			RamWrite32A( CMD_ZSRV_MODE , ZSRV_DISABLE );
 		}
 		
-		//•½‹Ï’l‘ª’è
+		//å¹³å‡å€¤æ¸¬å®š
 			MesFil124( THROUGH ) ;					// Set Measure Filter
 
 			SlMeasureParameterNum	=	ZERO_SERVO_NUM ;					// Measurement times
@@ -1782,7 +1782,7 @@ TRACE("VAL(H,A) pos = \t%08xh\t%08xh\t%d \n",(int)SlMeasureAveValueA, (int)SlMea
 			}
 	}else{
 		switch(ucposture){
-		case 0x80:	/* ŒvZ */
+		case 0x80:	/* è¨ˆç®— */
 			
 			if( UlPostureSt == 0x05L ){
 				// ( Xhp ) / ( Xap)
@@ -1967,7 +1967,7 @@ UINT32	TneAvc( UINT8 ucposture )
 
 	UlRsltSts = EXE_END ;
 	if( ucposture < 0x7f ){
-		//•½‹Ï’l‘ª’è
+		//å¹³å‡å€¤æ¸¬å®š
 		MesFil124( THROUGH ) ;					// Set Measure Filter
 
 		SlMeasureParameterNum	=	ACCLOF_NUM ;					// Measurement times
@@ -2043,7 +2043,7 @@ TRACE("POS14(X,Y,Z) st = \t%08xh\t%08xh\t%08xh\t%08xh \n", (unsigned int)StPosOf
 		}
 	}else{
 		switch(ucposture){
-		case 0x80:	/* ŒvZ */
+		case 0x80:	/* è¨ˆç®— */
 
 			if(StPosOff124.UlAclOfSt == 0x3fL ){
 				/*X offset*/
@@ -2159,7 +2159,7 @@ UINT8	Actuator_Moving( UINT8 uc_axis, Act_Mov_t *pt_parameter, int *ul_readval )
 
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
-//+=  ‚±‚±‚©‚ç’Ç‰Á by K.Otake                                                                     +=
+//+=  ã“ã“ã‹ã‚‰è¿½åŠ  by K.Otake                                                                     +=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //********************************************************************************
@@ -2717,7 +2717,7 @@ void	OIS_Pos_Correction_by_AF( UINT16	us_af_code )
 // Explanation		: Flash write linearity correction data function
 // History			: First edition
 //********************************************************************************
-#define N 7  /* ƒf[ƒ^” */
+#define N 7  /* ãƒ‡ãƒ¼ã‚¿æ•° */
 
 UINT8	CalcSetMizxAndLinearityData( mlLinearityValue *linval ,  mlMixingValue *mixval )
 {
@@ -2728,7 +2728,7 @@ UINT8	CalcSetMizxAndLinearityData( mlLinearityValue *linval ,  mlMixingValue *mi
 	UINT8		ans;
 	
 	// **************************************************
-	// Å¬2æ–@
+	// æœ€å°2ä¹—æ³•
 	// **************************************************
 #ifdef __MIX_LIB_METHOD__		// TESTAPP library method
 	for (i=0; i<N; i++) {
@@ -2773,7 +2773,7 @@ TRACE("Xa = %f\n", Xa);
 TRACE("Ya = %f\n", Ya);
 
 	// **************************************************
-	// MIXINGŒW”ŒvZ
+	// MIXINGä¿‚æ•°è¨ˆç®—
 	// **************************************************
 TRACE("degreeX  = %f\n", -atan(Xa)*180/3.14159265358979323846 );
 TRACE("degreeY  = %f\n", +atan(Ya)*180/3.14159265358979323846 );
@@ -2794,11 +2794,11 @@ TRACE("degreeY  = %f\n", +atan(Ya)*180/3.14159265358979323846 );
     mixval->hy45y = +(cos(mixval->radianX) / cos(mixval->radianX - mixval->radianY));
     mixval->hy45x = +(sin(mixval->radianX) / cos(mixval->radianX - mixval->radianY));
 
-	mixval->hxsx = (unsigned char)abs(mixval->hx45x);                                     // >1‚È‚ç‚ÎƒVƒtƒg”‚Æ‚µ‚Äİ’è
-	mixval->hysx = (unsigned char)abs(mixval->hy45y);                                     // >1‚È‚ç‚ÎƒVƒtƒg”‚Æ‚µ‚Äİ’è
+	mixval->hxsx = (unsigned char)abs(mixval->hx45x);                                     // >1ãªã‚‰ã°ã‚·ãƒ•ãƒˆæ•°ã¨ã—ã¦è¨­å®š
+	mixval->hysx = (unsigned char)abs(mixval->hy45y);                                     // >1ãªã‚‰ã°ã‚·ãƒ•ãƒˆæ•°ã¨ã—ã¦è¨­å®š
 
-    mixval->hx45x = mixval->hx45x / pow(2, (double)mixval->hxsx);        // ƒVƒtƒg‚ğ‰Á–¡‚µ‚ÄÄŒvZ
-    mixval->hy45y = mixval->hy45y / pow(2, (double)mixval->hysx);        // ƒVƒtƒg‚ğ‰Á–¡‚µ‚ÄÄŒvZ
+    mixval->hx45x = mixval->hx45x / pow(2, (double)mixval->hxsx);        // ã‚·ãƒ•ãƒˆã‚’åŠ å‘³ã—ã¦å†è¨ˆç®—
+    mixval->hy45y = mixval->hy45y / pow(2, (double)mixval->hysx);        // ã‚·ãƒ•ãƒˆã‚’åŠ å‘³ã—ã¦å†è¨ˆç®—
 
 TRACE("hx45x  = %f\n", mixval->hx45x);
 TRACE("hx45y  = %f\n", mixval->hx45y);
@@ -2818,7 +2818,7 @@ TRACE("hy45yL  = %08X\n", mixval->hy45yL);
 TRACE("hy45xL  = %08X\n", mixval->hy45xL);
 
 	// **************************************************
-	// RAM‚ÉƒZƒbƒg‚·‚é
+	// RAMã«ã‚»ãƒƒãƒˆã™ã‚‹
 	// **************************************************
 	RamWrite32A( HF_hx45x, mixval->hx45xL ) ; 
 	RamWrite32A( HF_hx45y, mixval->hx45yL ) ; 
@@ -2982,7 +2982,7 @@ UINT8 Read_InternalStatus_BMI260( void )
 
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
-//+=  ‚±‚±‚Ü‚Å by K.Otake                                                                         +=
+//+=  ã“ã“ã¾ã§ by K.Otake                                                                         +=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 

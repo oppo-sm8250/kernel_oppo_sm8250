@@ -24,10 +24,10 @@
  * Add for get boot mode.
 */
 #include <soc/oplus/boot_mode.h>
-#include "oppo_display_private_api.h"
-#include "oppo_dc_diming.h"
-#include "oppo_onscreenfingerprint.h"
-#include "oppo_aod.h"
+#include "oplus_display_private_api.h"
+#include "oplus_dc_diming.h"
+#include "oplus_onscreenfingerprint.h"
+#include "oplus_aod.h"
 #endif
 
 /**
@@ -625,13 +625,13 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 }
 
 #ifdef OPLUS_BUG_STABILITY
-extern int oppo_seed_backlight;
-extern u32 oppo_last_backlight;
-extern u32 oppo_backlight_delta;
-extern ktime_t oppo_backlight_time;
-extern int oppo_dimlayer_bl_enabled;
-extern int oppo_dimlayer_bl_enable_real;
-extern int oppo_dimlayer_bl_alpha;
+extern int oplus_seed_backlight;
+extern u32 oplus_last_backlight;
+extern u32 oplus_backlight_delta;
+extern ktime_t oplus_backlight_time;
+extern int oplus_dimlayer_bl_enabled;
+extern int oplus_dimlayer_bl_enable_real;
+extern int oplus_dimlayer_bl_alpha;
 #endif
 
 #ifndef OPLUS_BUG_STABILITY
@@ -639,7 +639,7 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 				enum dsi_cmd_set_type type)
 #else  /*OPLUS_BUG_STABILITY*/
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
- * Add for oppo display new structure
+ * Add for oplus display new structure
 */
 const char *cmd_set_prop_map[];
 int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
@@ -654,7 +654,7 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	struct dsi_display_mode *mode;
 	const struct mipi_dsi_host_ops *ops = panel->host->ops;
 #if defined(OPLUS_FEATURE_PXLW_IRIS5) || defined(OPLUS_BUG_STABILITY)
-	struct dsi_panel_cmd_set *oppo_cmd_set = NULL;
+	struct dsi_panel_cmd_set *oplus_cmd_set = NULL;
 #endif
 	if (!panel || !panel->cur_mode)
 		return -EINVAL;
@@ -668,14 +668,14 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 
 #ifdef OPLUS_BUG_STABILITY
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/12/13
- * Add for oppo display new structure
+ * Add for oplus display new structure
 */
-	if (oppo_seed_backlight) {
-		oppo_cmd_set = oppo_dsi_update_seed_backlight(panel, oppo_seed_backlight, type);
-		if (!IS_ERR_OR_NULL(oppo_cmd_set)) {
-			cmds = oppo_cmd_set->cmds;
-			count = oppo_cmd_set->count;
-			state = oppo_cmd_set->state;
+	if (oplus_seed_backlight) {
+		oplus_cmd_set = oplus_dsi_update_seed_backlight(panel, oplus_seed_backlight, type);
+		if (!IS_ERR_OR_NULL(oplus_cmd_set)) {
+			cmds = oplus_cmd_set->cmds;
+			count = oplus_cmd_set->count;
+			state = oplus_cmd_set->state;
 		}
 	}
 #endif /*OPLUS_BUG_STABILITY*/
@@ -683,8 +683,8 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
 	if (iris_get_feature() && iris5_abypass_mode_get(panel) == PASS_THROUGH_MODE) {
-		if (!IS_ERR_OR_NULL(oppo_cmd_set))
-			return iris5_panel_cmd_passthrough(panel, oppo_cmd_set);
+		if (!IS_ERR_OR_NULL(oplus_cmd_set))
+			return iris5_panel_cmd_passthrough(panel, oplus_cmd_set);
 		else
 			return iris5_panel_cmd_passthrough(panel, &panel->cur_mode->priv_info->cmd_sets[type]);
 	}
@@ -704,7 +704,7 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 			cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
 		#ifdef OPLUS_BUG_STABILITY
 		/*Mark.Yao@PSW.MM.Display.LCD.Stable,2019-11-30 add for video mode skip last_command */
-		if (panel->oppo_priv.skip_mipi_last_cmd)
+		if (panel->oplus_priv.skip_mipi_last_cmd)
 			cmds->msg.flags &= ~MIPI_DSI_MSG_LASTCOMMAND;
 		#endif /* OPLUS_BUG_STABILITY */
 
@@ -827,7 +827,7 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 /* Gou shengjun@PSW.MM.Display.LCD.Feature,2018-11-21
  * Add for OnScreenFingerprint feature
 */
-	if ((get_oppo_display_scene() == OPPO_DISPLAY_AOD_SCENE) && ( bl_lvl == 1)) {
+	if ((get_oplus_display_scene() == OPLUS_DISPLAY_AOD_SCENE) && ( bl_lvl == 1)) {
 		pr_err("dsi_cmd AOD mode return bl_lvl:%d\n",bl_lvl);
 		return 0;
 	}
@@ -835,35 +835,35 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	if (panel->is_hbm_enabled)
 		return 0;
 
-	if (oppo_display_get_hbm_mode()) {
+	if (oplus_display_get_hbm_mode()) {
 		return rc;
 	}
 
 	if (bl_lvl > 1) {
-		if (bl_lvl > oppo_last_backlight)
-			oppo_backlight_delta = bl_lvl - oppo_last_backlight;
+		if (bl_lvl > oplus_last_backlight)
+			oplus_backlight_delta = bl_lvl - oplus_last_backlight;
 		else
-			oppo_backlight_delta = oppo_last_backlight - bl_lvl;
-		oppo_backlight_time = ktime_get();
+			oplus_backlight_delta = oplus_last_backlight - bl_lvl;
+		oplus_backlight_time = ktime_get();
 	}
-	if (oppo_dimlayer_bl_enabled != oppo_dimlayer_bl_enable_real) {
-		oppo_dimlayer_bl_enable_real = oppo_dimlayer_bl_enabled;
-		if (oppo_dimlayer_bl_enable_real) {
+	if (oplus_dimlayer_bl_enabled != oplus_dimlayer_bl_enable_real) {
+		oplus_dimlayer_bl_enable_real = oplus_dimlayer_bl_enabled;
+		if (oplus_dimlayer_bl_enable_real) {
 			pr_info("Enter DC backlight\n");
 		} else {
 			pr_info("Exit DC backlight\n");
 		}
 	}
 
-	bl_lvl = oppo_panel_process_dimming_v2(panel, bl_lvl, false);
-	bl_lvl = oppo_panel_process_dimming_v3(panel, bl_lvl);
+	bl_lvl = oplus_panel_process_dimming_v2(panel, bl_lvl, false);
+	bl_lvl = oplus_panel_process_dimming_v3(panel, bl_lvl);
 
-	if (oppo_dimlayer_bl_enable_real) {
+	if (oplus_dimlayer_bl_enable_real) {
 		/*
 		 * avoid effect power and aod mode
 		 */
 		if (bl_lvl > 1)
-			bl_lvl = oppo_dimlayer_bl_alpha;
+			bl_lvl = oplus_dimlayer_bl_alpha;
 	}
 
 	/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-11-04 add for global hbm */
@@ -915,8 +915,8 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 
 #ifdef OPLUS_BUG_STABILITY
 /*Mark.Yao@PSW.MM.Display.LCD.Stable,2019-12-15 fix datadimming flash */
-	oppo_panel_process_dimming_v2_post(panel, false);
-	oppo_last_backlight = bl_lvl;
+	oplus_panel_process_dimming_v2_post(panel, false);
+	oplus_last_backlight = bl_lvl;
 #endif /* OPLUS_BUG_STABILITY */
 
 	return rc;
@@ -3860,7 +3860,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 
 #ifdef OPLUS_BUG_STABILITY
 /*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-10-30 add for fod config */
-	rc = dsi_panel_parse_oppo_config(panel);
+	rc = dsi_panel_parse_oplus_config(panel);
 	if (rc)
 		DSI_ERR("failed to parse panel config, rc=%d\n", rc);
 #endif /* OPLUS_BUG_STABILITY */
@@ -4357,10 +4357,10 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 
 #ifdef OPLUS_BUG_STABILITY
 /*Mark.Yao@PSW.MM.Display.LCD.Stable,2019-10-24 add for fingerprint */
-		rc = dsi_panel_parse_oppo_mode_config(mode, utils);
+		rc = dsi_panel_parse_oplus_mode_config(mode, utils);
 		if (rc)
 			DSI_ERR(
-			"failed to parse oppo config, rc=%d\n", rc);
+			"failed to parse oplus config, rc=%d\n", rc);
 #endif
 
 		rc = dsi_panel_parse_jitter_config(mode, utils);
@@ -4555,12 +4555,12 @@ int dsi_panel_set_lp1(struct dsi_panel *panel)
 /* Gou shengjun@PSW.MM.Display.LCD.Stable,2018-11-21
  * Fix aod flash problem
 */
-	oppo_update_aod_light_mode_unlock(panel);
+	oplus_update_aod_light_mode_unlock(panel);
 	panel->need_power_on_backlight = true;
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
  * Set and save display status
 */
-	set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE);
+	set_oplus_display_power_status(OPLUS_DISPLAY_POWER_DOZE);
 #endif
 exit:
 	mutex_unlock(&panel->panel_lock);
@@ -4588,7 +4588,7 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21,
  * Set and save display status
 */
-	set_oppo_display_power_status(OPPO_DISPLAY_POWER_DOZE_SUSPEND);
+	set_oplus_display_power_status(OPLUS_DISPLAY_POWER_DOZE_SUSPEND);
 #endif
 exit:
 	mutex_unlock(&panel->panel_lock);
@@ -4632,7 +4632,7 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
  * Set and save display status
 */
-	set_oppo_display_power_status(OPPO_DISPLAY_POWER_ON);
+	set_oplus_display_power_status(OPLUS_DISPLAY_POWER_ON);
 #endif
 exit:
 	mutex_unlock(&panel->panel_lock);
@@ -5023,9 +5023,9 @@ int dsi_panel_enable(struct dsi_panel *panel)
 */
 	panel->need_power_on_backlight = true;
 /* Gou shengjun@PSW.MM.Display.LCD.Stable,2018-08-23
- * add for save display panel power status at oppo display management
+ * add for save display panel power status at oplus display management
 */
-	set_oppo_display_power_status(OPPO_DISPLAY_POWER_ON);
+	set_oplus_display_power_status(OPLUS_DISPLAY_POWER_ON);
 #endif
 
 	mutex_unlock(&panel->panel_lock);
@@ -5142,9 +5142,9 @@ int dsi_panel_disable(struct dsi_panel *panel)
 */
 	panel->is_hbm_enabled = false;
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
- * add for save display panel power status at oppo display management
+ * add for save display panel power status at oplus display management
 */
-	set_oppo_display_power_status(OPPO_DISPLAY_POWER_OFF);
+	set_oplus_display_power_status(OPLUS_DISPLAY_POWER_OFF);
 #endif
 	panel->power_mode = SDE_MODE_DPMS_OFF;
 

@@ -61,8 +61,8 @@
 #include "sde_trace.h"
 #ifdef OPLUS_BUG_STABILITY
 /* QianXu@MM.Display.LCD.Stability, 2020/3/31, for decoupling display driver */
-#include "oppo_display_private_api.h"
-#include "oppo_onscreenfingerprint.h"
+#include "oplus_display_private_api.h"
+#include "oplus_onscreenfingerprint.h"
 #endif
 
 /* defines for secure channel call */
@@ -1432,7 +1432,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.clk_ctrl = dsi_display_clk_ctrl,
 #ifdef OPLUS_BUG_STABILITY
 /* QianXu@MM.Display.LCD.Stability, 2020/3/31, for decoupling display driver */
-		.set_power = dsi_display_oppo_set_power,
+		.set_power = dsi_display_oplus_set_power,
 #else
 		.set_power = dsi_display_set_power,
 #endif

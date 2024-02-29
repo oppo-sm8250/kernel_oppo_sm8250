@@ -34,9 +34,9 @@
 #include <trace/events/gpio.h>
 
 #ifdef VENDOR_EDIT
-//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oppo vooc adapter update
-extern bool oppo_vooc_adapter_update_is_tx_gpio(unsigned long gpio_num);
-extern bool oppo_vooc_adapter_update_is_rx_gpio(unsigned long gpio_num);
+//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oplus vooc adapter update
+extern bool oplus_vooc_adapter_update_is_tx_gpio(unsigned long gpio_num);
+extern bool oplus_vooc_adapter_update_is_rx_gpio(unsigned long gpio_num);
 #endif /* VENDOR_EDIT */
 
 /* Implementation infrastructure for GPIO interfaces.
@@ -2846,16 +2846,16 @@ static int gpiod_get_raw_value_commit(const struct gpio_desc *desc)
 	chip = desc->gdev->chip;
 	offset = gpio_chip_hwgpio(desc);
 #ifndef VENDOR_EDIT
-//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oppo vooc adapter update
+//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oplus vooc adapter update
 	value = chip->get ? chip->get(chip, offset) : -EIO;
 	value = value < 0 ? value : !!value;
 	trace_gpio_value(desc_to_gpio(desc), 1, value);
 #else
-	if(oppo_vooc_adapter_update_is_rx_gpio(desc_to_gpio(desc))) {
-		if(chip->get_oppo_vooc) {
-			value = chip->get_oppo_vooc(chip, offset);
+	if(oplus_vooc_adapter_update_is_rx_gpio(desc_to_gpio(desc))) {
+		if(chip->get_oplus_vooc) {
+			value = chip->get_oplus_vooc(chip, offset);
 		} else {
-			pr_err("%s get_oppo_vooc not exist\n", __func__);
+			pr_err("%s get_oplus_vooc not exist\n", __func__);
 			value = chip->get ? chip->get(chip, offset) : 0;
 		}
 	} else {
@@ -3099,18 +3099,18 @@ static void gpiod_set_raw_value_commit(struct gpio_desc *desc, bool value)
 
 	chip = desc->gdev->chip;
 #ifndef VENDOR_EDIT
-//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oppo vooc adapter update
+//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oplus vooc adapter update
 	trace_gpio_value(desc_to_gpio(desc), 0, value);
 	chip->set(chip, gpio_chip_hwgpio(desc), value);
 #else
-	if(oppo_vooc_adapter_update_is_tx_gpio(desc_to_gpio(desc)) == false) {
+	if(oplus_vooc_adapter_update_is_tx_gpio(desc_to_gpio(desc)) == false) {
 		trace_gpio_value(desc_to_gpio(desc), 0, value);
 		chip->set(chip, gpio_chip_hwgpio(desc), value);
 	} else {
-		if(chip->set_oppo_vooc) {
-			chip->set_oppo_vooc(chip, gpio_chip_hwgpio(desc), value);
+		if(chip->set_oplus_vooc) {
+			chip->set_oplus_vooc(chip, gpio_chip_hwgpio(desc), value);
 		} else {
-			pr_err("%s set_oppo_vooc not exist\n", __func__);
+			pr_err("%s set_oplus_vooc not exist\n", __func__);
 			chip->set(chip, gpio_chip_hwgpio(desc), value);
 		}
 	}

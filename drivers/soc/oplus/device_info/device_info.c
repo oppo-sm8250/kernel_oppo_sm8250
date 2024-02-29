@@ -1,5 +1,5 @@
 /**
- * Copyright 2008-2013 OPPO Mobile Comm Corp., Ltd, All rights reserved.
+ * Copyright 2008-2013 OPLUS Mobile Comm Corp., Ltd, All rights reserved.
  * VENDOR_EDIT:
  * FileName:devinfo.c
  * ModuleName:devinfo
@@ -15,7 +15,7 @@
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <soc/oplus/device_info.h>
-#include <soc/oplus/oppo_project.h>
+#include <soc/oplus/oplus_project.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
 #include <linux/fs.h>
@@ -695,7 +695,7 @@ devinfo_probe(struct platform_device *pdev)
 	init_other_hw_ids(pdev);
 	set_gpios_sleep(dev_info);
 #ifndef CONFIG_MTK_PLATFORM
-	/*register oppo special node*/
+	/*register oplus special node*/
 	init_ddr_type(dev_info);
 #endif
 
@@ -713,7 +713,7 @@ devinfo_remove(struct platform_device *dev)
 }
 
 static struct of_device_id devinfo_id[] = {
-	{.compatible = "oppo-devinfo", },
+	{.compatible = "oplus-devinfo", },
 	{},
 };
 
@@ -740,6 +740,6 @@ device_info_init(void)
 
 device_initcall(device_info_init);
 
-MODULE_DESCRIPTION("OPPO device info");
+MODULE_DESCRIPTION("OPLUS device info");
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Klus <>");

@@ -569,8 +569,8 @@ struct smb_charger {
 	bool			typec_irq_en;
 	bool			typec_role_swap_failed;
 #ifdef OPLUS_FEATURE_CHG_BASIC
-	struct	usbpd	*oppo_pd;
-	struct	usbpd_svid_handler	oppo_svid_handler;
+	struct	usbpd	*oplus_pd;
+	struct	usbpd_svid_handler	oplus_svid_handler;
 #endif
 	/* cached status */
 	bool			system_suspend_supported;
@@ -1037,6 +1037,6 @@ int smblib_deinit(struct smb_charger *chg);
 #ifdef OPLUS_FEATURE_CHG_BASIC
 int smblib_request_dpdm(struct smb_charger *chg, bool enable);
 const struct apsd_result *smblib_get_apsd_result(struct smb_charger *chg);
-void register_oppo_pdsvooc_svid(struct work_struct *work);
+void register_oplus_pdsvooc_svid(struct work_struct *work);
 #endif
 #endif /* __SMB5_CHARGER_H */

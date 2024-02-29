@@ -16,9 +16,9 @@ int __init  board_ftm_mode_init(void)
 {
 	char *substr;
 
-	substr = strstr(boot_command_line, "oppo_ftm_mode=");
+	substr = strstr(boot_command_line, "oplus_ftm_mode=");
 	if (substr) {
-		substr += strlen("oppo_ftm_mode=");
+		substr += strlen("oplus_ftm_mode=");
 
 		if (strncmp(substr, "factory2", 5) == 0) {
 			ftm_mode = MSM_BOOT_MODE__FACTORY;
@@ -132,12 +132,12 @@ bool qpnp_is_charger_reboot(void)
 	return false;
 }
 
-static int __init oppo_charger_reboot(void)
+static int __init oplus_charger_reboot(void)
 {
 	int i;
-	char * substr = strstr(boot_command_line, "oppo_charger_present=");
+	char * substr = strstr(boot_command_line, "oplus_charger_present=");
 	if (substr) {
-		substr += strlen("oppo_charger_present=");
+		substr += strlen("oplus_charger_present=");
 		for (i=0; substr[i] != ' '&& i < MAX_CMD_LENGTH && substr[i] != '\0'; i++) {
 			charger_reboot[i] = substr[i];
 		}
@@ -174,7 +174,7 @@ static int __init boot_mode_init(void)
 	board_boot_mode_init();
 	board_ftm_mode_init();
 	start_reason_init();
-	oppo_charger_reboot();
+	oplus_charger_reboot();
 
 	systeminfo_kobj = kobject_create_and_add("systeminfo", NULL);
 	if (systeminfo_kobj) {

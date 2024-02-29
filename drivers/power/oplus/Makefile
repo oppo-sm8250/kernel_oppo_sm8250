@@ -4,8 +4,8 @@ obj-y      += gauge_ic/
 obj-y      += vooc_ic/
 obj-y      += adapter_ic/
 
-obj-y	+= oppo_charger.o
-obj-y	+= oppo_gauge.o
-obj-y	+= oppo_vooc.o
-obj-y	+= oppo_adapter.o
-obj-y	+= oppo_short.o
+obj-y	+= oplus_charger.o
+obj-y	+= oplus_gauge.o
+obj-y	+= oplus_vooc.o
+obj-y	+= oplus_adapter.o
+obj-y	+= oplus_short.o

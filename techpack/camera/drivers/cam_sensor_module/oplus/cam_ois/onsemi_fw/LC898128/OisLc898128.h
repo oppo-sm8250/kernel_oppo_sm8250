@@ -538,7 +538,7 @@
 //==============================================================================
 //IO
 //==============================================================================
-// System Control配置アドレス
+// System Control驟咲ｽｮ繧｢繝峨Ξ繧ｹ
 #define 		SYSDSP_DSPDIV						0xD00014
 #define 		SYSDSP_SOFTRES						0xD0006C
 #define 		SYSDSP_REMAP						0xD000AC
@@ -554,7 +554,7 @@
 /************************************************************************/
 /*        Flash access													*/
 /************************************************************************/
-#define FLASHROM_128		0xE07000	// Flash Memory I/F配置アドレス
+#define FLASHROM_128		0xE07000	// Flash Memory I/F驟咲ｽｮ繧｢繝峨Ξ繧ｹ
 #define 		FLASHROM_FLA_RDAT					(FLASHROM_128 + 0x00)
 #define 		FLASHROM_FLA_WDAT					(FLASHROM_128 + 0x04)
 #define 		FLASHROM_ACSCNT						(FLASHROM_128 + 0x08)

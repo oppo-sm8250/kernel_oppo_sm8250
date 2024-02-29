@@ -449,8 +449,8 @@ __OIS_CMD_HEADER__	stAclVal	StAclVal ;				//!< Execute Command Parameter
  
 // for RunGea2
 // level of judgement
-#define		GEA_MAX_LVL		0x0A41			//!< 2030_87.5lsb/‹/s    max 30‹/s-p-p
-#define		GEA_MIN_LVL		0x1482			//!< 2030_87.5lsb/‹/s    min 60‹/s-p-p
+#define		GEA_MAX_LVL		0x0A41			//!< 2030_87.5lsb/ï¿½â€¹/s    max 30ï¿½â€¹/s-p-p
+#define		GEA_MIN_LVL		0x1482			//!< 2030_87.5lsb/ï¿½â€¹/s    min 60ï¿½â€¹/s-p-p
 // mode
 #define		GEA_MINMAX_MODE	0x00			//!< min, max mode
 #define		GEA_MEAN_MODE	0x01			//!< mean mode
@@ -459,7 +459,7 @@ __OIS_CMD_HEADER__	stAclVal	StAclVal ;				//!< Execute Command Parameter
 // for Accelerometer offset measurement
 #ifdef	SEL_SHIFT_COR
 
-//100mG‚Æ‚·‚é
+//100mGâ€šÃ†â€šÂ·â€šÃ©
 //#define		ZEROG_MRGN_Z	(409 << 16)			// G tolerance for Z
 //#define		ZEROG_MRGN_XY	(409 << 16)			// G tolerance for XY
 // XY 250mG , Z 320mG from Huawei

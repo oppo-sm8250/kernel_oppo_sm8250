@@ -14,5 +14,5 @@ obj-$(CONFIG_OPLUS_FEATURE_PROJECTINFO)	+=  project_info/
 
 #ifdef OPLUS_FEATURE_ESIM
 #ChenGuoyao@NETWORK.SIM,2020/06/10, Add for eSIM
-obj-$(CONFIG_OPLUS_OPPO_GPIO)    +=  oppo_gpio/
+obj-$(CONFIG_OPLUS_OPLUS_GPIO)    +=  oplus_gpio/
 #endif /* OPLUS_FEATURE_ESIM */

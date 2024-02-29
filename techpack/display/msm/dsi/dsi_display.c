@@ -31,8 +31,8 @@
 */
 #include <linux/msm_drm_notify.h>
 #include <linux/notifier.h>
-#include "oppo_display_private_api.h"
-#include "oppo_ffl.h"
+#include "oplus_display_private_api.h"
+#include "oplus_ffl.h"
 extern int msm_drm_notifier_call_chain(unsigned long val, void *v);
 /* Don't panic if smmu fault*/
 extern int sde_kms_set_smmu_no_fatal_faults(struct drm_device *drm);
@@ -49,7 +49,7 @@ extern int lcd_closebl_flag;
 /* Add for fingerprint silence*/
 extern int lcd_closebl_flag_fp;
 /* Add for ffl feature */
-extern bool oppo_ffl_trigger_finish;
+extern bool oplus_ffl_trigger_finish;
 #endif
 
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
@@ -271,7 +271,7 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 		}
 
 		/* Gou shengjun@PSW.MM.Display.LCD.Stable,2018-10-25 fix ffl dsi abnormal on esd scene */
-		oppo_start_ffl_thread();
+		oplus_start_ffl_thread();
 	}
 #endif /* OPLUS_BUG_STABILITY */
 	panel->bl_config.bl_level = bl_lvl;
@@ -279,7 +279,7 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 /* Gou shengjun@PSW.MM.Display.LCD.Feature,2018-07-12
  * Add for ffl feature
 */
-	if (oppo_ffl_trigger_finish == false)
+	if (oplus_ffl_trigger_finish == false)
 		goto error;
 #endif /* OPLUS_BUG_STABILITY */
 
@@ -5352,8 +5352,8 @@ static int dsi_display_bind(struct device *dev,
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/06/05
  * Add for save select panel and give different feature
 */
-	if(oppo_set_display_vendor(display)) {
-		pr_err("maybe send a null point to oppo display manager\n");
+	if(oplus_set_display_vendor(display)) {
+		pr_err("maybe send a null point to oplus display manager\n");
 	}
 
 	/* Add for SUA feature request */
@@ -7948,9 +7948,9 @@ int dsi_display_enable(struct dsi_display *display)
 		DSI_DEBUG("cont splash enabled, display enable not required\n");
 #ifdef OPLUS_BUG_STABILITY
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/4/28
- * when continous splash enabled, we should set power mode to OPPO_DISPLAY_POWER_ON here
+ * when continous splash enabled, we should set power mode to OPLUS_DISPLAY_POWER_ON here
 */
-		set_oppo_display_power_status(OPPO_DISPLAY_POWER_ON);
+		set_oplus_display_power_status(OPLUS_DISPLAY_POWER_ON);
 #endif
 		return 0;
 	}
@@ -8100,7 +8100,7 @@ int dsi_display_pre_disable(struct dsi_display *display)
 /* Gou shengjun@PSW.MM.Display.LCD.Stable,2018-10-25
  * fix ffl dsi abnormal on esd scene
 */
-	oppo_stop_ffl_thread();
+	oplus_stop_ffl_thread();
 #endif /* OPLUS_BUG_STABILITY */
 	/* enable the clk vote for CMD mode panels */
 	if (display->config.panel_mode == DSI_OP_CMD_MODE)
@@ -8215,7 +8215,7 @@ int dsi_display_disable(struct dsi_display *display)
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/4/13
  * Add a notify for when disable display
 */
-	set_oppo_display_scene(OPPO_DISPLAY_NORMAL_SCENE);
+	set_oplus_display_scene(OPLUS_DISPLAY_NORMAL_SCENE);
 	msm_drm_notifier_call_chain(MSM_DRM_EVENT_BLANK,
 					&notifier_data);
 #endif

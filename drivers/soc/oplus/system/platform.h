@@ -1,5 +1,5 @@
 /*
- * Copyright (C), 2020, OPPO Mobile Comm Corp., Ltd.
+ * Copyright (C), 2020, OPLUS Mobile Comm Corp., Ltd.
  * File: - arch.c
  * Description: which platform you use.
  * Version: 1.0

@@ -14,7 +14,7 @@
 
 #ifdef OPLUS_BUG_STABILITY
 /*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-07-25 add for aod function */
-#include "oppo_dsi_support.h"
+#include "oplus_dsi_support.h"
 #endif /* OPLUS_BUG_STABILITY */
 
 #define PP_TEAR_CHECK_EN                0x000
@@ -165,7 +165,7 @@ static struct sde_pingpong_cfg *_pingpong_offset(enum sde_pingpong pp,
 /* Gou shengjun@PSW.MM.Display.Lcd.Stability,2018/11/21
  * For solve te sync issue at doze
 */
-extern int oppo_request_power_status;
+extern int oplus_request_power_status;
 #endif /*OPLUS_BUG_STABILITY*/
 static int sde_hw_pp_setup_te_config(struct sde_hw_pingpong *pp,
 		struct sde_hw_tear_check *te)
@@ -188,7 +188,7 @@ static int sde_hw_pp_setup_te_config(struct sde_hw_pingpong *pp,
 	{
 		int temp_vclks_line = te->vsync_count;
 
-		if((oppo_request_power_status == OPPO_DISPLAY_POWER_DOZE) || (oppo_request_power_status == OPPO_DISPLAY_POWER_DOZE_SUSPEND)) {
+		if((oplus_request_power_status == OPLUS_DISPLAY_POWER_DOZE) || (oplus_request_power_status == OPLUS_DISPLAY_POWER_DOZE_SUSPEND)) {
 			temp_vclks_line = temp_vclks_line * 60 * 100 / 3000;
 		}
 		cfg |= temp_vclks_line;

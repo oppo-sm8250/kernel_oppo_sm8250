@@ -167,7 +167,7 @@ typedef union ULLNVAL	UnllnVal;
 #define 	SYSDSP_REMAP					0xD000AC
 #define 	SYSDSP_CVER						0xD00100
 #define		ROMINFO							0xE050D4
-#define FLASHROM_128		0xE07000	// Flash Memory I/F配置アドレス
+#define FLASHROM_128		0xE07000	// Flash Memory I/F驟咲ｽｮ繧｢繝峨Ξ繧ｹ
 #define 		FLASHROM_FLA_RDAT					(FLASHROM_128 + 0x00)
 #define 		FLASHROM_FLA_WDAT					(FLASHROM_128 + 0x04)
 #define 		FLASHROM_ACSCNT						(FLASHROM_128 + 0x08)

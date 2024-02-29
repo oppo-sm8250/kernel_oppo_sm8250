@@ -1,4 +1,4 @@
-ifeq ($(CONFIG_OPPO_COMMON_SOFT),y)
+ifeq ($(CONFIG_OPLUS_COMMON_SOFT),y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
         dtbo-$(CONFIG_ARCH_KONA) += kona-mtp-overlay-19066.dtbo
 

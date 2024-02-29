@@ -1,3 +1,3 @@
-	obj-y	+= oppo_p922x.o
-	obj-y	+= oppo_chargepump.o
+	obj-y	+= oplus_p922x.o
+	obj-y	+= oplus_chargepump.o
 

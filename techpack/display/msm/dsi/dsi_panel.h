@@ -22,10 +22,10 @@
 #include "msm_drv.h"
 #ifdef OPLUS_BUG_STABILITY
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
- * Add for save display panel power status at oppo display management
+ * Add for save display panel power status at oplus display management
 */
-#include "oppo_dsi_support.h"
-struct oppo_brightness_alpha {
+#include "oplus_dsi_support.h"
+struct oplus_brightness_alpha {
 	u32 brightness;
 	u32 alpha;
 };
@@ -204,12 +204,12 @@ struct drm_panel_esd_config {
 };
 
 #ifdef OPLUS_BUG_STABILITY
-/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-11-07 add for oppo custom info */
-struct dsi_panel_oppo_privite {
+/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-11-07 add for oplus custom info */
+struct dsi_panel_oplus_privite {
 	const char *vendor_name;
 	const char *manufacture_name;
 	bool skip_mipi_last_cmd;
-	struct oppo_brightness_alpha *bl_remap;
+	struct oplus_brightness_alpha *bl_remap;
 	int bl_remap_count;
 	bool is_pxlw_iris5;
 	bool bl_interpolate_nosub;
@@ -273,9 +273,9 @@ struct dsi_panel {
 	/* Fix aod flash problem */
 	bool need_power_on_backlight;
 /*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-10-30 add for fod brightness */
-	struct oppo_brightness_alpha *ba_seq;
+	struct oplus_brightness_alpha *ba_seq;
 	int ba_count;
-	struct dsi_panel_oppo_privite oppo_priv;
+	struct dsi_panel_oplus_privite oplus_priv;
 #endif
 
 	int panel_test_gpio;
@@ -406,7 +406,7 @@ void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 		struct dsi_display_mode *mode, u32 frame_threshold_us);
 #ifdef OPLUS_BUG_STABILITY
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
- * Add for oppo display new structure
+ * Add for oplus display new structure
 */
 int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 			   enum dsi_cmd_set_type type);

@@ -24,7 +24,7 @@
 #include <linux/slab.h>
 #ifdef VENDOR_EDIT
 /* Jianchao.Shi@PSW.BSP.CHG.Basic, 2018/04/05, sjc Add for charging */
-#include "../../power/oplus/oppo_vooc.h"
+#include "../../power/oplus/oplus_vooc.h"
 #include <soc/oplus/boot_mode.h>
 #endif
 
@@ -760,19 +760,19 @@ static bool i2c_err_occured = false;
 static unsigned int err_count = MAX_RESET_COUNT;
 extern int rpmb_is_enable(void);
 
-bool oppo_get_fg_i2c_err_occured(void)
+bool oplus_get_fg_i2c_err_occured(void)
 {
 	return i2c_err_occured;
 }
-EXPORT_SYMBOL(oppo_get_fg_i2c_err_occured);
+EXPORT_SYMBOL(oplus_get_fg_i2c_err_occured);
 
-void oppo_set_fg_i2c_err_occured(bool i2c_err)
+void oplus_set_fg_i2c_err_occured(bool i2c_err)
 {
 	i2c_err_occured = i2c_err;
 }
-EXPORT_SYMBOL(oppo_set_fg_i2c_err_occured);
+EXPORT_SYMBOL(oplus_set_fg_i2c_err_occured);
 
-static void i2c_oppo_gpio_reset(struct geni_i2c_dev *gi2c)
+static void i2c_oplus_gpio_reset(struct geni_i2c_dev *gi2c)
 {
 	int ret = 0;
 	int i = 0;
@@ -812,12 +812,12 @@ static void i2c_oppo_gpio_reset(struct geni_i2c_dev *gi2c)
 
 	for (i = 0; i < 220; i++) {
 		usleep_range(10000, 11000);
-		if (oppo_vooc_get_fastchg_started() == true && oppo_vooc_get_fastchg_ing() == false) {
+		if (oplus_vooc_get_fastchg_started() == true && oplus_vooc_get_fastchg_ing() == false) {
 			dev_err(gi2c->dev, "%s: vooc ready to start, don't pull down i2c, i:%d\n", __func__, i);
 			break;
 		}
 	}
-	oppo_set_fg_i2c_err_occured(true);
+	oplus_set_fg_i2c_err_occured(true);
 
 	if (!IS_ERR_OR_NULL(gi2c->i2c_rsc.geni_gpio_pullup)) {
 		dev_err(gi2c->dev, "%s: set geni_gpio_pullup\n", __func__);
@@ -1028,7 +1028,7 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 			if (gi2c->err) {
 				dev_err(gi2c->dev, "gi2c->adap.nr[%d], err_count[%d], msgs[i].addr[0x%x]\n", gi2c->adap.nr, err_count, msgs[i].addr);
 				if (err_count < MAX_RESET_COUNT) {
-					i2c_oppo_gpio_reset(gi2c);
+					i2c_oplus_gpio_reset(gi2c);
 				} else {
 					dev_err(gi2c->dev, "err_count(%d) >= %d so not reset\n", err_count, MAX_RESET_COUNT);
 				}

@@ -4,14 +4,14 @@ config OPLUS_SYSTEM_KERNEL
   help
 	define this config to add oplus sytstem kernel feature
 
-config OPPO_ARCH_FILE
-  bool "for build directory oppo"
+config OPLUS_ARCH_FILE
+  bool "for build directory oplus"
   ---help---
   say Y to buid in
 
-config OPPO_COMMON_SOFT
-  bool "config oppo common software"
-  select OPPO_ARCH_FILE
+config OPLUS_COMMON_SOFT
+  bool "config oplus common software"
+  select OPLUS_ARCH_FILE
   help
 	define this config to get project verion from sharemem.
 	Maybe this value is from CDT or dynamic identify by hardware

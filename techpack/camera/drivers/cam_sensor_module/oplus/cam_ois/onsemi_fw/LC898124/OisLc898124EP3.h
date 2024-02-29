@@ -783,7 +783,7 @@
 //==============================================================================
 //IO
 //==============================================================================
-// System Control配置アドレス
+// System Control驟咲ｽｮ繧｢繝峨Ξ繧ｹ
 #define 	PERICLKON						0xD00000
 #define 	SYSDSP_DSPDIV					0xD00014
 #define 	IOPLEV							0xD00020
@@ -829,7 +829,7 @@
 
 #define 	ADDA_DAO						0xD01054
 
-// PWM I/F配置アドレス
+// PWM I/F驟咲ｽｮ繧｢繝峨Ξ繧ｹ
 #define 	OISDRVFC1						0xD02100
 #define 	OISDRVFC4						0xD0210C
 #define 	OISDRVFC5						0xD02110
@@ -861,7 +861,7 @@
 #define 	ROMINFO							0xE0500C
 #define 	SADR							0xE05030
 
-// E2PROM 配置アドレス
+// E2PROM 驟咲ｽｮ繧｢繝峨Ξ繧ｹ
 #define 	E2P_RDAT						0xE07000
 #define 	E2P_ADR							0xE07008
 #define 	E2P_ASCNT						0xE0700C

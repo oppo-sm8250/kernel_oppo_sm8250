@@ -9,4 +9,4 @@
 	oplus,dtsi_no = <19066>;
 };
 
-#include "oppo/kona.dtsi"
+#include "oplus/kona.dtsi"

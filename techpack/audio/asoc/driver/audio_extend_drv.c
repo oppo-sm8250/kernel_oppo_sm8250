@@ -1,7 +1,7 @@
 /************************************************************************************
 ** File: -
 ** VENDOR_EDIT
-** Copyright (C), 2020-2025, OPPO Mobile Comm Corp., Ltd
+** Copyright (C), 2020-2025, OPLUS Mobile Comm Corp., Ltd
 **
 ** Description:
 **     add audio extend driver

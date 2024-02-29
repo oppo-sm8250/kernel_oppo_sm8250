@@ -1,5 +1,5 @@
 #
-#oppo project info configuration
+#oplus project info configuration
 #
 config OPLUS_FEATURE_OPROJECT
   bool "config oplus project info for kernel"

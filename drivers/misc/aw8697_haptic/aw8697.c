@@ -38,7 +38,7 @@
 #include <linux/pm_qos.h>
 #include <linux/vmalloc.h>
 #include <soc/oplus/device_info.h>
-#include <soc/oplus/oppo_project.h>
+#include <soc/oplus/oplus_project.h>
 #endif
 
 /******************************************************
@@ -1877,15 +1877,15 @@ static int aw8697_ram_update(struct aw8697 *aw8697)
     //173 174,174
     //>175 ,174
     if(aw8697->device_id == 815) {
-        if (aw8697->f0 < OPPO_F0_VAL_MIN_0815 || aw8697->f0 > OPPO_F0_VAL_MAX_0815) {
+        if (aw8697->f0 < OPLUS_F0_VAL_MIN_0815 || aw8697->f0 > OPLUS_F0_VAL_MAX_0815) {
             aw8697->f0 = 1700;
         }
     } else if(aw8697->device_id == 832) {
-        if (aw8697->f0 < OPPO_F0_VAL_MIN_0832 || aw8697->f0 > OPPO_F0_VAL_MAX_0832) {
+        if (aw8697->f0 < OPLUS_F0_VAL_MIN_0832 || aw8697->f0 > OPLUS_F0_VAL_MAX_0832) {
             aw8697->f0 = 2350;
         }
     } else {
-        if (aw8697->f0 < OPPO_F0_VAL_MIN_0833 || aw8697->f0 > OPPO_F0_VAL_MAX_0833) {
+        if (aw8697->f0 < OPLUS_F0_VAL_MIN_0833 || aw8697->f0 > OPLUS_F0_VAL_MAX_0833) {
             aw8697->f0 = 2350;
         }
     }
@@ -3070,8 +3070,8 @@ const struct firmware *aw8697_old_work_file_load_accord_f0(struct aw8697 *aw8697
     unsigned int f0_file_num = 1024;
     int ret = -1;
 
-    if (aw8697->rtp_file_num == AW8697_OPPO_WAVEFORM_INDEX_OLD_STEADY
-         || aw8697->rtp_file_num == AW8697_OPPO_WAVEFORM_INDEX_HIGH_TEMP)
+    if (aw8697->rtp_file_num == AW8697_OPLUS_WAVEFORM_INDEX_OLD_STEADY
+         || aw8697->rtp_file_num == AW8697_OPLUS_WAVEFORM_INDEX_HIGH_TEMP)
     {
         if(aw8697->device_id == 815){
             if(aw8697->f0 <= 1610)
@@ -3120,7 +3120,7 @@ const struct firmware *aw8697_old_work_file_load_accord_f0(struct aw8697 *aw8697
             else
                 f0_file_num = 10;
         }
-        if (aw8697->rtp_file_num == AW8697_OPPO_WAVEFORM_INDEX_OLD_STEADY)
+        if (aw8697->rtp_file_num == AW8697_OPLUS_WAVEFORM_INDEX_OLD_STEADY)
         {
             if(aw8697->device_id == 815){
                 ret = request_firmware(&rtp_file,
@@ -3159,8 +3159,8 @@ const struct firmware *aw8697_rtp_load_file_accord_f0(struct aw8697 *aw8697)
     unsigned int f0_file_num = 1024;
     int ret = -1;
 
-    if (aw8697->rtp_file_num == AW8697_OPPO_WAVEFORM_INDEX_OLD_STEADY
-         || aw8697->rtp_file_num == AW8697_OPPO_WAVEFORM_INDEX_HIGH_TEMP)
+    if (aw8697->rtp_file_num == AW8697_OPLUS_WAVEFORM_INDEX_OLD_STEADY
+         || aw8697->rtp_file_num == AW8697_OPLUS_WAVEFORM_INDEX_HIGH_TEMP)
     {
         return aw8697_old_work_file_load_accord_f0(aw8697);
     }
@@ -3190,8 +3190,8 @@ const struct firmware *aw8697_rtp_load_file_accord_f0(struct aw8697 *aw8697)
         }
         return NULL;
     }
-    else if (aw8697->rtp_file_num == AW8697_OPPO_RTP_LONG_SOUND_INDEX
-        || aw8697->rtp_file_num == AW8697_OPPO_WAVEFORM_INDEX_OLD_STEADY)
+    else if (aw8697->rtp_file_num == AW8697_OPLUS_RTP_LONG_SOUND_INDEX
+        || aw8697->rtp_file_num == AW8697_OPLUS_WAVEFORM_INDEX_OLD_STEADY)
     {
         if (aw8697->f0 <= 1650)
             f0_file_num = 0;
@@ -3203,12 +3203,12 @@ const struct firmware *aw8697_rtp_load_file_accord_f0(struct aw8697 *aw8697)
             f0_file_num = 3;
         pr_info("%s long sound or old steady test f0_file_num[%d], aw8697->rtp_file_num[%d]\n", __func__, f0_file_num, aw8697->rtp_file_num);
 
-        if (aw8697->rtp_file_num == AW8697_OPPO_RTP_LONG_SOUND_INDEX) {
+        if (aw8697->rtp_file_num == AW8697_OPLUS_RTP_LONG_SOUND_INDEX) {
             ret = request_firmware(&rtp_file,
                     aw8697_long_sound_rtp_name[f0_file_num],
                     aw8697->dev);
         }
-        else if (aw8697->rtp_file_num == AW8697_OPPO_WAVEFORM_INDEX_OLD_STEADY){
+        else if (aw8697->rtp_file_num == AW8697_OPLUS_WAVEFORM_INDEX_OLD_STEADY){
             ret = request_firmware(&rtp_file,
                     aw8697_old_steady_test_rtp_name_0815[f0_file_num],
                     aw8697->dev);
@@ -4804,7 +4804,7 @@ static ssize_t aw8697_activate_store(struct device *dev,
 
         if (aw8697->device_id == 815)
             aw8697_haptic_set_gain(aw8697, aw8697->gain);
-        aw8697_haptic_set_repeat_wav_seq(aw8697, AW8697_OPPO_WAVEFORM_INDEX_SINE_CYCLE);
+        aw8697_haptic_set_repeat_wav_seq(aw8697, AW8697_OPLUS_WAVEFORM_INDEX_SINE_CYCLE);
 
         mutex_unlock(&aw8697->lock);
         cancel_work_sync(&aw8697->vibrator_work);
@@ -5393,17 +5393,17 @@ static ssize_t aw8697_f0_store(struct device *dev, struct device_attribute *attr
 
     if(aw8697->device_id == 815) {
         aw8697->f0 = val;
-        if (aw8697->f0 < OPPO_F0_VAL_MIN_0815 || aw8697->f0 > OPPO_F0_VAL_MAX_0815) {
+        if (aw8697->f0 < OPLUS_F0_VAL_MIN_0815 || aw8697->f0 > OPLUS_F0_VAL_MAX_0815) {
             aw8697->f0 = 1700;
         }
     } else if(aw8697->device_id == 832) {
         aw8697->f0 = val;
-        if (aw8697->f0 < OPPO_F0_VAL_MIN_0832 || aw8697->f0 > OPPO_F0_VAL_MAX_0832) {
+        if (aw8697->f0 < OPLUS_F0_VAL_MIN_0832 || aw8697->f0 > OPLUS_F0_VAL_MAX_0832) {
             aw8697->f0 = 2300;
         }
     } else if(aw8697->device_id == 833) {
         aw8697->f0 = val;
-        if (aw8697->f0 < OPPO_F0_VAL_MIN_0833 || aw8697->f0 > OPPO_F0_VAL_MAX_0833) {
+        if (aw8697->f0 < OPLUS_F0_VAL_MIN_0833 || aw8697->f0 > OPLUS_F0_VAL_MAX_0833) {
             aw8697->f0 = 2330;
         }
     }
@@ -6146,7 +6146,7 @@ static ssize_t aw8697_haptic_audio_time_store(struct device *dev, struct device_
 
 #ifdef VENDOR_EDIT
 /* tongfeng.Huang@BSP.CHG.Basic, 2018/11/17,  Add for old test */
-static void oppo_motor_old_test_work(struct work_struct *work)
+static void oplus_motor_old_test_work(struct work_struct *work)
 {
     struct aw8697 *aw8697 = container_of(work, struct aw8697, motor_old_test_work);
 
@@ -6157,7 +6157,7 @@ static void oppo_motor_old_test_work(struct work_struct *work)
         aw8697->gain = 0x80;
         aw8697_haptic_set_gain(aw8697, aw8697->gain);
         aw8697_haptic_set_bst_vol(aw8697, AW8697_HAPTIC_HIGH_LEVEL_REG_VAL);
-        aw8697_haptic_set_wav_seq(aw8697, 0, AW8697_OPPO_WAVEFORM_INDEX_TRANSIENT);
+        aw8697_haptic_set_wav_seq(aw8697, 0, AW8697_OPLUS_WAVEFORM_INDEX_TRANSIENT);
         aw8697_haptic_set_wav_loop(aw8697, 0, 0);
         aw8697_haptic_play_wav_seq(aw8697, 1);
 
@@ -6171,9 +6171,9 @@ static void oppo_motor_old_test_work(struct work_struct *work)
         aw8697_haptic_set_rtp_aei(aw8697, false);
         aw8697_interrupt_clear(aw8697);
         mutex_unlock(&aw8697->lock);
-        if(AW8697_OPPO_WAVEFORM_INDEX_OLD_STEADY < (sizeof(aw8697_rtp_name)/AW8697_RTP_NAME_MAX)) {
-            aw8697->rtp_file_num = AW8697_OPPO_WAVEFORM_INDEX_OLD_STEADY;
-            if(AW8697_OPPO_WAVEFORM_INDEX_OLD_STEADY) {
+        if(AW8697_OPLUS_WAVEFORM_INDEX_OLD_STEADY < (sizeof(aw8697_rtp_name)/AW8697_RTP_NAME_MAX)) {
+            aw8697->rtp_file_num = AW8697_OPLUS_WAVEFORM_INDEX_OLD_STEADY;
+            if(AW8697_OPLUS_WAVEFORM_INDEX_OLD_STEADY) {
                 //schedule_work(&aw8697->rtp_work);
                 queue_work(system_unbound_wq, &aw8697->rtp_work);
             }
@@ -6189,9 +6189,9 @@ static void oppo_motor_old_test_work(struct work_struct *work)
         aw8697_haptic_set_rtp_aei(aw8697, false);
         aw8697_interrupt_clear(aw8697);
         mutex_unlock(&aw8697->lock);
-        if(AW8697_OPPO_WAVEFORM_INDEX_HIGH_TEMP < (sizeof(aw8697_rtp_name)/AW8697_RTP_NAME_MAX)) {
-            aw8697->rtp_file_num = AW8697_OPPO_WAVEFORM_INDEX_HIGH_TEMP;
-            if(AW8697_OPPO_WAVEFORM_INDEX_HIGH_TEMP) {
+        if(AW8697_OPLUS_WAVEFORM_INDEX_HIGH_TEMP < (sizeof(aw8697_rtp_name)/AW8697_RTP_NAME_MAX)) {
+            aw8697->rtp_file_num = AW8697_OPLUS_WAVEFORM_INDEX_HIGH_TEMP;
+            if(AW8697_OPLUS_WAVEFORM_INDEX_HIGH_TEMP) {
                 //schedule_work(&aw8697->rtp_work);
                 queue_work(system_unbound_wq, &aw8697->rtp_work);
             }
@@ -6207,9 +6207,9 @@ static void oppo_motor_old_test_work(struct work_struct *work)
         aw8697_haptic_set_rtp_aei(aw8697, false);
         aw8697_interrupt_clear(aw8697);
         mutex_unlock(&aw8697->lock);
-        if(AW8697_OPPO_WAVEFORM_INDEX_LISTEN_POP < (sizeof(aw8697_rtp_name)/AW8697_RTP_NAME_MAX)) {
-            aw8697->rtp_file_num = AW8697_OPPO_WAVEFORM_INDEX_LISTEN_POP;
-            if(AW8697_OPPO_WAVEFORM_INDEX_LISTEN_POP) {
+        if(AW8697_OPLUS_WAVEFORM_INDEX_LISTEN_POP < (sizeof(aw8697_rtp_name)/AW8697_RTP_NAME_MAX)) {
+            aw8697->rtp_file_num = AW8697_OPLUS_WAVEFORM_INDEX_LISTEN_POP;
+            if(AW8697_OPLUS_WAVEFORM_INDEX_LISTEN_POP) {
                 //schedule_work(&aw8697->rtp_work);
                 queue_work(system_unbound_wq, &aw8697->rtp_work);
             }
@@ -7154,7 +7154,7 @@ static int aw8697_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *
     aw8697_ram_init(aw8697);
 #ifdef VENDOR_EDIT
 /* tongfeng.Huang@BSP.CHG.Basic, 2018/11/17,  Add for old test */
-    INIT_WORK(&aw8697->motor_old_test_work, oppo_motor_old_test_work);
+    INIT_WORK(&aw8697->motor_old_test_work, oplus_motor_old_test_work);
     aw8697->motor_old_test_mode = 0;
     atomic_set(&aw8697->qos_cnt, 0);
 #endif

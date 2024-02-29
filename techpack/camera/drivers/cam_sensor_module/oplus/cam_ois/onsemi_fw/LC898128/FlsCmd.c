@@ -207,7 +207,7 @@ UINT_8 CoreResetwithoutMC128( void )
 UINT_8 PmemUpdate128( DOWNLOAD_TBL_EXT* ptr )
 {
 	UINT_8	data[BURST_LENGTH_UC +2 ];
-	UINT_16	Remainder;	// —]‚è
+	UINT_16	Remainder;	// ä½™ã‚Š
 	const UINT_8 *NcDataVal = ptr->UpdataCode;
 	UINT_8	ReadData[8];
 	long long CheckSumCode = ptr->SizeUpdataCodeCksm;
@@ -224,7 +224,7 @@ UINT_8 PmemUpdate128( DOWNLOAD_TBL_EXT* ptr )
 	data[0] = 0x40; // CmdH
 	data[1] = 0x00; // CmdL
 
-	// XXbyte–ˆ‚Ì“]‘—
+	// XXbyteæ¯ã®è»¢é€
 	Remainder = ( (ptr->SizeUpdataCode*5) / BURST_LENGTH_UC ); 
 	for(i=0 ; i< Remainder ; i++)
 	{
@@ -251,17 +251,17 @@ UINT_8 PmemUpdate128( DOWNLOAD_TBL_EXT* ptr )
 // 2. Verify
 //--------------------------------------------------------------------------------
 
-	// Program RAM‚ÌCheckSum‚Ì‹N“®
+	// Program RAMã®CheckSumã®èµ·å‹•
 	data[0] = 0xF0;											//CmdID
 	data[1] = 0x0E;											//CmdID
-	data[2] = (unsigned char)((ptr->SizeUpdataCode >> 8) & 0x000000FF);	//‘‚«‚İƒf[ƒ^(MSB)
-	data[3] = (unsigned char)(ptr->SizeUpdataCode & 0x000000FF);			//‘‚«‚İƒf[ƒ^
-	data[4] = 0x00;											//‘‚«‚İƒf[ƒ^
-	data[5] = 0x00;											//‘‚«‚İƒf[ƒ^(LSB)
+	data[2] = (unsigned char)((ptr->SizeUpdataCode >> 8) & 0x000000FF);	//æ›¸ãè¾¼ã¿ãƒ‡ãƒ¼ã‚¿(MSB)
+	data[3] = (unsigned char)(ptr->SizeUpdataCode & 0x000000FF);			//æ›¸ãè¾¼ã¿ãƒ‡ãƒ¼ã‚¿
+	data[4] = 0x00;											//æ›¸ãè¾¼ã¿ãƒ‡ãƒ¼ã‚¿
+	data[5] = 0x00;											//æ›¸ãè¾¼ã¿ãƒ‡ãƒ¼ã‚¿(LSB)
 
 	CntWrt( data, 6 ) ;
 
-	// CheckSum‚ÌI—¹”»’è
+	// CheckSumã®çµ‚äº†åˆ¤å®š
 	UlCnt = 0;
 	do{
 		WitTim( 1 );
@@ -269,11 +269,11 @@ UINT_8 PmemUpdate128( DOWNLOAD_TBL_EXT* ptr )
 			IOWrite32A( FLASHROM_FLAMODE , 0x00000002);
 			return (0x21) ;									// No enough memory
 		}
-		RamRead32A( 0x0088, &UlReadVal );					// PmCheck.ExecFlag‚Ì“Ç‚İo‚µ
+		RamRead32A( 0x0088, &UlReadVal );					// PmCheck.ExecFlagã®èª­ã¿å‡ºã—
 	}while ( UlReadVal != 0 );
 
 #if 0
-	// CheckSum’l‚Ì“Ç‚İo‚µ
+	// CheckSumå€¤ã®èª­ã¿å‡ºã—
 	data[0] = 0xF0;											// CmdID
 	data[1] = 0x0E;											// CmdID
 	CntWrt( data, 2 ) ;
@@ -283,9 +283,9 @@ UINT_8 PmemUpdate128( DOWNLOAD_TBL_EXT* ptr )
 #endif
 	
 	IOWrite32A( FLASHROM_FLAMODE , 0x00000002);
-	// CheckSum’l‚Ì”»’è(Šú‘Ò’l‚ÍAHeader‚Édefine‚³‚ê‚Ä‚¢‚é)
+	// CheckSumå€¤ã®åˆ¤å®š(æœŸå¾…å€¤ã¯ã€Headerã«defineã•ã‚Œã¦ã„ã‚‹)
 	for( i=0; i<8; i++) {
-		if(ReadData[7-i] != *p++ ) {  							// CheckSum Code‚Ì”»’è
+		if(ReadData[7-i] != *p++ ) {  							// CheckSum Codeã®åˆ¤å®š
 TRACE("[2] PMEM verify Error %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n",ReadData[0],ReadData[1],ReadData[2],ReadData[3],ReadData[4],ReadData[5],ReadData[6],ReadData[7]);
 			return (0x22) ;					// verify ng
 		}
@@ -309,12 +309,12 @@ UINT_8 EraseUserMat128(UINT_8 StartBlock, UINT_8 EndBlock )
 	IOWrite32A( 0xE0701C , 0x00000000);
 	RamWrite32A( 0xF007, 0x00000000 );					// FlashAccess Setup
 
-	//***** User Mat‚ÌƒuƒƒbƒNÁ‹ *****
+	//***** User Matã®ãƒ–ãƒ­ãƒƒã‚¯æ¶ˆå» *****
 	for( i=StartBlock ; i<EndBlock ; i++) {
-		RamWrite32A( 0xF00A, ( i << 10 ) );				// FromCmd.Addr‚Ìİ’è
-		RamWrite32A( 0xF00C, 0x00000020 );				// FromCmd.Control‚Ìİ’è(ƒuƒƒbƒNÁ‹)
+		RamWrite32A( 0xF00A, ( i << 10 ) );				// FromCmd.Addrã®è¨­å®š
+		RamWrite32A( 0xF00C, 0x00000020 );				// FromCmd.Controlã®è¨­å®š(ãƒ–ãƒ­ãƒƒã‚¯æ¶ˆå»)
 
-		// ƒuƒƒbƒNÁ‹‚ÌI—¹”»’è
+		// ãƒ–ãƒ­ãƒƒã‚¯æ¶ˆå»ã®çµ‚äº†åˆ¤å®š
 		WitTim( 5 );
 		UlCnt = 0;
 		do{
@@ -324,7 +324,7 @@ UINT_8 EraseUserMat128(UINT_8 StartBlock, UINT_8 EndBlock )
 				IOWrite32A( 0xE0701C , 0x00000002);
 				return (0x31) ;				// block erase timeout ng
 			}
-			RamRead32A( 0xF00C, &UlReadVal );					// FromCmd.Control‚Ì“Ç‚İo‚µ
+			RamRead32A( 0xF00C, &UlReadVal );					// FromCmd.Controlã®èª­ã¿å‡ºã—
 		}while ( UlReadVal != 0 );
 	}
 	IOWrite32A( 0xE0701C , 0x00000002);
@@ -345,7 +345,7 @@ UINT_8 ProgramFlash128_LongBurst( DOWNLOAD_TBL_EXT* ptr )
 	UINT_32	UlReadVal, UlCnt , UlNum ;
 	UINT_8	data[(BURST_LENGTH_FC + 2)];
 	UINT_32 i, j;
-	UINT_16	Remainder;	// —]‚è
+	UINT_16	Remainder;	// ä½™ã‚Š
 	const UINT_8 *NcFromVal = ptr->FromCode+BURST_LENGTH_FC;
 	const UINT_8 *NcFromVal1st = ptr->FromCode;
 	UINT_8 UcOddEvn;
@@ -355,15 +355,15 @@ UINT_8 ProgramFlash128_LongBurst( DOWNLOAD_TBL_EXT* ptr )
 	RamWrite32A( 0x0680, 0x000800be );		// F009 Update
 
 	RamWrite32A( 0xF007, 0x00000000 );						// FlashAccess Setup
-//	RamWrite32A( 0xF00A, 0x00000000 );						// FromCmd.Addr‚Ìİ’è
-	RamWrite32A( 0xF00A, 0x00000030 );						// FromCmd.Addr‚Ìİ’è
+//	RamWrite32A( 0xF00A, 0x00000000 );						// FromCmd.Addrã®è¨­å®š
+	RamWrite32A( 0xF00A, 0x00000030 );						// FromCmd.Addrã®è¨­å®š
 
 	data[0] = 0xF0;						// CmdH
 	data[1] = 0x08;						// CmdL
 
 	for(i=1 ; i< ( ptr->SizeFromCode / BURST_LENGTH_FC ) ; i++)
 	{
-		if( ++UcOddEvn >1 )  	UcOddEvn = 0;	// Šï”‹ô”Check
+		if( ++UcOddEvn >1 )  	UcOddEvn = 0;	// å¥‡æ•°å¶æ•°Check
 		if (UcOddEvn == 0) data[1] = 0x08;
 		else 			   data[1] = 0x09;		
 
@@ -374,16 +374,16 @@ UINT_8 ProgramFlash128_LongBurst( DOWNLOAD_TBL_EXT* ptr )
 
 		UlCnt = 0;
 		if(UcOddEvn == 0){
-			do{															// ‘‚«‚İ‚ÌI—¹”»’è
-				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+			do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
+				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 				if( UlCnt++ > 100 ) {
 					IOWrite32A( 0xE0701C , 0x00000002);
 					return (0x41) ;				// write ng
 				}
 			}while ( (UlReadVal & 0x00000004) != 0 );			
 		}else{
-			do{															// ‘‚«‚İ‚ÌI—¹”»’è
-				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+			do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
+				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 				if( UlCnt++ > 100 ) {
 					IOWrite32A( 0xE0701C , 0x00000002);
 					return (0x41) ;				// write ng
@@ -396,7 +396,7 @@ UINT_8 ProgramFlash128_LongBurst( DOWNLOAD_TBL_EXT* ptr )
 	Remainder = ( ptr->SizeFromCode % BURST_LENGTH_FC ) / 64;
 	for(i=0 ; i< Remainder ; i++)
 	{
-		if( ++UcOddEvn >1 )  	UcOddEvn = 0;	// Šï”‹ô”Check
+		if( ++UcOddEvn >1 )  	UcOddEvn = 0;	// å¥‡æ•°å¶æ•°Check
 		if (UcOddEvn == 0) data[1] = 0x08;
 		else 			   data[1] = 0x09;		
 
@@ -407,16 +407,16 @@ UINT_8 ProgramFlash128_LongBurst( DOWNLOAD_TBL_EXT* ptr )
 
 		UlCnt = 0;
 		if(UcOddEvn == 0){
-			do{															// ‘‚«‚İ‚ÌI—¹”»’è
-				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+			do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
+				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 				if( UlCnt++ > 100 ) {
 					IOWrite32A( 0xE0701C , 0x00000002);
 					return (0x41) ;				// write ng
 				}
 			}while ( (UlReadVal & 0x00000004) != 0 );			
 		}else{
-			do{															// ‘‚«‚İ‚ÌI—¹”»’è
-				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+			do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
+				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 				if( UlCnt++ > 100 ) {
 					IOWrite32A( 0xE0701C , 0x00000002);
 					return (0x41) ;				// write ng
@@ -427,10 +427,10 @@ UINT_8 ProgramFlash128_LongBurst( DOWNLOAD_TBL_EXT* ptr )
 		CntWrt( data, BURST_LENGTH_FC+2 );  // Cmd 2Byte.
 	}	
 	UlCnt = 0;
-	do{															// ‘‚«‚İ‚ÌI—¹”»’è
+	do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
 //		WitTim( 4 );
 		WitTim( 1 );	
-		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 		if( UlCnt++ > 10 ) {
 			IOWrite32A( 0xE0701C , 0x00000002);
 			return (0x42) ;				// write ng
@@ -438,7 +438,7 @@ UINT_8 ProgramFlash128_LongBurst( DOWNLOAD_TBL_EXT* ptr )
 	}while ( (UlReadVal & 0x0000000C) != 0 );	
 
 	/* write magic code */
-	RamWrite32A( 0xF00A, 0x00000000 );						// FromCmd.Addr‚Ìİ’è
+	RamWrite32A( 0xF00A, 0x00000000 );						// FromCmd.Addrã®è¨­å®š
 	data[1] = 0x08;						// CmdL
 	UlNum = 2;
 	for(j=0 ; j < BURST_LENGTH_FC; j++){
@@ -446,8 +446,8 @@ UINT_8 ProgramFlash128_LongBurst( DOWNLOAD_TBL_EXT* ptr )
 	}
 
 	UlCnt = 0;
-	do{															// ‘‚«‚İ‚ÌI—¹”»’è
-		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+	do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
+		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 		if( UlCnt++ > 100 ) {
 			IOWrite32A( 0xE0701C , 0x00000002);
 			return (0x41) ;				// write ng
@@ -457,9 +457,9 @@ UINT_8 ProgramFlash128_LongBurst( DOWNLOAD_TBL_EXT* ptr )
 	CntWrt( data, BURST_LENGTH_FC+2 );  // Cmd 2Byte.
 
 	UlCnt = 0;
-	do{															// ‘‚«‚İ‚ÌI—¹”»’è
+	do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
 		WitTim( 1 );	
-		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 		if( UlCnt++ > 10 ) {
 			IOWrite32A( 0xE0701C , 0x00000002);
 			return (0x42) ;				// write ng
@@ -491,20 +491,20 @@ UINT_8 ProgramFlash128_Standard( DOWNLOAD_TBL_EXT* ptr )
 
 	IOWrite32A( 0xE0701C , 0x00000000);
 	RamWrite32A( 0xF007, 0x00000000 );						// FlashAccess Setup
-	RamWrite32A( 0xF00A, 0x00000010 );						// FromCmd.Addr‚Ìİ’è
+	RamWrite32A( 0xF00A, 0x00000010 );						// FromCmd.Addrã®è¨­å®š
 	data[0] = 0xF0;						// CmdH
 	data[1] = 0x08;						// CmdL
-	data[2] = 0x00;						// FromCmd.BufferA‚ÌƒAƒhƒŒƒX
+	data[2] = 0x00;						// FromCmd.BufferAã®ã‚¢ãƒ‰ãƒ¬ã‚¹
 
 	for(i=1 ; i< ( ptr->SizeFromCode / 64 ) ; i++)
 	{
-		if( ++UcOddEvn >1 )  	UcOddEvn = 0;	// Šï”‹ô”Check
+		if( ++UcOddEvn >1 )  	UcOddEvn = 0;	// å¥‡æ•°å¶æ•°Check
 		if (UcOddEvn == 0) data[1] = 0x08;
 		else 			   data[1] = 0x09;		
 TRACE("[%d]UcOddEvn= %d , data[1]= %d \n", i, data[1], NcFromVal );
 
 #if (BURST_LENGTH_FC == 32)
-		// 32Byte‚È‚ç‚ÎA2‰ñ‚É•ª‚¯‚Ä‘—‚ç‚È‚¢‚Æ‚¢‚¯‚È‚¢B
+		// 32Byteãªã‚‰ã°ã€2å›ã«åˆ†ã‘ã¦é€ã‚‰ãªã„ã¨ã„ã‘ãªã„ã€‚
 		data[2] = 0x00;
 		UlNum = 3;
 		for(j=0 ; j < BURST_LENGTH_FC; j++){
@@ -525,33 +525,33 @@ TRACE("[%d]UcOddEvn= %d , data[1]= %d \n", i, data[1], NcFromVal );
 		CntWrt( data, BURST_LENGTH_FC+3 );  // Cmd 3Byte.
 #endif
 
-		RamWrite32A( 0xF00B, 0x00000010 );							// FromCmd.Length‚Ìİ’è
+		RamWrite32A( 0xF00B, 0x00000010 );							// FromCmd.Lengthã®è¨­å®š
 		UlCnt = 0;
 		if (UcOddEvn == 0){
-			do{															// ‘‚«‚İ‚ÌI—¹”»’è
-				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+			do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
+				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 				if( UlCnt++ > 250 ) {
 					IOWrite32A( 0xE0701C , 0x00000002);
 					return (0x41) ;				// write ng
 				}
 			}while ( UlReadVal != 0 );
-		 	RamWrite32A( 0xF00C, 0x00000004 );	// FromCmd.Control‚Ìİ’è(‘‚«‚İ)
+		 	RamWrite32A( 0xF00C, 0x00000004 );	// FromCmd.Controlã®è¨­å®š(æ›¸ãè¾¼ã¿)
 		}else{
-			do{															// ‘‚«‚İ‚ÌI—¹”»’è
-				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+			do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
+				RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 				if( UlCnt++ > 250 ) {
 					IOWrite32A( 0xE0701C , 0x00000002);
 					return (0x41) ;				// write ng
 				}
 			}while ( UlReadVal != 0 );
-			RamWrite32A( 0xF00C, 0x00000008 );	// FromCmd.Control‚Ìİ’è(‘‚«‚İ)
+			RamWrite32A( 0xF00C, 0x00000008 );	// FromCmd.Controlã®è¨­å®š(æ›¸ãè¾¼ã¿)
 		}			
 	}
 	
 	UlCnt = 0;	
-	do{															// ‘‚«‚İ‚ÌI—¹”»’è
+	do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
 		WitTim( 1 );	
-		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 		if( UlCnt++ > 250 ) {
 			IOWrite32A( 0xE0701C , 0x00000002);
 			return (0x41) ;				// write ng
@@ -559,13 +559,13 @@ TRACE("[%d]UcOddEvn= %d , data[1]= %d \n", i, data[1], NcFromVal );
 	}while ( (UlReadVal & 0x0000000C) != 0 );	
 	
 	{	/* write magic code */
-		RamWrite32A( 0xF00A, 0x00000000 );						// FromCmd.Addr‚Ìİ’è
+		RamWrite32A( 0xF00A, 0x00000000 );						// FromCmd.Addrã®è¨­å®š
 		data[1] = 0x08;
 //		data[1] = 0x09;
 TRACE("[%d]UcOddEvn= %d , data[1]= %d \n", 0, data[1], NcFromVal1st );
 
 #if (BURST_LENGTH_FC == 32)
-		// 32Byte‚È‚ç‚ÎA2‰ñ‚É•ª‚¯‚Ä‘—‚ç‚È‚¢‚Æ‚¢‚¯‚È‚¢B
+		// 32Byteãªã‚‰ã°ã€2å›ã«åˆ†ã‘ã¦é€ã‚‰ãªã„ã¨ã„ã‘ãªã„ã€‚
 		data[2] = 0x00;
 		UlNum = 3;
 		for(j=0 ; j < BURST_LENGTH_FC; j++){
@@ -587,23 +587,23 @@ TRACE("[%d]UcOddEvn= %d , data[1]= %d \n", 0, data[1], NcFromVal1st );
 		CntWrt( data, BURST_LENGTH_FC+3 );  // Cmd 3Byte.
 #endif
 
-		RamWrite32A( 0xF00B, 0x00000010 );							// FromCmd.Length‚Ìİ’è
+		RamWrite32A( 0xF00B, 0x00000010 );							// FromCmd.Lengthã®è¨­å®š
 		UlCnt = 0;
-		do{															// ‘‚«‚İ‚ÌI—¹”»’è
-			RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+		do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
+			RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 			if( UlCnt++ > 250 ) {
 				IOWrite32A( 0xE0701C , 0x00000002);
 				return (0x41) ;				// write ng
 			}
 		}while ( UlReadVal != 0 );
-	 	RamWrite32A( 0xF00C, 0x00000004 );	// FromCmd.Control‚Ìİ’è(‘‚«‚İ)
-//	 	RamWrite32A( 0xF00C, 0x00000008 );	// FromCmd.Control‚Ìİ’è(‘‚«‚İ)
+	 	RamWrite32A( 0xF00C, 0x00000004 );	// FromCmd.Controlã®è¨­å®š(æ›¸ãè¾¼ã¿)
+//	 	RamWrite32A( 0xF00C, 0x00000008 );	// FromCmd.Controlã®è¨­å®š(æ›¸ãè¾¼ã¿)
 	}
 	
 	UlCnt = 0;	
-	do{															// ‘‚«‚İ‚ÌI—¹”»’è
+	do{															// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
 		WitTim( 1 );	
-		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Control‚Ì“Ç‚İo‚µ
+		RamRead32A( 0xF00C, &UlReadVal );						// FromCmd.Controlã®èª­ã¿å‡ºã—
 		if( UlCnt++ > 250 ) {
 			IOWrite32A( 0xE0701C , 0x00000002);
 			return (0x41) ;				// write ng
@@ -682,7 +682,7 @@ UINT_32 DrvOffAdj( void )
 	UINT_32 UlReadVal;
 TRACE("DrvOffAdj \n");
 	
-//Infomat‚ÌŠm”FB‚à‚µRe-Adjust‚µ‚Ä‚¢‚È‚¢‚È‚çÄÀsB
+//Infomatã®ç¢ºèªã€‚ã‚‚ã—Re-Adjustã—ã¦ã„ãªã„ãªã‚‰å†å®Ÿè¡Œã€‚
 	ans = CheckDrvOffAdj();
 	if( ans == 1 ){
 
@@ -702,7 +702,7 @@ TRACE("DrvOffAdj \n");
 
 		IOWrite32A( FLASHROM_FLAMODE , 0x00000002);
 		IOWrite32A( SYSDSP_REMAP,				0x00001000 ) ;		// CORE_RST[12], MC_IGNORE2[10] = 1 PRAMSEL[7:6]=01b
-		WitTim( 15 ) ;												// BootƒvƒƒOƒ‰ƒ€‚ğ‰ñ‚·‚Ì‚É15msec•K—vB
+		WitTim( 15 ) ;												// Bootãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’å›ã™ã®ã«15msecå¿…è¦ã€‚
 //neo: need to reduce this time
 		IORead32A( ROMINFO,				(UINT_32 *)&UlReadVal ) ;	
 TRACE("[%08x]DrvOffAdj  \n",(unsigned int)UlReadVal );
@@ -789,14 +789,14 @@ TRACE("[%d]ProgramFlash end \n", ans );
 //--------------------------------------------------------------------------------
 
 	IOWrite32A( 0xE0701C , 0x00000000);
-	RamWrite32A( 0xF00A, 0x00000000 );									// FromCmd.Addr‚Ìİ’è
-	RamWrite32A( 0xF00D, ptr->SizeFromCodeValid );						// —LŒøCheckSumƒTƒCƒY‚Ìİ’è
+	RamWrite32A( 0xF00A, 0x00000000 );									// FromCmd.Addrã®è¨­å®š
+	RamWrite32A( 0xF00D, ptr->SizeFromCodeValid );						// æœ‰åŠ¹CheckSumã‚µã‚¤ã‚ºã®è¨­å®š
 
-	RamWrite32A( 0xF00C, 0x00000100 );									// FromCmd.Control‚Ìİ’è(CheckSumÀs)
+	RamWrite32A( 0xF00C, 0x00000100 );									// FromCmd.Controlã®è¨­å®š(CheckSumå®Ÿè¡Œ)
 	WitTim( 6 );
 	UlCnt = 0;
-	do{																	// ‘‚«‚İ‚ÌI—¹”»’è
-		RamRead32A( 0xF00C, &UlReadVal );								// FromCmd.Control‚Ì“Ç‚İo‚µ
+	do{																	// æ›¸ãè¾¼ã¿ã®çµ‚äº†åˆ¤å®š
+		RamRead32A( 0xF00C, &UlReadVal );								// FromCmd.Controlã®èª­ã¿å‡ºã—
 		if( UlCnt++ > 10 ) {
 			IOWrite32A( 0xE0701C , 0x00000002);
 			return (0x51) ;				// check sum excute ng
@@ -804,7 +804,7 @@ TRACE("[%d]ProgramFlash end \n", ans );
 		WitTim( 1 );		
 	}while ( UlReadVal != 0 );
 
-	RamRead32A( 0xF00D, &UlReadVal );									// CheckSum’l‚Ì“Ç‚İo‚µ
+	RamRead32A( 0xF00D, &UlReadVal );									// CheckSumå€¤ã®èª­ã¿å‡ºã—
 
 	if( UlReadVal != ptr->SizeFromCodeCksm ) {
 		IOWrite32A( 0xE0701C , 0x00000002);
@@ -814,7 +814,7 @@ TRACE("[%d]ProgramFlash end \n", ans );
 TRACE("[]UserMat Verify OK \n" );
 //	CoreReset
 	IOWrite32A( SYSDSP_REMAP,				0x00001000 ) ;		// CORE_RST[12], MC_IGNORE2[10] = 1 PRAMSEL[7:6]=01b
-	WitTim( 15 ) ;												// BootƒvƒƒOƒ‰ƒ€‚ğ‰ñ‚·‚Ì‚É15msec•K—vB
+	WitTim( 15 ) ;												// Bootãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’å›ã™ã®ã«15msecå¿…è¦ã€‚
 	//neo: need to reduce this time
 	IORead32A( ROMINFO,				(UINT_32 *)&UlReadVal ) ;	
 	if( UlReadVal != 0x0A)		return( 0x53 );
@@ -840,11 +840,11 @@ UINT_8	FlashBlockErase( UINT_8 SelMat , UINT_32 SetAddress )
 
 	// fail safe
 	// reject irregular mat
-	if( SelMat != USER_MAT && SelMat != INF_MAT0 && SelMat != INF_MAT1 && SelMat != INF_MAT2  )	return 10;	// INF_MAT2‚àAccess‚µ‚È‚¢
+	if( SelMat != USER_MAT && SelMat != INF_MAT0 && SelMat != INF_MAT1 && SelMat != INF_MAT2  )	return 10;	// INF_MAT2ã‚‚Accessã—ãªã„
 	// reject command if address inner NVR3
 	if( SetAddress > 0x000003FF )											return 9;
 
-	// Flash write€”õ
+	// Flash writeæº–å‚™
 	ans	= UnlockCodeSet();
 	if( ans != 0 )	return( ans ) ;							// Unlock Code Set
 
@@ -889,7 +889,7 @@ UINT_8	FlashSingleRead( UINT_8 SelMat, UINT_32 UlAddress, UINT_32 *PulData )
 
 	// fail safe
 	// reject irregular mat
-	if( SelMat != USER_MAT && SelMat != INF_MAT0 && SelMat != INF_MAT1 && SelMat != INF_MAT2  )	return 10;	// INF_MAT2‚àAccess‚µ‚È‚¢
+	if( SelMat != USER_MAT && SelMat != INF_MAT0 && SelMat != INF_MAT1 && SelMat != INF_MAT2  )	return 10;	// INF_MAT2ã‚‚Accessã—ãªã„
 	// reject command if address inner NVR3
 	if( UlAddress > 0x000003FF )											return 9;
 	
@@ -918,7 +918,7 @@ UINT_8	FlashMultiRead( UINT_8 SelMat, UINT_32 UlAddress, UINT_32 *PulData , UINT
 
 	// fail safe
 	// reject irregular mat
-	if( SelMat != USER_MAT && SelMat != INF_MAT0 && SelMat != INF_MAT1 && SelMat != INF_MAT2  )	return 10;	// INF_MAT2‚ÍRead only Access‚µ‚È‚¢
+	if( SelMat != USER_MAT && SelMat != INF_MAT0 && SelMat != INF_MAT1 && SelMat != INF_MAT2  )	return 10;	// INF_MAT2ã¯Read only Accessã—ãªã„
 	// reject command if address inner NVR3
 	if( UlAddress > 0x000003FF )											return 9;
 	
@@ -953,12 +953,12 @@ UINT_8	FlashBlockWrite( UINT_8 SelMat , UINT_32 SetAddress , UINT_32 *PulData)
 
 	// fail safe
 	// reject irregular mat
-//	if( SelMat != INF_MAT0 && SelMat != INF_MAT1  )			return 10;	// USR MAT,INF_MAT2‚àAccess‚µ‚È‚¢
-	if( SelMat != INF_MAT0 && SelMat != INF_MAT1 && SelMat != INF_MAT2  )			return 10;	// USR MAT‚ÍAccess‚µ‚È‚¢
+//	if( SelMat != INF_MAT0 && SelMat != INF_MAT1  )			return 10;	// USR MAT,INF_MAT2ã‚‚Accessã—ãªã„
+	if( SelMat != INF_MAT0 && SelMat != INF_MAT1 && SelMat != INF_MAT2  )			return 10;	// USR MATã¯Accessã—ãªã„
 	// 
 	if( SetAddress > 0x000003FF )							return 9;
 
-	// Flash write€”õ
+	// Flash writeæº–å‚™
 	ans	= UnlockCodeSet();
 	if( ans != 0 )	return( ans ) ;							// Unlock Code Set
 
@@ -969,7 +969,7 @@ UINT_8	FlashBlockWrite( UINT_8 SelMat , UINT_32 SetAddress , UINT_32 *PulData)
 	}
 	AddtionalUnlockCodeSet();								// common additional unlock code set
 	
-	IOWrite32A( FLASHROM_FLA_ADR, ((UINT_32)SelMat << 16) | ( SetAddress & 0x000010 )) ;// address‚Ípage‚Ì‚İw’è
+	IOWrite32A( FLASHROM_FLA_ADR, ((UINT_32)SelMat << 16) | ( SetAddress & 0x000010 )) ;// addressã¯pageã®ã¿æŒ‡å®š
 	// page write Start
 	IOWrite32A( FLASHROM_FLAMODE , 0x00000000);
 	IOWrite32A( FLASHROM_CMD, 2 ) ;
@@ -1022,7 +1022,7 @@ UINT_8 WrHallCalData( UINT_8 UcMode )
 
 TRACE( "WrHallCalData : Mode = %d\n", UcMode);
 	/* Back up ******************************************************/
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 1 );
 	
 	/* Erase   ******************************************************/
@@ -1088,7 +1088,7 @@ TRACE( "[ %d ] = %08x\n", i, UlMAT0[i] );
 
 	/* Verify ******************************************************/
 	UsCkVal_Bk = UsCkVal;
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 4 );
 	
 	UsCkVal = 0;
@@ -1125,7 +1125,7 @@ UINT_8 WrGyroGainData( UINT_8 UcMode )
 
 TRACE( "WrGyroGainData : Mode = %d\n", UcMode);
 	/* Back up ******************************************************/
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 1 );
 	
 	/* Erase   ******************************************************/
@@ -1173,7 +1173,7 @@ TRACE( "UlMAT0[ %d ] = %08x\n", i, UlMAT0[i] );
 
 	/* Verify ******************************************************/
 	UsCkVal_Bk = UsCkVal;
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 4 );
 	
 	UsCkVal = 0;
@@ -1217,7 +1217,7 @@ UINT_8 WrLinCalData( UINT_8 UcMode, mlLinearityValue *linval )
 	}
 TRACE( "WrLinCalData : Mode = %d\n", UcMode);
 	/* Back up ******************************************************/
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 1 );
 	
 	/* Erase   ******************************************************/
@@ -1288,7 +1288,7 @@ TRACE( "UlMAT0[ %d ] = %08x\n", i, UlMAT0[i] );
 
 	/* Verify ******************************************************/
 	UsCkVal_Bk = UsCkVal;
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 4 );
 	
 	UsCkVal = 0;
@@ -1331,7 +1331,7 @@ UINT_8 WrMixCalData( UINT_8 UcMode, mlMixingValue *mixval )
 
 TRACE( "WrMixCalData : Mode = %d\n", UcMode);
 	/* Back up ******************************************************/
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 1 );
 	
 	/* Erase   ******************************************************/
@@ -1392,7 +1392,7 @@ TRACE( "UlMAT0[ %d ] = %08x\n", i, UlMAT0[i] );
 
 	/* Verify ******************************************************/
 	UsCkVal_Bk = UsCkVal;
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 4 );
 	
 	UsCkVal = 0;
@@ -1438,7 +1438,7 @@ UINT_8 WrLinMixCalData( UINT_8 UcMode, mlMixingValue *mixval , mlLinearityValue 
 
 TRACE( "WrLinMixCalData : Mode = %d\n", UcMode);
 	/* Back up ******************************************************/
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 1 );
 	
 	/* Erase   ******************************************************/
@@ -1485,7 +1485,7 @@ TRACE( "[ %d ] = %08x\n", i, UlMAT0[i] );
 		}
 	
 	//*****************************************************//
-		/* X ‚Æ Y ‚ÅStep ‹É«‚ªˆá‚¤ */
+		/* X ã¨ Y ã§Step æ¥µæ€§ãŒé•ã†æ™‚ */
 		if(( (INT_32)linval->dacY[4] > 0 && (INT_32)linval->dacX[4] < 0 ) || ( (INT_32)linval->dacY[4] < 0 && (INT_32)linval->dacX[4] > 0 )){
 			mixval->hx45yL = (-1)*mixval->hx45yL;
 			mixval->hy45xL = (-1)*mixval->hy45xL;
@@ -1532,7 +1532,7 @@ TRACE( "UlMAT0[ %d ] = %08x\n", i, UlMAT0[i] );
 
 	/* Verify ******************************************************/
 	UsCkVal_Bk = UsCkVal;
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 4 );
 	
 	UsCkVal = 0;
@@ -1571,7 +1571,7 @@ UINT_8 WrOptCenerData( UINT_8 UcMode )
 
 TRACE( "WrOptCenerData : Mode = %d\n", UcMode);
 	/* Back up ******************************************************/
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 1 );
 	
 	/* Erase   ******************************************************/
@@ -1612,7 +1612,7 @@ TRACE( "[ %d ] = %08x\n", i, UlMAT0[i] );
 
 	/* Verify ******************************************************/
 	UsCkVal_Bk = UsCkVal;
-	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ˆÈŠO
+	ans =FlashMultiRead( INF_MAT0, 0, UlMAT0, 32 );	// check sum ä»¥å¤–
 	if( ans )	return( 4 );
 	
 	UsCkVal = 0;
@@ -1635,13 +1635,13 @@ TRACE( "WrOptCenerData____COMPLETE\n" );
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
 /* function name    : lstsq								 							  	 */
-/* input parameter  : double x[] X²‚Ì”z—ñƒf[ƒ^                                         */
-/*                    double y[] Y²‚Ì”z—ñƒf[ƒ^                                         */
-/*                    int n      ƒf[ƒ^ŒÂ”                                              */
-/*                    int m      ‹ß—‘½€®Ÿ”                                          */
-/* output parameter : double c[] ‹ß—‚µ‚½Še€‚ÌŒW””z—ñ                                  */
-/*                    –ß‚è’l‚ÍA0‚Å³íA-1‚Åû‘©¸”s                                    */
-/* comment          : Å¬2æ‹ß—–@                                                      */
+/* input parameter  : double x[] Xè»¸ã®é…åˆ—ãƒ‡ãƒ¼ã‚¿                                         */
+/*                    double y[] Yè»¸ã®é…åˆ—ãƒ‡ãƒ¼ã‚¿                                         */
+/*                    int n      ãƒ‡ãƒ¼ã‚¿å€‹æ•°                                              */
+/*                    int m      è¿‘ä¼¼å¤šé …å¼æ¬¡æ•°                                          */
+/* output parameter : double c[] è¿‘ä¼¼ã—ãŸå„é …ã®ä¿‚æ•°é…åˆ—                                  */
+/*                    æˆ»ã‚Šå€¤ã¯ã€0ã§æ­£å¸¸ã€-1ã§åæŸå¤±æ•—                                    */
+/* comment          : æœ€å°2ä¹—è¿‘ä¼¼æ³•                                                      */
 /*				   	   	    			      								  2018.03.07 */
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
 INT_32 lstsq( double x[], double y[], INT_32 n, INT_32 m, double c[] )
@@ -1748,7 +1748,7 @@ TRACE( "Already re-write\n" );
 	
 	/* backup sum check before re-write *****/
 	UlCkVal_Bk = 0;
-	for( i=0; i < 32; i++ ){		// ‘S—Ìˆæ
+	for( i=0; i < 32; i++ ){		// å…¨é ˜åŸŸ
 		UlCkVal_Bk +=  UlMAT2[i];
 	}
 	
@@ -1766,7 +1766,7 @@ TRACE( "Already re-write\n" );
 	if( ans )	return( 0xA0 );
 	
 	UlCkVal = 0;
-	for( i=0; i < 32; i++ ){		// ‘S—Ìˆæ
+	for( i=0; i < 32; i++ ){		// å…¨é ˜åŸŸ
 		UlCkVal +=  UlMAT2[i];
 	}
 	
@@ -1796,14 +1796,14 @@ UINT_8 LoadUareToPM( DOWNLOAD_TBL_EXT* ptr , UINT_8 mode )
 		RamRead32A( 0x8000 , &UlReadVer );
 		if( (UlReadVer & 0xFF000000) == 0x01000000 ){
 			RamWrite32A( 0xE000 , 0x00000000 );		// to boot
-			WitTim( 15 ) ;												// BootƒvƒƒOƒ‰ƒ€‚ğ‰ñ‚·‚Ì‚É15msec•K—vB
+			WitTim( 15 ) ;												// Bootãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’å›ã™ã®ã«15msecå¿…è¦ã€‚
 			IORead32A( ROMINFO,				(UINT_32 *)&UlReadVal ) ;	
 		}else{
 			return( 0x01 );	// NG
 		}
 		if( UlReadVal != 0x0B ){
 			IOWrite32A( SYSDSP_REMAP,				0x00001400 ) ;		// CORE_RST[12], MC_IGNORE2[10] = 1
-			WitTim( 15 ) ;												// BootƒvƒƒOƒ‰ƒ€‚ğ‰ñ‚·‚Ì‚É15msec•K—vB
+			WitTim( 15 ) ;												// Bootãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’å›ã™ã®ã«15msecå¿…è¦ã€‚
 			IORead32A( ROMINFO,				(UINT_32 *)&UlReadVal ) ;	
 			if( UlReadVal != 0x0B) {
 				return( 0x02 );
@@ -1824,7 +1824,7 @@ UINT_8 LoadUareToPM( DOWNLOAD_TBL_EXT* ptr , UINT_8 mode )
 			IOWrite32A( 0xE0701C , 0x00000002);
 			return (0x10) ;									// trans ng
 		}
-		RamRead32A( 0x5004, &UlReadVal );					// PmCheck.ExecFlag‚Ì“Ç‚İo‚µ
+		RamRead32A( 0x5004, &UlReadVal );					// PmCheck.ExecFlagã®èª­ã¿å‡ºã—
 	}while ( UlReadVal != 0 );
 	IOWrite32A( 0xE0701C , 0x00000002);
 
@@ -1934,7 +1934,7 @@ UINT_8	WrUareaToFlash( void )
 			if( UnlockCodeClear() != 0 ) 	return (0x11) ;				// unlock code clear ng
 			return (0x10) ;									// erase ng
 		}
-		RamRead32A( 0x5005, &UlReadVal );					// complite Flag‚Ì“Ç‚İo‚µ
+		RamRead32A( 0x5005, &UlReadVal );					// complite Flagã®èª­ã¿å‡ºã—
 	}while ( UlReadVal != 0 );
 
 	RamWrite32A( 0x5006 , 0x00000000 );		// write user area data from PM to flash memory
@@ -1947,7 +1947,7 @@ UINT_8	WrUareaToFlash( void )
 			if( UnlockCodeClear() != 0 ) 	return (0x21) ;				// unlock code clear ng
 			return (0x20) ;									// write ng
 		}
-		RamRead32A( 0x5006, &UlReadVal );					// complite Flag‚Ì“Ç‚İo‚µ
+		RamRead32A( 0x5006, &UlReadVal );					// complite Flagã®èª­ã¿å‡ºã—
 	}while ( UlReadVal != 0 );
 	IOWrite32A( 0xE0701C , 0x00000002);
 	if( UnlockCodeClear() != 0 ) 	return (0x31) ;				// unlock code clear ng

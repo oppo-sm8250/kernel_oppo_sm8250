@@ -23,7 +23,7 @@
 #endif
 #include <linux/jiffies.h>
 
-#include "oppo_nfc/oppo_nfc.h"
+#include "oplus_nfc/oplus_nfc.h"
 
 
 #include <linux/regulator/consumer.h>

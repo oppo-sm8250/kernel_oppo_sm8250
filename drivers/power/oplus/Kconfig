@@ -1,11 +1,11 @@
-menuconfig OPPO_CHARGER
-	bool "OPPO charging system"
+menuconfig OPLUS_CHARGER
+	bool "OPLUS charging system"
 	depends on I2C
 	select REGMAP_I2C
 	help
-	  Say Y here to enable OPPO charging system support
+	  Say Y here to enable OPLUS charging system support
 
-if OPPO_CHARGER
+if OPLUS_CHARGER
 #ifdef VENDOR_EDIT /* Jianchao.Shi@BSP.CHG.Basic, 2018/01/12, sjc Add for charging */
 config OPLUS_SM8250_CHARGER
 	tristate "OPLUS SM8150 charger driver"
@@ -13,74 +13,74 @@ config OPLUS_SM8250_CHARGER
 	help
 	  Enables support for the oplus charging framework
 
-config OPPO_CALL_MODE_SUPPORT
-	bool "OPPO call mode support"
+config OPLUS_CALL_MODE_SUPPORT
+	bool "OPLUS call mode support"
 	help
 	  Say Y to include support
 
-config OPPO_SMART_CHARGER_SUPPORT
-	bool "OPPO smart charger support"
+config OPLUS_SMART_CHARGER_SUPPORT
+	bool "OPLUS smart charger support"
 	help
 	  Say Y to include support
 
-config OPPO_CHIP_SOC_NODE
-	bool "OPPO chip soc node"
+config OPLUS_CHIP_SOC_NODE
+	bool "OPLUS chip soc node"
 	help
 	  Say Y to include support
 
-config OPPO_SHORT_USERSPACE
-	bool "OPPO batt userspace"
+config OPLUS_SHORT_USERSPACE
+	bool "OPLUS batt userspace"
 	help
 	 Say Y to include support
 
-config OPPO_RTC_DET_SUPPORT
-	tristate "OPPO RTC DET SUPPORT"
+config OPLUS_RTC_DET_SUPPORT
+	tristate "OPLUS RTC DET SUPPORT"
 	default n
 	depends on MFD_SPMI_PMIC
 	help
 	  Say Y to include support
 
-config OPPO_CHECK_CHARGERID_VOLT
-	tristate "OPPO CHECK CHARGERID VOLT"
+config OPLUS_CHECK_CHARGERID_VOLT
+	tristate "OPLUS CHECK CHARGERID VOLT"
 	default n
 	depends on MFD_SPMI_PMIC
 	help
 	  Say Y to include support
 
-config OPPO_SHIP_MODE_SUPPORT
-	tristate "OPPO_SHIP_MODE_SUPPORT"
+config OPLUS_SHIP_MODE_SUPPORT
+	tristate "OPLUS_SHIP_MODE_SUPPORT"
 	default n
 	depends on MFD_SPMI_PMIC
 	help
 	  Say Y to include support
 	  
-config OPPO_SHORT_C_BATT_CHECK
-	bool "OPPO batt short "
+config OPLUS_SHORT_C_BATT_CHECK
+	bool "OPLUS batt short "
 	help
-	  Say Y here to declare OPPO batt short	  
+	  Say Y here to declare OPLUS batt short	  
 
-config OPPO_STANDARD_BATTERY_CHECK_ADC
-	bool "OPPO Official Standard Battery check by ADC"
+config OPLUS_STANDARD_BATTERY_CHECK_ADC
+	bool "OPLUS Official Standard Battery check by ADC"
 	help
 	  Say Y here to support Official Standard Battery check by ADC
 
-config OPPO_SHORT_IC_CHECK
-	bool "OPPO short ic"
+config OPLUS_SHORT_IC_CHECK
+	bool "OPLUS short ic"
 	help
-	  Say Y here to declare OPPO batt short
+	  Say Y here to declare OPLUS batt short
 
-config OPPO_SHORT_HW_CHECK
-	bool "OPPO batt HW SHORT "
+config OPLUS_SHORT_HW_CHECK
+	bool "OPLUS batt HW SHORT "
 	help
 	  Say Y here to declare charging system is on MTK
 
-config OPPO_SHORT_USERSPACE
-	bool "OPPO batt userspace"
+config OPLUS_SHORT_USERSPACE
+	bool "OPLUS batt userspace"
 	help
 	  Say Y to include support
 
-config OPPO_CHIP_SOC_NODE
-	bool "OPPO chip soc node"
+config OPLUS_CHIP_SOC_NODE
+	bool "OPLUS chip soc node"
 	help
 	  Say Y to include support
-endif #OPPO_CHARGER
+endif #OPLUS_CHARGER

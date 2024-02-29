@@ -41,9 +41,9 @@
 #include "sde_hw_qdss.h"
 #ifdef OPLUS_BUG_STABILITY
 /* QianXu@MM.Display.LCD.Stability, 2020/3/31, for decoupling display driver */
-#include "oppo_display_private_api.h"
-#include "oppo_onscreenfingerprint.h"
-#include "oppo_dc_diming.h"
+#include "oplus_display_private_api.h"
+#include "oplus_onscreenfingerprint.h"
+#include "oplus_dc_diming.h"
 #endif
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 #include "../../iris/dsi_iris5_api.h"

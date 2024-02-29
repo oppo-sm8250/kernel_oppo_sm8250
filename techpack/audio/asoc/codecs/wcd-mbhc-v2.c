@@ -1812,7 +1812,7 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_component *component,
 	 *Add for mbhc cross connection.
 	 */
 	u32 cross_conn = 0;
-	const char *mbhc_cross_conn = "oppo,mbhc-check-cross-conn";
+	const char *mbhc_cross_conn = "oplus,mbhc-check-cross-conn";
 	#endif /* OPLUS_ARCH_EXTENDS */
 
 	pr_debug("%s: enter\n", __func__);

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-ifneq ($(CONFIG_OPPO_COMMON_SOFT),y)
+ifneq ($(CONFIG_OPLUS_COMMON_SOFT),y)
 subdir-y += actions
 subdir-y += al
 subdir-y += allwinner

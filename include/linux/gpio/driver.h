@@ -256,8 +256,8 @@ struct gpio_chip {
 	int			(*get)(struct gpio_chip *chip,
 						unsigned offset);
 #ifdef VENDOR_EDIT
-//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oppo vooc adapter update
-	int 		(*get_oppo_vooc)(struct gpio_chip *chip,
+//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oplus vooc adapter update
+	int 		(*get_oplus_vooc)(struct gpio_chip *chip,
 							unsigned offset);
 #endif /* VENDOR_EDIT */
 	int			(*get_multiple)(struct gpio_chip *chip,
@@ -269,8 +269,8 @@ struct gpio_chip {
 						unsigned long *mask,
 						unsigned long *bits);
 #ifdef VENDOR_EDIT
-//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oppo vooc adapter update
-	void			(*set_oppo_vooc)(struct gpio_chip *chip,
+//Fuchun.Liao@PSW.BSP.CHG.Basic, 2016/01/19, add for oplus vooc adapter update
+	void			(*set_oplus_vooc)(struct gpio_chip *chip,
 						unsigned offset, int value);
 #endif /* VENDOR_EDIT */
 	int			(*set_config)(struct gpio_chip *chip,

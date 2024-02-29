@@ -7,14 +7,14 @@ ccflags-y += -I$(srctree)/techpack/display/oplus
 ccflags-y += -I$(srctree)/techpack/display/iris
 ccflags-y += -DOPLUS_FEATURE_PXLW_IRIS5
 
-obj-$(CONFIG_DRM_OPLUS) += oppo_dsi_support.o \
-	oppo_display_private_api.o \
-	oppo_dc_diming.o \
-	oppo_onscreenfingerprint.o \
-	oppo_aod.o \
-	oppo_ffl.o \
-	oppo_display_panel.o \
-	oppo_display_panel_power.o \
-	oppo_display_panel_seed.o \
-	oppo_display_panel_common.o \
-	oppo_display_panel_hbm.o
+obj-$(CONFIG_DRM_OPLUS) += oplus_dsi_support.o \
+	oplus_display_private_api.o \
+	oplus_dc_diming.o \
+	oplus_onscreenfingerprint.o \
+	oplus_aod.o \
+	oplus_ffl.o \
+	oplus_display_panel.o \
+	oplus_display_panel_power.o \
+	oplus_display_panel_seed.o \
+	oplus_display_panel_common.o \
+	oplus_display_panel_hbm.o

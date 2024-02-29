@@ -19,7 +19,7 @@
 
 #include	"FromCode_01_02_01_00.h"
 #include	"FromCode_01_02_02_01.h"
-//OPPO ois firmware
+//OPLUS ois firmware
 #include	"FromCode_01_01_01_02.h"
 
 /* Burst Length for updating to PMEM */
@@ -697,7 +697,7 @@ UINT_8 FlashDownload128( UINT_8 ModuleVendor, UINT_8 ActVer, UINT_8 MasterSlave,
 	do {
 		if(1) {
 
-			// UploadFile‚ª64Byte‚İ‚ÉPadding‚³‚ê‚Ä‚¢‚È‚¢‚È‚ç‚ÎAErrorB
+			// UploadFileãŒ64Byteåˆ»ã¿ã«Paddingã•ã‚Œã¦ã„ãªã„ãªã‚‰ã°ã€Errorã€‚
 			if( ( ptr->SizeFromCode % 64 ) != 0 )	return (0xF1) ;
 
 			if(!RamRead32A(0x8000, &data1)) {
@@ -1678,7 +1678,7 @@ UINT_8 LoadUareToPM( DOWNLOAD_TBL_EXT* ptr , UINT_8 mode )
 			RamRead32A( 0x8000 , &UlReadVer );
 			if( (UlReadVer & 0xFF000000) == 0x01000000 ){
 				RamWrite32A( 0xE000 , 0x00000000 ); 	// to boot
-				WitTim( 5 ) ;												// BootƒvƒƒOƒ‰ƒ€‚ğ‰ñ‚·‚Ì‚É15msec•K—vB
+				WitTim( 5 ) ;												// Bootãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’å›ã™ã®ã«15msecå¿…è¦ã€‚
 	//neo: need to reduce this time
 				IORead32A( ROMINFO, 			(UINT_32 *)&UlReadVal ) ;	
 			}else{
@@ -1686,7 +1686,7 @@ UINT_8 LoadUareToPM( DOWNLOAD_TBL_EXT* ptr , UINT_8 mode )
 			}
 			if( UlReadVal != 0x0B ){
 				IOWrite32A( SYSDSP_REMAP,				0x00001400 ) ;		// CORE_RST[12], MC_IGNORE2[10] = 1
-				WitTim( 5 ) ;												// BootƒvƒƒOƒ‰ƒ€‚ğ‰ñ‚·‚Ì‚É15msec•K—vB
+				WitTim( 5 ) ;												// Bootãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’å›ã™ã®ã«15msecå¿…è¦ã€‚
 	//neo: need to reduce this time
 				IORead32A( ROMINFO, 			(UINT_32 *)&UlReadVal ) ;	
 				if( UlReadVal != 0x0B) {
@@ -1708,7 +1708,7 @@ UINT_8 LoadUareToPM( DOWNLOAD_TBL_EXT* ptr , UINT_8 mode )
 				IOWrite32A( 0xE0701C , 0x00000002);
 				return (0x10) ; 								// trans ng
 			}
-			RamRead32A( 0x5004, &UlReadVal );					// PmCheck.ExecFlag‚Ì“Ç‚İo‚µ
+			RamRead32A( 0x5004, &UlReadVal );					// PmCheck.ExecFlagã®èª­ã¿å‡ºã—
 		}while ( UlReadVal != 0 );
 		IOWrite32A( 0xE0701C , 0x00000002);
 
@@ -1824,7 +1824,7 @@ UINT_8	WrUareaToFlash( void )
 				TRACE("%s, entry 222 !!!\n", __func__);
 				return (0x10) ; 								// erase ng
 			}
-			RamRead32A( 0x5005, &UlReadVal );					// complite Flag‚Ì“Ç‚İo‚µ
+			RamRead32A( 0x5005, &UlReadVal );					// complite Flagã®èª­ã¿å‡ºã—
 		}while ( UlReadVal != 0 );
 
 		RamWrite32A( 0x5006 , 0x00000000 ); 	// write user area data from PM to flash memory
@@ -1837,7 +1837,7 @@ UINT_8	WrUareaToFlash( void )
 				if( UnlockCodeClear() != 0 )	return (0x21) ; 			// unlock code clear ng
 				return (0x20) ; 								// write ng
 			}
-			RamRead32A( 0x5006, &UlReadVal );					// complite Flag‚Ì“Ç‚İo‚µ
+			RamRead32A( 0x5006, &UlReadVal );					// complite Flagã®èª­ã¿å‡ºã—
 		}while ( UlReadVal != 0 );
 		IOWrite32A( 0xE0701C , 0x00000002);
 		if( UnlockCodeClear() != 0 )	return (0x31) ; 			// unlock code clear ng

@@ -23,7 +23,7 @@
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
  * Add for save select panel and give different feature
 */
-#include "oppo_dsi_support.h"
+#include "oplus_dsi_support.h"
 #endif /*OPLUS_BUG_STABILITY*/
 
 #define MAX_DSI_CTRLS_PER_DISPLAY             2

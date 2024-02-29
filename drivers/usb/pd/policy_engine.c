@@ -494,7 +494,7 @@ struct usbpd {
 static LIST_HEAD(_usbpd);	/* useful for debugging */
 #ifdef VENDOR_EDIT
 /*Gang.Yan@BSP.CHG.BASIC, 2020/09/09,add for PD+SVOOC adapter*/
-int oppo_usbpd_send_svdm(u16 svid, u8 cmd, enum usbpd_svdm_cmd_type cmd_type,
+int oplus_usbpd_send_svdm(u16 svid, u8 cmd, enum usbpd_svdm_cmd_type cmd_type,
 		int obj_pos, const u32 *vdos, int num_vdos);
 #endif
 
@@ -2929,7 +2929,7 @@ static void enter_state_snk_ready(struct usbpd *pd)
 #ifdef VENDOR_EDIT
 	/*Gang.Yan@BSP.CHG.BASIC, 2020/09/09,add for PD+SVOOC adapter*/
 	pd->in_good_connect = true;
-	oppo_usbpd_send_svdm(USBPD_SID, USBPD_SVDM_DISCOVER_SVIDS,
+	oplus_usbpd_send_svdm(USBPD_SID, USBPD_SVDM_DISCOVER_SVIDS,
 		SVDM_CMD_TYPE_INITIATOR, 0, NULL, 0);
 #endif
 
@@ -4747,7 +4747,7 @@ static void usbpd_release(struct device *dev)
 }
 #ifdef VENDOR_EDIT
 /* Hang.Zhao@PSW.BSP.CHG.Basic, 2019/10/10, Add for pd charging */
-int oppo_usbpd_send_svdm(u16 svid, u8 cmd, enum usbpd_svdm_cmd_type cmd_type,
+int oplus_usbpd_send_svdm(u16 svid, u8 cmd, enum usbpd_svdm_cmd_type cmd_type,
 		int obj_pos, const u32 *vdos, int num_vdos) {
 	struct usbpd *pd = pd_lobal;
 	u32 svdm_hdr = SVDM_HDR(svid, 0, obj_pos, cmd_type, cmd);
@@ -4755,13 +4755,13 @@ int oppo_usbpd_send_svdm(u16 svid, u8 cmd, enum usbpd_svdm_cmd_type cmd_type,
 	return usbpd_send_vdm(pd, svdm_hdr, vdos, num_vdos);
 }
 
-bool oppo_check_pd_state_ready(void)
+bool oplus_check_pd_state_ready(void)
 {
 	return (pd_lobal->in_good_connect);
 }
-EXPORT_SYMBOL(oppo_check_pd_state_ready);
+EXPORT_SYMBOL(oplus_check_pd_state_ready);
 
-int oppo_pdo_select(int vbus_mv, int ibus_ma)
+int oplus_pdo_select(int vbus_mv, int ibus_ma)
 {
 	int i = 0;
 	int rc = 0;
@@ -4833,7 +4833,7 @@ out:
 	mutex_unlock(&pd->swap_lock);
 	return rc;
 }
-EXPORT_SYMBOL(oppo_pdo_select);
+EXPORT_SYMBOL(oplus_pdo_select);
 #endif /*VENDOR_EDIT*/
 
 static int num_pd_instances;

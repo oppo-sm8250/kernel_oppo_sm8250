@@ -31,7 +31,7 @@
 #ifdef OPLUS_BUG_STABILITY
 /*Hujie@PSW.MM.Display.Lcd.Stability, 2019-09-01, add for runing SDE_RECOVERY_HARD_RESET when pingpong timeout many times*/
 #define PP_TIMEOUT_BAD_TRIALS   10
-extern int oppo_dimlayer_fingerprint_failcount;
+extern int oplus_dimlayer_fingerprint_failcount;
 #endif
 
 /*

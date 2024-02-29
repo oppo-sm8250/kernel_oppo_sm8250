@@ -17,7 +17,7 @@
  #include	"FromCode_01_02_01_02.h"
 // 19811 Tele
 #include	"FromCode_01_02_02_01.h"
-//OPPO ois firmware
+//OPLUS ois firmware
 #include	"FromCode_01_01_01_02.h"
 
 #include	"OisDWL.h"
@@ -51,7 +51,7 @@ UINT_8 FlashUpload128( UINT_8 ModuleVendor, UINT_8 ActVer, UINT_8 MasterSlave, U
 	do {
 		if( (ptr->Index == ( ((UINT_16)ModuleVendor<<8) + ActVer)) && (ptr->FWType == FWType) && (ptr->MasterSlave == MasterSlave)) {
 
-			// UploadFile‚ª64Byte‚Ý‚ÉPadding‚³‚ê‚Ä‚¢‚È‚¢‚È‚ç‚ÎAErrorB
+			// UploadFileãŒ64Byteåˆ»ã¿ã«Paddingã•ã‚Œã¦ã„ãªã„ãªã‚‰ã°ã€Errorã€‚
 			if( ( ptr->SizeFromCode % 64 ) != 0 )	return (0xF1) ;
 
             if(!RamRead32A(0x8000, &data)) {

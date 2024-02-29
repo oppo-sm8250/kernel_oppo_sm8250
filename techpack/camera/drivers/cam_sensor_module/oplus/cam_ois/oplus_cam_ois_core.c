@@ -25,7 +25,7 @@
 /*add by hongbo.dai@Camera 20181215, for OIS bu63169*/
 #define MODE_NOCONTINUE 1
 #define MODE_CONTINUE 0
-/*hongbo.dai@Camera.Drv, 2018/12/26, modify for [oppo ois]*/
+/*hongbo.dai@Camera.Drv, 2018/12/26, modify for [oplus ois]*/
 #define MAX_LENGTH 160
 #define CAMX_HALL_MAX_NUMBER 100
 

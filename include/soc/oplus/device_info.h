@@ -1,5 +1,5 @@
 /**
- * Copyright 2008-2013 OPPO Mobile Comm Corp., Ltd, All rights reserved.
+ * Copyright 2008-2013 OPLUS Mobile Comm Corp., Ltd, All rights reserved.
  * FileName:devinfo.h
  * ModuleName:devinfo
  * Create Date: 2013-10-23

@@ -1,5 +1,5 @@
 config OPLUS_FEATURE_PROJECTINFO
-  bool "config oppo common software"
+  bool "config oplus common software"
   default y
   help
 	define this config to get project verion from sharemem.

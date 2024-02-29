@@ -17,7 +17,7 @@
 #include "sde_crtc.h"
 #include "sde_rm.h"
 #ifdef OPLUS_BUG_STABILITY
-#include "oppo_display_private_api.h"
+#include "oplus_display_private_api.h"
 #endif
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 #include "../../iris/dsi_iris5_api.h"
@@ -74,8 +74,8 @@ static const struct drm_prop_enum_list e_frame_trigger_mode[] = {
 
 #ifdef OPLUS_BUG_STABILITY
 /*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-11-04 add for global hbm */
-extern int oppo_debug_max_brightness;
-extern int oppo_seed_backlight;
+extern int oplus_debug_max_brightness;
+extern int oplus_seed_backlight;
 #endif
 
 static int sde_backlight_device_update_status(struct backlight_device *bd)
@@ -105,19 +105,19 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	bl_lvl = mult_frac(brightness, display->panel->bl_config.bl_max_level,
 			display->panel->bl_config.brightness_max_level);
 #else
-	if (oppo_debug_max_brightness) {
-		bl_lvl = mult_frac(brightness, oppo_debug_max_brightness,
+	if (oplus_debug_max_brightness) {
+		bl_lvl = mult_frac(brightness, oplus_debug_max_brightness,
 			display->panel->bl_config.brightness_max_level);
 	} else if (brightness == 0) {
 		bl_lvl = 0;
 	} else {
-		if (display->panel->oppo_priv.bl_remap && display->panel->oppo_priv.bl_remap_count) {
+		if (display->panel->oplus_priv.bl_remap && display->panel->oplus_priv.bl_remap_count) {
 			int i = 0;
-			int count = display->panel->oppo_priv.bl_remap_count;
-			struct oppo_brightness_alpha *lut = display->panel->oppo_priv.bl_remap;
+			int count = display->panel->oplus_priv.bl_remap_count;
+			struct oplus_brightness_alpha *lut = display->panel->oplus_priv.bl_remap;
 
-			for (i = 0; i < display->panel->oppo_priv.bl_remap_count; i++){
-				if (display->panel->oppo_priv.bl_remap[i].brightness >= brightness)
+			for (i = 0; i < display->panel->oplus_priv.bl_remap_count; i++){
+				if (display->panel->oplus_priv.bl_remap[i].brightness >= brightness)
 					break;
 			}
 
@@ -128,7 +128,7 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 			else
 				bl_lvl = interpolate(brightness, lut[i-1].brightness,
 						lut[i].brightness, lut[i-1].alpha,
-						lut[i].alpha, display->panel->oppo_priv.bl_interpolate_nosub);
+						lut[i].alpha, display->panel->oplus_priv.bl_interpolate_nosub);
 		} else if (brightness > display->panel->bl_config.brightness_normal_max_level) {
 			bl_lvl = interpolate(brightness,
 					display->panel->bl_config.brightness_normal_max_level,

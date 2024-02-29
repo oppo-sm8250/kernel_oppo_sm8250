@@ -1,7 +1,7 @@
 /**********************************************************************************
-* Copyright (c)  2008-2019  Guangdong OPPO Mobile Comm Corp., Ltd
+* Copyright (c)  2008-2019  Guangdong OPLUS Mobile Comm Corp., Ltd
 * OPLUS_FEATURE_CHG_BASIC
-* Description: OPPO Charge Module Device Tree
+* Description: OPLUS Charge Module Device Tree
 * 
 * Version: 1.0
 * Date: 2019-06-10
