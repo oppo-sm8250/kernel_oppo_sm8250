@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2018,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_dsi_support.h
 ** Description : display driver private management
 ** Version : 1.0
@@ -24,10 +24,14 @@
 /* A hardware display blank early change occurred */
 #define OPLUS_DISPLAY_EARLY_EVENT_BLANK		0x02
 
+#define PANEL_LOADING_EFFECT_FLAG  100
+#define PANEL_LOADING_EFFECT_MODE1 101
+#define PANEL_LOADING_EFFECT_MODE2 102
+#define PANEL_LOADING_EFFECT_OFF   100
 
 enum oplus_display_support_list {
 	OPLUS_SAMSUNG_ANA6706_DISPLAY_FHD_DSC_CMD_PANEL = 0,
-	OPLUS_SAMSUNG_ONEPLUS_DISPLAY_FHD_DSC_CMD_PANEL,
+	OPLUS_SAMSUNG_OPLUS_DISPLAY_FHD_DSC_CMD_PANEL,
 	OPLUS_DISPLAY_UNKNOW,
 };
 

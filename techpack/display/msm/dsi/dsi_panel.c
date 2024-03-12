@@ -18,6 +18,7 @@
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
 #include "../../iris/dsi_iris5_api.h"
+#include "../../iris/dsi_iris5_gpio.h"
 #endif
 #ifdef OPLUS_BUG_STABILITY
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/12/13
@@ -28,8 +29,16 @@
 #include "oplus_dc_diming.h"
 #include "oplus_onscreenfingerprint.h"
 #include "oplus_aod.h"
+#include "oplus_bl.h"
+#include "oplus_display_panel_common.h"
+#include "oplus_display_panel_cabc.h"
+#include <linux/gpio.h>
 #endif
 
+#ifdef OPLUS_FEATURE_ADFR
+#include "oplus_adfr.h"
+#include "sde_trace.h"
+#endif /* OPLUS_FEATURE_ADFR */
 /**
  * topology is currently defined by a set of following 3 values:
  * 1. num of layer mixers
@@ -47,6 +56,55 @@
 #define MAX_PANEL_JITTER		10
 #define DEFAULT_PANEL_PREFILL_LINES	25
 #define MIN_PREFILL_LINES      35
+
+#ifdef OPLUS_BUG_STABILITY
+/* Add for solve sau issue*/
+extern int lcd_closebl_flag;
+/* Add for fingerprint silence*/
+extern int lcd_closebl_flag_fp;
+#ifdef CONFIG_REGULATOR_TPS65132
+extern void TPS65132_pw_enable(int enable);
+#endif /* CONFIG_REGULATOR_TPS65132 */
+
+#ifdef OPLUS_BUG_STABILITY
+extern int last_fps;
+#endif /*OPLUS_BUG_STABILITY*/
+
+__attribute__((weak)) void lcd_queue_load_tp_fw(void) {return;}
+__attribute__((weak)) int tp_gesture_enable_flag(void) {return 0;}
+__attribute__((weak)) int tp_control_cs_gpio(bool enable) {return 0;}
+static int tp_black_power_on_ff_flag = 0;
+static int tp_cs_flag = 0;
+
+static int mdss_tp_black_gesture_status(void){
+	int ret = 0;
+	/*default disable tp gesture*/
+	//tp add the interface for check black status to ret
+	ret = tp_gesture_enable_flag();
+	pr_err("[TP]%s:ret = %d\n", __func__, ret);
+	return ret;
+}
+
+static atomic_t esd_check_happened = ATOMIC_INIT(0);
+int get_esd_check_happened(void)
+{
+	return atomic_read(&esd_check_happened);
+}
+void set_esd_check_happened(int val)
+{
+	atomic_set(&esd_check_happened, val);
+
+	DSI_INFO("%s, esd_check_happened = %d\n", __func__, get_esd_check_happened());
+}
+EXPORT_SYMBOL_GPL(set_esd_check_happened);
+
+static atomic_t bl_frame_done_cnt = ATOMIC_INIT(0);
+void set_bl_frame_done_cnt(void)
+{
+	atomic_add_unless(&bl_frame_done_cnt, -1, 0);
+}
+EXPORT_SYMBOL_GPL(set_bl_frame_done_cnt);
+#endif /* OPLUS_BUG_STABILITY */
 
 enum dsi_dsc_ratio_type {
 	DSC_8BPC_8BPP,
@@ -85,21 +143,17 @@ static char dsi_dsc_rc_range_min_qp_1_1_scr1[][15] = {
  * DSC 1.1
  * Rate control - Max QP values for each ratio type in dsi_dsc_ratio_type
  */
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-static char dsi_dsc_rc_range_max_qp_1_1_iris[][15] = {
-	{4, 4, 5, 6, 7, 7, 7, 8, 9, 10, 11, 12, 13, 13, 15},
-	{4, 8, 9, 10, 11, 11, 11, 12, 13, 14, 15, 16, 17, 17, 19},
-	{12, 12, 13, 14, 15, 15, 15, 16, 17, 18, 19, 20, 21, 21, 23},
-	{8, 8, 9, 10, 11, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16},
-	};
-#endif
 static char dsi_dsc_rc_range_max_qp_1_1[][15] = {
 	{4, 4, 5, 6, 7, 7, 7, 8, 9, 10, 11, 12, 13, 13, 15},
 	{4, 8, 9, 10, 11, 11, 11, 12, 13, 14, 15, 16, 17, 17, 19},
 	{12, 12, 13, 14, 15, 15, 15, 16, 17, 18, 19, 20, 21, 21, 23},
 	{7, 8, 9, 10, 11, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16},
 	};
+
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+static char dsi_dsc_rc_range_max_qp_1_1_pxlw[15] = {
+	8, 8, 9, 10, 11, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16};
+#endif
 
 /*
  * DSC 1.1 SCR
@@ -280,26 +334,16 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 		rc = gpio_request(r_config->reset_gpio, "reset_gpio");
 		if (rc) {
 			DSI_ERR("request for reset_gpio failed, rc=%d\n", rc);
-		#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-		// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-			if (iris_get_feature()) {
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+            if (iris_is_chip_supported()) {
 				if (!strcmp(panel->type, "primary"))
 					goto error;
-				else
-					rc = 0;
-			} else {
-				goto error;
-			}
-		#else
+				rc = 0;
+			} else
+#endif
 			goto error;
-		#endif
 		}
 	}
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature())
-		iris5_gpio_request(panel);
-#endif
 
 	if (gpio_is_valid(r_config->disp_en_gpio)) {
 		rc = gpio_request(r_config->disp_en_gpio, "disp_en_gpio");
@@ -346,6 +390,15 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 		}
 	}
 
+	if (gpio_is_valid(r_config->panel_vddr_aod_en_gpio)) {
+		rc = gpio_request(r_config->panel_vddr_aod_en_gpio, "panel_vddr_aod_en_gpio");
+		if (rc) {
+			DSI_ERR("request for panel_vddr_aod_en_gpio failed, rc=%d\n", rc);
+			if (gpio_is_valid(r_config->panel_vddr_aod_en_gpio))
+				gpio_free(r_config->panel_vddr_aod_en_gpio);
+		}
+	}
+
 	if (gpio_is_valid(r_config->panel_te_esd_gpio)) {
 		rc = gpio_request(r_config->panel_te_esd_gpio, "panel_te_esd_gpio");
 		if (rc)
@@ -353,6 +406,17 @@ static int dsi_panel_gpio_request(struct dsi_panel *panel)
 	}
 	gpio_direction_input(r_config->panel_te_esd_gpio);
 #endif
+
+#ifdef OPLUS_FEATURE_ADFR
+	if (oplus_adfr_is_support()) {
+		if (gpio_is_valid(panel->vsync_switch_gpio)) {
+			rc = gpio_request(panel->vsync_switch_gpio, "vsync_switch_gpio");
+			if (rc) {
+				DSI_ERR("adfr request for vsync_switch_gpio failed, rc=%d\n", rc);
+			}
+		}
+	}
+#endif /*OPLUS_FEATURE_ADFR*/
 
 	goto error;
 error_release_mode_sel:
@@ -388,16 +452,19 @@ static int dsi_panel_gpio_release(struct dsi_panel *panel)
 	if (gpio_is_valid(panel->panel_test_gpio))
 		gpio_free(panel->panel_test_gpio);
 
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature())
-		iris5_gpio_free(panel);
-#endif
 #ifdef OPLUS_BUG_STABILITY
 /*Ling.Guo@PSW.MM.Display.LCD.Feature,2019-11-11 add for panel vout 1.5V*/
 	if (gpio_is_valid(r_config->panel_vout_gpio))
 		gpio_free(r_config->panel_vout_gpio);
 #endif
+
+#ifdef OPLUS_FEATURE_ADFR
+	if (oplus_adfr_is_support()) {
+		if (gpio_is_valid(panel->vsync_switch_gpio))
+			gpio_free(panel->vsync_switch_gpio);
+	}
+#endif /*OPLUS_FEATURE_ADFR*/
+
 	return rc;
 }
 
@@ -433,9 +500,9 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 	int i;
 
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature())
-		iris5_reset(panel);
+	if (iris_is_dual_supported() && panel->is_secondary)
+		return rc;
+	iris_reset();
 #endif
 
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio)) {
@@ -522,6 +589,20 @@ static int dsi_panel_set_pinctrl_state(struct dsi_panel *panel, bool enable)
 	return rc;
 }
 
+#ifdef OPLUS_BUG_STABILITY
+static int dsi_panel_1p8_on_off(struct dsi_panel *panel , int value)
+{
+	int rc = 0;
+
+	if (gpio_is_valid(panel->reset_config.disp_en_gpio)) {
+		rc = gpio_direction_output(panel->reset_config.disp_en_gpio, value);
+		if (rc) {
+			DSI_ERR("unable to set dir for disp gpio rc=%d\n", rc);
+		}
+	}
+	return rc;
+}
+#endif
 
 static int dsi_panel_power_on(struct dsi_panel *panel)
 {
@@ -548,11 +629,22 @@ static int dsi_panel_power_on(struct dsi_panel *panel)
 			DSI_ERR("unable to set dir for panel_vout_gpio rc=%d", rc);
 		gpio_set_value(panel->reset_config.panel_vout_gpio, 1);
 	}
+	if (gpio_is_valid(panel->reset_config.panel_vddr_aod_en_gpio)) {
+		rc = gpio_direction_output(panel->reset_config.panel_vddr_aod_en_gpio, 1);
+		if (rc)
+			DSI_ERR("unable to set dir for panel_vddr_aod_en_gpio rc=%d", rc);
+		gpio_set_value(panel->reset_config.panel_vddr_aod_en_gpio, 1);
+	}
 #endif
 
 #ifdef OPLUS_BUG_STABILITY
 /*Song.Gao@PSW.MM.Display.LCD.Stability,2019-12-17 Change reset enable sequence for LCD power on spec.*/
-	rc = dsi_panel_reset(panel);
+	if (!strcmp(panel->name,"samsung S6E3HC3 dsc cmd mode panel")) {
+		usleep_range(2000, 2100);
+		rc = dsi_panel_reset(panel);
+	} else {
+		rc = dsi_panel_reset(panel);
+	}
 #endif
 	if (rc) {
 		DSI_ERR("[%s] failed to reset panel, rc=%d\n", panel->name, rc);
@@ -588,14 +680,12 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 					!panel->reset_gpio_always_on)
 		gpio_set_value(panel->reset_config.reset_gpio, 0);
 
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+	iris_power_off(panel);
+#endif
+
 	if (gpio_is_valid(panel->reset_config.lcd_mode_sel_gpio))
 		gpio_set_value(panel->reset_config.lcd_mode_sel_gpio, 0);
-
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature())
-		iris5_power_off(panel);
-#endif
 
 #ifdef OPLUS_BUG_STABILITY
 /*Ling.Guo@PSW.MM.Display.LCD.Feature,2019-11-11 add for panel vout 1.5V*/
@@ -626,12 +716,12 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 
 #ifdef OPLUS_BUG_STABILITY
 extern int oplus_seed_backlight;
-extern u32 oplus_last_backlight;
 extern u32 oplus_backlight_delta;
 extern ktime_t oplus_backlight_time;
 extern int oplus_dimlayer_bl_enabled;
 extern int oplus_dimlayer_bl_enable_real;
 extern int oplus_dimlayer_bl_alpha;
+extern int oplus_dimlayer_bl_alpha_v2;
 #endif
 
 #ifndef OPLUS_BUG_STABILITY
@@ -639,7 +729,7 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 				enum dsi_cmd_set_type type)
 #else  /*OPLUS_BUG_STABILITY*/
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
- * Add for oplus display new structure
+ * Add for oppo display new structure
 */
 const char *cmd_set_prop_map[];
 int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
@@ -653,7 +743,7 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	enum dsi_cmd_set_state state;
 	struct dsi_display_mode *mode;
 	const struct mipi_dsi_host_ops *ops = panel->host->ops;
-#if defined(OPLUS_FEATURE_PXLW_IRIS5) || defined(OPLUS_BUG_STABILITY)
+#if defined(OPLUS_BUG_STABILITY)
 	struct dsi_panel_cmd_set *oplus_cmd_set = NULL;
 #endif
 	if (!panel || !panel->cur_mode)
@@ -667,9 +757,17 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 	SDE_EVT32(type, state, count);
 
 #ifdef OPLUS_BUG_STABILITY
-/* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/12/13
- * Add for oplus display new structure
-*/
+	if (type != DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_ON
+		&& type != DSI_CMD_READ_SAMSUNG_PANEL_REGISTER_OFF) {
+		#ifdef OPLUS_FEATURE_ADFR
+			if (type != DSI_CMD_FAKEFRAME) {
+			    pr_err("dsi_cmd %s\n", cmd_set_prop_map[type]);
+			}
+		#else
+		        pr_err("dsi_cmd %s\n", cmd_set_prop_map[type]);
+		#endif
+	}
+
 	if (oplus_seed_backlight) {
 		oplus_cmd_set = oplus_dsi_update_seed_backlight(panel, oplus_seed_backlight, type);
 		if (!IS_ERR_OR_NULL(oplus_cmd_set)) {
@@ -678,16 +776,6 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 			state = oplus_cmd_set->state;
 		}
 	}
-#endif /*OPLUS_BUG_STABILITY*/
-
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature() && iris5_abypass_mode_get(panel) == PASS_THROUGH_MODE) {
-		if (!IS_ERR_OR_NULL(oplus_cmd_set))
-			return iris5_panel_cmd_passthrough(panel, oplus_cmd_set);
-		else
-			return iris5_panel_cmd_passthrough(panel, &panel->cur_mode->priv_info->cmd_sets[type]);
-	}
 #endif
 
 	if (count == 0) {
@@ -695,6 +783,15 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 			 panel->name, type);
 		goto error;
 	}
+
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+    if (iris_is_chip_supported() && iris_is_pt_mode(panel)) {
+		rc = iris_pt_send_panel_cmd(panel, &(mode->priv_info->cmd_sets[type]));
+		if (rc)
+			DSI_ERR("iris_pt_send_panel_cmd failed\n");
+		return rc;
+    }
+#endif
 
 	for (i = 0; i < count; i++) {
 		if (state == DSI_CMD_SET_STATE_LP)
@@ -789,6 +886,18 @@ static int dsi_panel_wled_register(struct dsi_panel *panel,
 	return 0;
 }
 
+#ifdef CONFIG_OPLUS_FEATURE_MISC
+static int saved_backlight = -1;
+
+int dsi_panel_backlight_get(void)
+{
+	return saved_backlight;
+}
+#endif
+
+#ifdef OPLUS_BUG_STABILITY
+int enable_global_hbm_flags = 0;
+#endif
 static int dsi_panel_dcs_set_display_brightness_c2(struct mipi_dsi_device *dsi,
 			u32 bl_lvl)
 {
@@ -803,8 +912,6 @@ static int dsi_panel_dcs_set_display_brightness_c2(struct mipi_dsi_device *dsi,
 	return mipi_dsi_dcs_write(dsi, 0xC2, payload, sizeof(payload));
 }
 
-
-
 static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	u32 bl_lvl)
 {
@@ -818,6 +925,9 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	}
 
 	dsi = &panel->mipi_device;
+#ifdef CONFIG_OPLUS_FEATURE_MISC
+	saved_backlight = bl_lvl;
+#endif
 	bl = &panel->bl_config;
 
 	if (panel->bl_config.bl_inverted_dbv)
@@ -832,10 +942,28 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 		return 0;
 	}
 
-	if (panel->is_hbm_enabled)
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+	if (panel->oplus_priv.is_aod_ramless && !oplus_display_mode) {
+		if (bl_lvl == 0)
+			oplus_panel_process_dimming_v3(panel, bl_lvl);
 		return 0;
+	}
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+
+	if (panel->is_hbm_enabled) {
+		if ((bl_lvl != 0)) {
+			pr_info("backlight smooth check racing issue is_hbm_enabled\n");
+			return 0;
+		}
+	}
+
+	if((bl_lvl == 0) && oplus_display_get_hbm_mode()) {
+		pr_info("set backlight 0 and recovery hbm to 0\n");
+		__oplus_display_set_hbm(0);
+	}
 
 	if (oplus_display_get_hbm_mode()) {
+		pr_info("backlight smooth check racing issue oplus_display_get_hbm_mode\n");
 		return rc;
 	}
 
@@ -866,42 +994,78 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 			bl_lvl = oplus_dimlayer_bl_alpha;
 	}
 
-	/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-11-04 add for global hbm */
-	{
+	if (!strcmp(panel->oplus_priv.vendor_name, "S6E3HC3")
+		&& (bl_lvl <= PANEL_MAX_NOMAL_BRIGHTNESS)) {
+			bl_lvl = backlight_buf[bl_lvl];
+	}
+
+	if(OPLUS_DISPLAY_NORMAL_SCENE == get_oplus_display_scene()){
 		const struct mipi_dsi_host_ops *ops = dsi->host->ops;
 		char payload[] = {MIPI_DCS_WRITE_CONTROL_DISPLAY, 0xE0};
 		struct mipi_dsi_msg msg;
 
-		if (bl_lvl > panel->bl_config.bl_normal_max_level)
-			payload[1] = 0xE0;
-		else
-			payload[1] = 0x20;
+		if (!strcmp(panel->name,"samsung S6E3HC3 dsc cmd mode panel")) {
+			if(panel->panel_id2 <= 2) {
+				if(bl_lvl > HBM_BASE_600NIT)
+					bl_lvl = HBM_BASE_600NIT;
+				if (bl_lvl > panel->bl_config.bl_normal_max_level)
+					bl_lvl = backlight_500_600nit_buf[bl_lvl - PANEL_MAX_NOMAL_BRIGHTNESS];
+			} else {
+				if (bl_lvl > HBM_BASE_600NIT) {
+					if((bl_lvl - HBM_BASE_600NIT > 5) && (enable_global_hbm_flags == 0))
+						mipi_dsi_dcs_set_display_brightness(dsi, 3538);
+					rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_HBM_ENTER_SWITCH);
+					bl_lvl = backlight_600_800nit_buf[bl_lvl - HBM_BASE_600NIT];
+					enable_global_hbm_flags = 1;
+				} else {
+					if(enable_global_hbm_flags == 1) {
+						if(bl_lvl < HBM_BASE_600NIT) {
+							mipi_dsi_dcs_set_display_brightness(dsi, 2047);
+						}
+						payload[1] = 0x20;
+						memset(&msg, 0, sizeof(msg));
+						msg.channel = dsi->channel;
+						msg.tx_buf = payload;
+						msg.tx_len = sizeof(payload);
+						msg.type = MIPI_DSI_DCS_SHORT_WRITE_PARAM;
+						rc = ops->transfer(dsi->host, &msg);
+						enable_global_hbm_flags = 0;
+					}
+					if (bl_lvl > PANEL_MAX_NOMAL_BRIGHTNESS) {
+						bl_lvl = backlight_500_600nit_buf[bl_lvl - PANEL_MAX_NOMAL_BRIGHTNESS];
+					}
+				}
+			}
+		} else {
+			if (bl_lvl > panel->bl_config.bl_normal_max_level)
+				payload[1] = 0xE0;
+			else
+				payload[1] = 0x20;
 
-		memset(&msg, 0, sizeof(msg));
-		msg.channel = dsi->channel;
-		msg.tx_buf = payload;
-		msg.tx_len = sizeof(payload);
-		msg.type = MIPI_DSI_DCS_SHORT_WRITE_PARAM;
+			memset(&msg, 0, sizeof(msg));
+			msg.channel = dsi->channel;
+			msg.tx_buf = payload;
+			msg.tx_len = sizeof(payload);
+			msg.type = MIPI_DSI_DCS_SHORT_WRITE_PARAM;
 
-	#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-	// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-		if (iris_get_feature() && iris5_abypass_mode_get(panel) == PASS_THROUGH_MODE) {
-			struct dsi_cmd_desc hbm_cmd = {msg, 1, 1};
-			struct dsi_panel_cmd_set cmdset = {.state = DSI_CMD_SET_STATE_HS, .count = 1,.cmds = &hbm_cmd,};
-			rc = iris5_panel_cmd_passthrough(panel, &cmdset);
-		} else
-        #endif
-			rc = ops->transfer(dsi->host, &msg);
+		#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+            if (iris_is_chip_supported() && iris_is_pt_mode(panel)) {
+				struct dsi_cmd_desc hbm_cmd = {msg, 1, 1};
+				struct dsi_panel_cmd_set cmdset = {.state = DSI_CMD_SET_STATE_HS, .count = 1,.cmds = &hbm_cmd,};
+				rc = iris_pt_send_panel_cmd(panel, &cmdset);
+			} else
+		#endif
+				rc = ops->transfer(dsi->host, &msg);
 
-		if (rc < 0)
-			pr_err("failed to backlight bl_lvl %d - ret=%d\n", bl_lvl, rc);
+			if (rc < 0)
+				pr_err("failed to backlight bl_lvl %d - ret=%d\n", bl_lvl, rc);
+		}
 	}
 #endif /* OPLUS_BUG_STABILITY */
 
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature() && iris5_abypass_mode_get(panel) == PASS_THROUGH_MODE)
-		rc = iris5_update_backlight(1, bl_lvl);
+    if (iris_is_chip_supported() && iris_is_pt_mode(panel))
+        rc = iris_update_backlight(1, bl_lvl);
 	else
 		rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 #else
@@ -910,11 +1074,39 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	else
 		rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 #endif
+
 	if (rc < 0)
 		DSI_ERR("failed to update dcs backlight:%d\n", bl_lvl);
 
+	if (panel->oplus_priv.low_light_adjust_gamma_support) {
+		if(bl_lvl == 0) {
+			panel->oplus_priv.low_light_gamma_is_adjusted = false;
+		} else if (bl_lvl <= panel->oplus_priv.low_light_adjust_gamma_level) {
+			if (!panel->oplus_priv.low_light_gamma_is_adjusted) {
+				rc = dsi_panel_tx_cmd_set(panel, DSI_GAMMA_LOWBL_COMMAND);
+				if (rc < 0) {
+					pr_err("send DSI_GAMMA_LOWBL_COMMAND fail\n");
+					panel->oplus_priv.low_light_gamma_is_adjusted = false;
+				} else {
+					panel->oplus_priv.low_light_gamma_is_adjusted = true;
+					pr_info("bl_lvl=%d, send DSI_GAMMA_LOWBL_COMMAND ok\n", bl_lvl);
+				}
+			}
+		} else if (bl_lvl > panel->oplus_priv.low_light_adjust_gamma_level){
+			if (panel->oplus_priv.low_light_gamma_is_adjusted) {
+				rc = dsi_panel_tx_cmd_set(panel, DSI_GAMMA_NOMAL_COMMAND);
+				if (rc < 0) {
+					pr_err("send DSI_GAMMA_LOWBL_COMMAND fail\n");
+					panel->oplus_priv.low_light_gamma_is_adjusted = true;
+				} else {
+					panel->oplus_priv.low_light_gamma_is_adjusted = false;
+					pr_info("bl_lvl=%d, send DSI_GAMMA_NOMAL_COMMAND ok\n", bl_lvl);
+				}
+			}
+		}
+	}
+
 #ifdef OPLUS_BUG_STABILITY
-/*Mark.Yao@PSW.MM.Display.LCD.Stable,2019-12-15 fix datadimming flash */
 	oplus_panel_process_dimming_v2_post(panel, false);
 	oplus_last_backlight = bl_lvl;
 #endif /* OPLUS_BUG_STABILITY */
@@ -981,6 +1173,15 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	if (panel->host_config.ext_bridge_mode)
 		return 0;
 
+#ifdef OPLUS_BUG_STABILITY
+	/* Add for silence and sau reboot */
+	if(lcd_closebl_flag) {
+		pr_err("silence reboot we should set backlight to zero\n");
+		bl_lvl = 0;
+	} else if (bl_lvl > 0) {
+		lcd_closebl_flag_fp = 0;
+	}
+#endif
 	DSI_DEBUG("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
 	switch (bl->type) {
 	case DSI_BACKLIGHT_WLED:
@@ -2085,6 +2286,15 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-seed-2-command",
 	"qcom,mdss-dsi-seed-3-command",
 	"qcom,mdss-dsi-seed-4-command",
+	"qcom,mdss-dsi-seed-0-switch-command",
+	"qcom,mdss-dsi-seed-1-switch-command",
+	"qcom,mdss-dsi-seed-2-switch-command",
+	"qcom,mdss-dsi-seed-0-dc-switch-command",
+	"qcom,mdss-dsi-seed-1-dc-switch-command",
+	"qcom,mdss-dsi-seed-2-dc-switch-command",
+	"qcom,mdss-dsi-seed-0-dc-command",
+	"qcom,mdss-dsi-seed-1-dc-command",
+	"qcom,mdss-dsi-seed-2-dc-command",
 	"qcom,mdss-dsi-seed-off-command",
 	"qcom,mdss-dsi-normal-hbm-on-command",
 	"qcom,mdss-dsi-aod-high-mode-command",
@@ -2096,6 +2306,10 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-data-dimming-off-command",
 	"qcom,mdss-dsi-osc-clk-mode0-command",
 	"qcom,mdss-dsi-osc-clk-mode1-command",
+	"qcom,mdss-dsi-osc-clk-mode2-command",
+	"qcom,mdss-dsi-osc-clk-mode3-command",
+	"qcom,mdss-dsi-failsafe-on-command",
+	"qcom,mdss-dsi-failsafe-off-command",
 	"qcom,mdss-dsi-seed-enter-command",
 	"qcom,mdss-dsi-seed-exit-command",
 	"qcom,mdss-dsi-panel-id1-command",
@@ -2103,11 +2317,53 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-panel-read-register-close-command",
 	"qcom,mdss-dsi-mca-on-command",
 	"qcom,mdss-dsi-mca-off-command",
+	"qcom,mdss-dsi-loading-effect-1-command",
+	"qcom,mdss-dsi-loading-effect-2-command",
+	"qcom,mdss-dsi-loading-effect-off-command",
+	"qcom,mdss-dsi-hbm-enter-switch-command",
+	"qcom,mdss-dsi-hbm-enter1-switch-command",
+	"qcom,mdss-dsi-hbm-enter2-switch-command",
+	"qcom,mdss-dsi-hbm-exit-switch-command",
+	"qcom,mdss-dsi-hbm-exit1-switch-command",
+	"qcom,mdss-dsi-hbm-exit2-switch-command",
+	"qcom,mdss-dsi-aor-restore-command",
+	"qcom,mdss-dsi-lp1-pvt-command",
+	"qcom,mdss-dsi-nolp-pvt-command",
+	"qcom,mdss-dsi-aod-hbm-on-pvt-command",
+	"qcom,mdss-dsi-aod-hbm-off-pvt-command",
+	"qcom,mdss-dsi-dly-off-command",
+	"qcom,mdss-dsi-panel-register-read-command",
+	"qcom,mdss-dsi-panel-level2-key-enable-command",
+	"qcom,mdss-dsi-panel-level2-key-disable-command",
+	"qcom,mdss-dsi-fps-switch-command",
+	"qcom,mdss-dsi-cabc-off-command",
+	"qcom,mdss-dsi-cabc-1-command",
+	"qcom,mdss-dsi-cabc-2-command",
+	"qcom,mdss-dsi-cabc-3-command",
+	"qcom,mdss-dsi-gamma-nomal-command",
+	"qcom,mdss-dsi-gamma-lowbl-command",
+/* add for optimizing the display effect under low backlight brightness */
+	"qcom,mdss-dsi-panel-dimming-gamma-command",
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
 	"iris,abyp-panel-command",
 #endif
 #endif /*OPLUS_BUG_STABILITY*/
+
+#ifdef OPLUS_FEATURE_ADFR
+	"qcom,mdss-dsi-qsync-min-fps-0-command",
+	"qcom,mdss-dsi-qsync-min-fps-1-command",
+	"qcom,mdss-dsi-qsync-min-fps-2-command",
+	"qcom,mdss-dsi-qsync-min-fps-3-command",
+	"qcom,mdss-dsi-qsync-min-fps-4-command",
+	"qcom,mdss-dsi-qsync-min-fps-5-command",
+	"qcom,mdss-dsi-qsync-min-fps-6-command",
+	"qcom,mdss-dsi-qsync-min-fps-7-command",
+	"qcom,mdss-dsi-qsync-min-fps-8-command",
+	"qcom,mdss-dsi-qsync-min-fps-9-command",
+	"qcom,mdss-dsi-fakeframe-command",
+	"qcom,mdss-dsi-adfr-pre-switch-command",
+#endif
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -2150,6 +2406,15 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-seed-2-command-state",
 	"qcom,mdss-dsi-seed-3-command-state",
 	"qcom,mdss-dsi-seed-4-command-state",
+	"qcom,mdss-dsi-seed-0-switch-command-state",
+	"qcom,mdss-dsi-seed-1-switch-command-state",
+	"qcom,mdss-dsi-seed-2-switch-command-state",
+	"qcom,mdss-dsi-seed-0-dc-switch-command-state",
+	"qcom,mdss-dsi-seed-1-dc-switch-command-state",
+	"qcom,mdss-dsi-seed-2-dc-switch-command-state",
+	"qcom,mdss-dsi-seed-0-dc-command-state",
+	"qcom,mdss-dsi-seed-1-dc-command-state",
+	"qcom,mdss-dsi-seed-2-dc-command-state",
 	"qcom,mdss-dsi-seed-off-command-state",
 	"qcom,mdss-dsi-normal-hbm-on-command-state",
 	"qcom,mdss-dsi-aod-high-mode-command-state",
@@ -2161,6 +2426,10 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-data-dimming-off-command-state",
 	"qcom,mdss-dsi-osc-clk-mode0-command-state",
 	"qcom,mdss-dsi-osc-clk-mode1-command-state",
+	"qcom,mdss-dsi-osc-clk-mode2-command-state",
+	"qcom,mdss-dsi-osc-clk-mode3-command-state",
+	"qcom,mdss-dsi-failsafe-on-command-state",
+	"qcom,mdss-dsi-failsafe-off-command-state",
 	"qcom,mdss-dsi-seed-enter-command-state",
 	"qcom,mdss-dsi-seed-exit-command-state",
 	"qcom,mdss-dsi-panel-id1-command-state",
@@ -2168,11 +2437,53 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-panel-read-register-close-state",
 	"qcom,mdss-dsi-mca-on-command-state",
 	"qcom,mdss-dsi-mca-off-command-state",
+	"qcom,mdss-dsi-loading-effect-1-command-state",
+	"qcom,mdss-dsi-loading-effect-2-command-state",
+	"qcom,mdss-dsi-loading-effect-off-command-state",
+	"qcom,mdss-dsi-hbm-enter-switch-command-state",
+	"qcom,mdss-dsi-hbm-enter1-switch-command-state",
+	"qcom,mdss-dsi-hbm-enter2-switch-command-state",
+	"qcom,mdss-dsi-hbm-exit-switch-command-state",
+	"qcom,mdss-dsi-hbm-exit1-switch-command-state",
+	"qcom,mdss-dsi-hbm-exit2-switch-command-state",
+	"qcom,mdss-dsi-aor-restore-command-state",
+	"qcom,mdss-dsi-lp1-pvt-command-state",
+	"qcom,mdss-dsi-nolp-pvt-command-state",
+	"qcom,mdss-dsi-aod-hbm-on-pvt-command-state",
+	"qcom,mdss-dsi-aod-hbm-off-pvt-command-state",
+	"qcom,mdss-dsi-dly-off-command-state",
+	"qcom,mdss-dsi-panel-register-read-command-state",
+	"qcom,mdss-dsi-panel-level2-key-enable-command-state",
+	"qcom,mdss-dsi-panel-level2-key-disable-command-state",
+	"qcom,mdss-dsi-fps-switch-command-state",
+	"qcom,mdss-dsi-cabc-off-command-state",
+	"qcom,mdss-dsi-cabc-1-command-state",
+	"qcom,mdss-dsi-cabc-2-command-state",
+	"qcom,mdss-dsi-cabc-3-command-state",
+	"qcom,mdss-dsi-gamma-nomal-command-state",
+	"qcom,mdss-dsi-gamma-lowbl-command-state",
+/* add for optimizing the display effect under low backlight brightness */
+	"qcom,mdss-dsi-panel-dimming-gamma-command-state",
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
 	"iris,abyp-panel-command-state",
 #endif
 #endif /*OPLUS_BUG_STABILITY*/
+
+#ifdef OPLUS_FEATURE_ADFR
+	"qcom,mdss-dsi-qsync-min-fps-0-command-state",
+	"qcom,mdss-dsi-qsync-min-fps-1-command-state",
+	"qcom,mdss-dsi-qsync-min-fps-2-command-state",
+	"qcom,mdss-dsi-qsync-min-fps-3-command-state",
+	"qcom,mdss-dsi-qsync-min-fps-4-command-state",
+	"qcom,mdss-dsi-qsync-min-fps-5-command-state",
+	"qcom,mdss-dsi-qsync-min-fps-6-command-state",
+	"qcom,mdss-dsi-qsync-min-fps-7-command-state",
+	"qcom,mdss-dsi-qsync-min-fps-8-command-state",
+	"qcom,mdss-dsi-qsync-min-fps-9-command-state",
+	"qcom,mdss-dsi-fakeframe-command-state",
+	"qcom,mdss-dsi-adfr-pre-switch-command-state",
+#endif
 };
 
 static int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -2364,7 +2675,7 @@ static int dsi_panel_parse_cmd_sets(
 					i, rc);
 		#if defined(OPLUS_FEATURE_PXLW_IRIS5)
 		// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-			if (iris_get_feature())
+            if (iris_is_chip_supported())
 				set->state = DSI_CMD_SET_STATE_HS;
 			else
 				set->state = DSI_CMD_SET_STATE_LP;
@@ -2569,19 +2880,14 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 	struct dsi_parser_utils *utils = &panel->utils;
 	char *reset_gpio_name, *mode_set_gpio_name;
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
 	bool is_primary = false;
-
-	if (iris_get_feature())
-		iris5_gpio_parse(panel);
 #endif
 
 	if (!strcmp(panel->type, "primary")) {
 		reset_gpio_name = "qcom,platform-reset-gpio";
 		mode_set_gpio_name = "qcom,panel-mode-gpio";
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature())
+	if (iris_is_chip_supported())
 		is_primary = true;
 #endif
 	} else {
@@ -2595,7 +2901,7 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 		!panel->host_config.ext_bridge_mode) {
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-		if (iris_get_feature()) {
+		if (iris_is_chip_supported()) {
 			if (is_primary) {
 				rc = panel->reset_config.reset_gpio;
 				DSI_ERR("[%s] failed get reset gpio, rc=%d\n", panel->name, rc);
@@ -2619,14 +2925,20 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 					      "qcom,platform-panel-vout-gpio", 0);
 
 	if (!gpio_is_valid(panel->reset_config.panel_vout_gpio)) {
-		DSI_ERR("[%s] failed get panel_vout_gpio, rc=%d\n", panel->name, rc);
+		DSI_DEBUG("[%s] failed get panel_vout_gpio, rc=%d\n", panel->name, rc);
 	}
 
 	panel->reset_config.panel_te_esd_gpio = utils->get_named_gpio(utils->data,
 		                  "qcom,platform-panel-te-esd-gpio", 0);
 
 	if (!gpio_is_valid(panel->reset_config.panel_te_esd_gpio)) {
-		DSI_ERR("[%s:%d] platform-panel-te-esd-gpio", __func__, __LINE__);
+		DSI_DEBUG("[%s:%d] platform-panel-te-esd-gpio", __func__, __LINE__);
+	}
+	panel->reset_config.panel_vddr_aod_en_gpio = utils->get_named_gpio(utils->data,
+					      "qcom,platform-panel-vddr-aod-en-gpio", 0);
+
+	if (!gpio_is_valid(panel->reset_config.panel_vddr_aod_en_gpio)) {
+		DSI_ERR("[%s] failed get panel_vddr_aod_en_gpio, rc=%d\n", panel->name, rc);
 	}
 #endif
 
@@ -2644,6 +2956,15 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 				 panel->name, rc);
 		}
 	}
+
+#ifdef OPLUS_FEATURE_ADFR
+	if (oplus_adfr_is_support()) {
+		panel->vsync_switch_gpio = utils->get_named_gpio(utils->data, "qcom,vsync-switch-gpio", 0);
+		if (!gpio_is_valid(panel->vsync_switch_gpio)) {
+			DSI_DEBUG("[%s] vsync_switch_gpio is not set, rc=%d\n", panel->name, rc);
+		}
+	}
+#endif /*OPLUS_FEATURE_ADFR*/
 
 	panel->reset_config.lcd_mode_sel_gpio = utils->get_named_gpio(
 		utils->data, mode_set_gpio_name, 0);
@@ -2825,6 +3146,14 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 	} else {
 		panel->bl_config.brightness_default_level = val;
 	}
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-dc-backlight-level", &val);
+	if (rc) {
+		DSI_DEBUG("[%s] dc backlight unspecified, defaulting to default level 260\n",
+			 panel->name);
+		oplus_dimlayer_bl_alpha_v2 = 260;
+	} else {
+		oplus_dimlayer_bl_alpha_v2 = val;
+	}
 #endif
 
 	if (panel->bl_config.type == DSI_BACKLIGHT_PWM) {
@@ -2908,15 +3237,11 @@ int dsi_dsc_populate_static_param(struct msm_display_dsc_info *dsc)
 	if (dsc->version == 0x11 && dsc->scr_rev == 0x1)
 		dsc->first_line_bpg_offset = 15;
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	else if(iris_get_feature() && (dsc->bpc == 10) && (dsc->bpp == 10))
+	else if(iris_is_chip_supported() && (dsc->bpc == 10) && (dsc->bpp == 10))
 		dsc->first_line_bpg_offset = 9;
-	else
-		dsc->first_line_bpg_offset = 12;
-#else
-	else
-		dsc->first_line_bpg_offset = 12;
 #endif
+	else
+		dsc->first_line_bpg_offset = 12;
 
 	dsc->edge_factor = 6;
 	dsc->tgt_offset_hi = 3;
@@ -2948,9 +3273,8 @@ int dsi_dsc_populate_static_param(struct msm_display_dsc_info *dsc)
 		dsc->range_min_qp = dsi_dsc_rc_range_min_qp_1_1[ratio_index];
 		dsc->range_max_qp = dsi_dsc_rc_range_max_qp_1_1[ratio_index];
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-		if (iris_get_feature())
-			dsc->range_max_qp = dsi_dsc_rc_range_max_qp_1_1_iris[ratio_index];
+        if (iris_is_chip_supported() && ratio_index == DSC_10BPC_10BPP)
+            dsc->range_max_qp = dsi_dsc_rc_range_max_qp_1_1_pxlw;
 #endif
 	}
 	dsc->range_bpg_offset = dsi_dsc_rc_range_bpg_offset;
@@ -3811,6 +4135,9 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	if (!panel->name)
 		panel->name = DSI_PANEL_DEFAULT_LABEL;
 
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+    iris_query_capability(panel);
+#endif
 	/*
 	 * Set panel type to LCD as default.
 	 */
@@ -3859,10 +4186,16 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	}
 
 #ifdef OPLUS_BUG_STABILITY
-/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-10-30 add for fod config */
 	rc = dsi_panel_parse_oplus_config(panel);
 	if (rc)
 		DSI_ERR("failed to parse panel config, rc=%d\n", rc);
+#endif /* OPLUS_BUG_STABILITY */
+
+#ifdef OPLUS_BUG_STABILITY
+/*Jiasong.ZhongPSW.MM.Display.LCD.Stable,2020-09-17 add for DC backlight */
+	rc = dsi_panel_parse_oplus_dc_config(panel);
+	if (rc)
+		DSI_ERR("failed to parse dc config, rc=%d\n", rc);
 #endif /* OPLUS_BUG_STABILITY */
 
 	rc = dsi_panel_parse_power_cfg(panel);
@@ -3942,6 +4275,10 @@ int dsi_panel_drv_init(struct dsi_panel *panel,
 		return -EINVAL;
 	}
 
+#ifdef OPLUS_BUG_STABILITY
+	set_esd_check_happened(0);
+#endif
+
 	mutex_lock(&panel->panel_lock);
 
 	dev = &panel->mipi_device;
@@ -3976,7 +4313,7 @@ int dsi_panel_drv_init(struct dsi_panel *panel,
 		       rc);
 	#if defined(OPLUS_FEATURE_PXLW_IRIS5)
 	// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature()) {
+        if (iris_is_chip_supported()) {
 		if (!strcmp(panel->type, "primary"))
 			goto error_pinctrl_deinit;
 		else
@@ -4114,6 +4451,28 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 	num_bit_clks = !panel->dyn_clk_caps.dyn_clk_support ? 1 :
 					panel->dyn_clk_caps.bit_clk_list_len;
 
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+	if (panel->oplus_priv.is_aod_ramless) {
+		/* Inflate num_of_modes by fps and bit clks in dfps */
+		panel->num_display_modes = (num_cmd_modes * num_bit_clks) +
+				(num_video_modes * num_bit_clks * num_dfps_rates);
+	} else {
+		/*
+		 * Inflate num_of_modes by fps and bit clks in dfps.
+		 * Single command mode for video mode panels supporting
+		 * panel operating mode switch.
+		 */
+		num_video_modes = num_video_modes * num_bit_clks * num_dfps_rates;
+
+		if ((panel->panel_mode == DSI_OP_VIDEO_MODE) &&
+				(panel->panel_mode_switch_enabled))
+			num_cmd_modes  = 1;
+		else
+			num_cmd_modes = num_cmd_modes * num_bit_clks;
+
+		panel->num_display_modes = num_video_modes + num_cmd_modes;
+	}
+#else
 	/*
 	 * Inflate num_of_modes by fps and bit clks in dfps.
 	 * Single command mode for video mode panels supporting
@@ -4128,6 +4487,7 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 		num_cmd_modes = num_cmd_modes * num_bit_clks;
 
 	panel->num_display_modes = num_video_modes + num_cmd_modes;
+#endif /* OPLUS_BUG_STABILITY */
 
 error:
 	return rc;
@@ -4391,6 +4751,13 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 		} else {
 			mode->panel_mode = panel->panel_mode;
 		}
+
+#ifdef OPLUS_FEATURE_ADFR
+		// ignore the return result
+		if (oplus_adfr_is_support()) {
+			dsi_panel_parse_adfr(mode, utils);
+		}
+#endif
 	}
 	goto done;
 
@@ -4459,8 +4826,7 @@ int dsi_panel_pre_prepare(struct dsi_panel *panel)
 
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature())
-		iris5_power_on(panel);
+    iris_power_on(panel);
 #endif
 
 	/* If LP11_INIT is set, panel will be powered up during prepare() */
@@ -4470,6 +4836,14 @@ int dsi_panel_pre_prepare(struct dsi_panel *panel)
 	rc = dsi_panel_power_on(panel);
 	if (rc) {
 		DSI_ERR("[%s] panel power on failed, rc=%d\n", panel->name, rc);
+		#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+		if (iris_is_chip_supported()) {
+			if (iris_vdd_valid())
+				iris_disable_vdd();
+			else
+				iris_control_pwr_regulator(false);
+		}
+		#endif
 		goto error;
 	}
 
@@ -4504,9 +4878,8 @@ int dsi_panel_update_pps(struct dsi_panel *panel)
 	}
 
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature() && iris5_abypass_mode_get(panel) == PASS_THROUGH_MODE)
-		rc = iris5_panel_cmd_passthrough(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_PPS]));
+    if (iris_is_chip_supported() && iris_is_pt_mode(panel))
+        rc = iris_pt_send_panel_cmd(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_PPS]));
 	else
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PPS);
 #else
@@ -4547,19 +4920,19 @@ int dsi_panel_set_lp1(struct dsi_panel *panel)
 		panel->power_mode != SDE_MODE_DPMS_LP2)
 		dsi_pwr_panel_regulator_mode_set(&panel->power_info,
 			"ibb", REGULATOR_MODE_IDLE);
+#ifdef OPLUS_BUG_STABILITY
+	if (!strcmp(panel->oplus_priv.vendor_name, "S6E3HC3") && (panel->panel_id2 >= 5))
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_LP1_PVT);
+	else
+#endif
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_LP1);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_LP1 cmd, rc=%d\n",
 		       panel->name, rc);
 #ifdef OPLUS_BUG_STABILITY
-/* Gou shengjun@PSW.MM.Display.LCD.Stable,2018-11-21
- * Fix aod flash problem
-*/
+	oplus_set_aod_gamma_data_status(panel);
 	oplus_update_aod_light_mode_unlock(panel);
 	panel->need_power_on_backlight = true;
-/* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
- * Set and save display status
-*/
 	set_oplus_display_power_status(OPLUS_DISPLAY_POWER_DOZE);
 #endif
 exit:
@@ -4618,10 +4991,9 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 			"ibb", REGULATOR_MODE_NORMAL);
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature() && iris5_abypass_mode_get(panel) == PASS_THROUGH_MODE)
-		rc = iris5_panel_cmd_passthrough(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_NOLP]));
+	if (!strcmp(panel->oplus_priv.vendor_name, "S6E3HC3") && (panel->panel_id2 >= 5))
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_NOLP_PVT);
 	else
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_NOLP);
 #else
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_NOLP);
 #endif
@@ -4781,7 +5153,11 @@ int dsi_panel_send_qsync_off_dcs(struct dsi_panel *panel,
 {
 	int rc = 0;
 
+#ifdef OPLUS_FEATURE_ADFR
+	if (!panel || !panel->cur_mode) {
+#else
 	if (!panel) {
+#endif /* OPLUS_FEATURE_ADFR */
 		DSI_ERR("invalid params\n");
 		return -EINVAL;
 	}
@@ -4826,11 +5202,6 @@ int dsi_panel_send_roi_dcs(struct dsi_panel *panel, int ctrl_idx,
 	mutex_lock(&panel->panel_lock);
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_ROI);
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature() && iris5_abypass_mode_get(panel) == PASS_THROUGH_MODE)
-		rc = iris5_panel_cmd_passthrough(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_ROI]));
-#endif
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_ROI cmds, rc=%d\n",
 				panel->name, rc);
@@ -4899,6 +5270,10 @@ int dsi_panel_mode_switch_to_cmd(struct dsi_panel *panel)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_CMD_TO_VID_SWITCH cmds, rc=%d\n",
 		       panel->name, rc);
 
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+	oplus_ramless_panel_update_aod_area_unlock();
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -4932,22 +5307,42 @@ int dsi_panel_switch(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+	if (iris_is_dual_supported() && panel->is_secondary)
+		return rc;
+#endif
 	mutex_lock(&panel->panel_lock);
 
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature())
-		rc = iris_panel_switch(panel,
-			&(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_TIMING_SWITCH]), &panel->cur_mode->timing);
-	else
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_TIMING_SWITCH);
-	pr_err("Send DSI_CMD_SET_TIMING_SWITCH cmds\n");
-#else
-	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_TIMING_SWITCH);
+	if (iris_is_chip_supported()) {
+		rc = iris_switch(panel,
+				&(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_TIMING_SWITCH]),
+				&panel->cur_mode->timing);
+	} else
 #endif
+	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_TIMING_SWITCH);
+
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_TIMING_SWITCH cmds, rc=%d\n",
 		       panel->name, rc);
+#ifdef OPLUS_BUG_STABILITY
+	if (panel->oplus_priv.gamma_switch_enable)
+		gamma_switch(panel);
+#endif /*OPLUS_BUG_STABILITY*/
+
+#ifdef OPLUS_FEATURE_ADFR
+	if (oplus_adfr_is_support()) {
+		/* reset adfr auto mode status as panel mode will be change after timing switch */
+		dsi_panel_adfr_status_reset(panel);
+		if (oplus_adfr_get_vsync_mode() == OPLUS_EXTERNAL_TE_TP_VSYNC) {
+			oplus_adfr_resolution_vsync_switch(panel);
+		} else {
+			/* make sure the cur_h_active is the newest status */
+			panel->cur_h_active = panel->cur_mode->timing.h_active;
+		}
+	}
+#endif /* OPLUS_FEATURE_ADFR */
 
 	mutex_unlock(&panel->panel_lock);
 	return rc;
@@ -4961,19 +5356,22 @@ int dsi_panel_post_switch(struct dsi_panel *panel)
 		DSI_ERR("Invalid params\n");
 		return -EINVAL;
 	}
-
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+    if (iris_is_dual_supported() && panel->is_secondary)
+		return rc;
+#endif
 	mutex_lock(&panel->panel_lock);
 
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature())
-		rc = iris_panel_post_switch(panel,
-			&(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_POST_TIMING_SWITCH]), &panel->cur_mode->timing);
-	else
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_POST_TIMING_SWITCH);
-#else
-	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_POST_TIMING_SWITCH);
+	if (iris_is_chip_supported()) {
+		rc = iris_post_switch(panel,
+				&(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_POST_TIMING_SWITCH]),
+				&panel->cur_mode->timing);
+	} else
 #endif
+
+	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_POST_TIMING_SWITCH);
 
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_POST_TIMING_SWITCH cmds, rc=%d\n",
@@ -4994,24 +5392,44 @@ int dsi_panel_enable(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
+#ifdef OPLUS_FEATURE_ADFR
+	if (oplus_adfr_is_support()) {
+		oplus_adfr_vsync_switch_reset(panel);
+	}
+#endif /* OPLUS_FEATURE_ADFR */
+
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISIPALY, 2020/06/02, IRIS5 feature.
-	if (iris_get_feature())
-		rc = iris_panel_enable(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_ON]));
+    if (iris_is_chip_supported())
+        rc = iris_enable(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_ON]));
 	else
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_ON);
-#else
-	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_ON);
 #endif
+	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_ON);
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_ON cmds, rc=%d\n",
 		       panel->name, rc);
 	else
 		panel->panel_initialized = true;
+#ifdef OPLUS_BUG_STABILITY
+	if (panel->oplus_priv.gamma_switch_enable && (panel->cur_mode->timing.refresh_rate == 90)) {
+		dsi_panel_write_gamma_90(panel);
+	}
+
+/* add for optimizing the display effect under low backlight brightness */
+	rc = oplus_dimming_gamma_write(panel);
+	if (rc)
+		DSI_ERR("Failed to write dimming gamma, rc=%d\n", rc);
+#endif /*OPLUS_BUG_STABILITY*/
+
+#ifdef OPLUS_FEATURE_ADFR
+	if (oplus_adfr_is_support()) {
+		dsi_panel_adfr_status_reset(panel);
+	}
+#endif /* OPLUS_FEATURE_ADFR */
 
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 // Pixelworks@MULTIMEDIA.DISIPALY, 2020/06/02, IRIS5 feature.
-	if (iris_get_feature() && panel->is_secondary) {
+	if (panel->is_secondary) {
 		mutex_unlock(&panel->panel_lock);
 		return rc;
 	}
@@ -5023,7 +5441,7 @@ int dsi_panel_enable(struct dsi_panel *panel)
 */
 	panel->need_power_on_backlight = true;
 /* Gou shengjun@PSW.MM.Display.LCD.Stable,2018-08-23
- * add for save display panel power status at oplus display management
+ * add for save display panel power status at oppo display management
 */
 	set_oplus_display_power_status(OPLUS_DISPLAY_POWER_ON);
 #endif
@@ -5043,15 +5461,8 @@ int dsi_panel_post_enable(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature() && iris5_abypass_mode_get(panel) == PASS_THROUGH_MODE)
-		rc = iris5_panel_cmd_passthrough(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_POST_ON]));
-	else
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_POST_ON);
-#else
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_POST_ON);
-#endif
+
 	if (rc) {
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_POST_ON cmds, rc=%d\n",
 		       panel->name, rc);
@@ -5072,15 +5483,7 @@ int dsi_panel_pre_disable(struct dsi_panel *panel)
 	}
 
 	mutex_lock(&panel->panel_lock);
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature() && iris5_abypass_mode_get(panel) == PASS_THROUGH_MODE)
-		rc = iris5_panel_cmd_passthrough(panel, &(panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_PRE_OFF]));
-	else
-		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PRE_OFF);
-#else
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PRE_OFF);
-#endif
 	if (rc) {
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_PRE_OFF cmds, rc=%d\n",
 		       panel->name, rc);
@@ -5101,6 +5504,11 @@ int dsi_panel_disable(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+	if (iris_is_dual_supported() && panel->is_secondary)
+		return rc;
+#endif
+
 	mutex_lock(&panel->panel_lock);
 
 	/* Avoid sending panel off commands when ESD recovery is underway */
@@ -5118,9 +5526,8 @@ int dsi_panel_disable(struct dsi_panel *panel)
 
 	#if defined(OPLUS_FEATURE_PXLW_IRIS5)
 	// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Panel commands are sent through Iris5 when Iris5 is PT.
-		if (iris_get_feature()) {
-			iris5_lightoff(panel, NULL);
-		}
+		if (iris_is_chip_supported())			
+            iris_disable(panel, NULL);
 	#endif
 
 		if (rc) {
@@ -5142,7 +5549,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 */
 	panel->is_hbm_enabled = false;
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
- * add for save display panel power status at oplus display management
+ * add for save display panel power status at oppo display management
 */
 	set_oplus_display_power_status(OPLUS_DISPLAY_POWER_OFF);
 #endif

@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_ffl.c
 ** Description : oplus ffl feature
 ** Version : 1.0
@@ -16,6 +16,7 @@
 #include "dsi_display.h"
 #include "oplus_dsi_support.h"
 #include "oplus_onscreenfingerprint.h"
+/*#include <soc/oplus/oplus_mm_kevent.h>*/
 
 #define FFL_LEVEL_START 2
 #define FFL_LEVEL_END  236
@@ -54,6 +55,7 @@ void oplus_ffl_set(int enable)
 
 	if ((is_ffl_enable ==FFL_TRIGGLE_CONTROL) && ffl_work_running) {
 		scnprintf(payload, sizeof(payload), "fflset@@%d", enable);
+		/*upload_mm_fb_kevent_to_atlas(OPLUS_DISPLAY_EVENTID_FFLSET, payload);*/
 	}
 }
 

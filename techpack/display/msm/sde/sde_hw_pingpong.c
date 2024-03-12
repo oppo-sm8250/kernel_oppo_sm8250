@@ -14,7 +14,7 @@
 
 #ifdef OPLUS_BUG_STABILITY
 /*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-07-25 add for aod function */
-#include "oplus_dsi_support.h"
+#include "dsi_display.h"
 #endif /* OPLUS_BUG_STABILITY */
 
 #define PP_TEAR_CHECK_EN                0x000
@@ -45,6 +45,10 @@ static u32 dither_depth_map[DITHER_DEPTH_MAP_INDEX] = {
 
 #define MERGE_3D_MODE 0x004
 #define MERGE_3D_MUX  0x000
+
+#ifdef OPLUS_BUG_STABILITY
+extern int oplus_dither_enable;
+#endif
 
 static struct sde_merge_3d_cfg *_merge_3d_offset(enum sde_merge_3d idx,
 		struct sde_mdss_cfg *m,
@@ -161,12 +165,6 @@ static struct sde_pingpong_cfg *_pingpong_offset(enum sde_pingpong pp,
 	return ERR_PTR(-EINVAL);
 }
 
-#ifdef OPLUS_BUG_STABILITY
-/* Gou shengjun@PSW.MM.Display.Lcd.Stability,2018/11/21
- * For solve te sync issue at doze
-*/
-extern int oplus_request_power_status;
-#endif /*OPLUS_BUG_STABILITY*/
 static int sde_hw_pp_setup_te_config(struct sde_hw_pingpong *pp,
 		struct sde_hw_tear_check *te)
 {
@@ -181,21 +179,7 @@ static int sde_hw_pp_setup_te_config(struct sde_hw_pingpong *pp,
 	if (te->hw_vsync_mode)
 		cfg |= BIT(20);
 
-#ifdef OPLUS_BUG_STABILITY
-/* Gou shengjun@PSW.MM.Display.Lcd.Stability,2018/11/21
- * For solve te sync issue at doze
- */
-	{
-		int temp_vclks_line = te->vsync_count;
-
-		if((oplus_request_power_status == OPLUS_DISPLAY_POWER_DOZE) || (oplus_request_power_status == OPLUS_DISPLAY_POWER_DOZE_SUSPEND)) {
-			temp_vclks_line = temp_vclks_line * 60 * 100 / 3000;
-		}
-		cfg |= temp_vclks_line;
-	}
-#else /*OPLUS_BUG_STABILITY*/
 	cfg |= te->vsync_count;
-#endif /*OPLUS_BUG_STABILITY*/
 
 	SDE_REG_WRITE(c, PP_SYNC_CONFIG_VSYNC, cfg);
 	SDE_REG_WRITE(c, PP_SYNC_CONFIG_HEIGHT, te->sync_cfg_height);
@@ -342,7 +326,16 @@ static int sde_hw_pp_setup_dither_v1(struct sde_hw_pingpong *pp,
 	struct sde_hw_blk_reg_map *c;
 	struct drm_msm_dither *dither = (struct drm_msm_dither *)cfg;
 	u32 base = 0, offset = 0, data = 0, i = 0;
+#ifdef OPLUS_BUG_STABILITY
+	struct dsi_display *display = get_main_display();
+	bool is_oplus_project = false;
 
+	if (!display) {
+		DRM_ERROR("%s: failed to get dsi dsilay! LINE:%d\n",__func__, __LINE__);
+		return -EINVAL;
+	}
+	is_oplus_project = display->panel->oplus_priv.is_oplus_project;
+#endif
 	if (!pp)
 		return -EINVAL;
 
@@ -367,6 +360,15 @@ static int sde_hw_pp_setup_dither_v1(struct sde_hw_pingpong *pp,
 		return -EINVAL;
 
 	offset += 4;
+#ifdef OPLUS_BUG_STABILITY
+	if (is_oplus_project) {
+		dither_depth_map[5] = 1;
+		dither_depth_map[6] = 2;
+		dither_depth_map[7] = 3;
+		dither_depth_map[8] = 2;
+		SDE_DEBUG("oplus_project's dither_depth_map\n");
+	}
+#endif
 	data = dither_depth_map[dither->c0_bitdepth] & REG_MASK(2);
 	data |= (dither_depth_map[dither->c1_bitdepth] & REG_MASK(2)) << 2;
 	data |= (dither_depth_map[dither->c2_bitdepth] & REG_MASK(2)) << 4;
@@ -382,6 +384,14 @@ static int sde_hw_pp_setup_dither_v1(struct sde_hw_pingpong *pp,
 			((dither->matrix[i + 3] & REG_MASK(4)) << 12);
 		SDE_REG_WRITE(c, base + offset, data);
 	}
+#ifdef OPLUS_BUG_STABILITY
+	if(is_oplus_project)
+		if(oplus_dither_enable)
+			SDE_REG_WRITE(c, base, 1);
+		else
+			SDE_REG_WRITE(c, base, 0);
+	else
+#endif
 	SDE_REG_WRITE(c, base, 1);
 
 	return 0;

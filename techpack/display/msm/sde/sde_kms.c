@@ -64,6 +64,9 @@
 #include "oplus_display_private_api.h"
 #include "oplus_onscreenfingerprint.h"
 #endif
+#ifdef OPLUS_FEATURE_ADFR
+#include "oplus_adfr.h"
+#endif
 
 /* defines for secure channel call */
 #define MEM_PROTECT_SD_CTRL_SWITCH 0x18
@@ -1216,6 +1219,24 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 
 	sde_kms_check_for_ext_vote(sde_kms, &priv->phandle);
 
+#ifdef OPLUS_FEATURE_ADFR
+	if (oplus_adfr_is_support()) {
+		if (oplus_adfr_get_vsync_mode() == OPLUS_DOUBLE_TE_VSYNC) {
+			SDE_ATRACE_BEGIN("sde_kms_adfr_vsync_source_switch");
+			for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
+				sde_kms_adfr_vsync_source_switch(kms, crtc);
+			}
+			SDE_ATRACE_END("sde_kms_adfr_vsync_source_switch");
+		} else if (oplus_adfr_get_vsync_mode() == OPLUS_EXTERNAL_TE_TP_VSYNC) {
+			SDE_ATRACE_BEGIN("sde_kms_adfr_vsync_switch");
+			for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
+				sde_kms_adfr_vsync_switch(kms, crtc);
+			}
+			SDE_ATRACE_END("sde_kms_adfr_vsync_switch");
+		}
+	}
+#endif /* OPLUS_FEATURE_ADFR */
+
 	SDE_EVT32_VERBOSE(SDE_EVTLOG_FUNC_EXIT);
 	SDE_ATRACE_END("sde_kms_complete_commit");
 }
@@ -1446,6 +1467,10 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.get_panel_vfp = dsi_display_get_panel_vfp,
 		.get_default_lms = dsi_display_get_default_lms,
 		.get_qsync_min_fps = dsi_display_get_qsync_min_fps,
+#ifdef OPLUS_FEATURE_ADFR
+		// enable qsync on/off cmds
+		.prepare_commit = dsi_display_pre_commit,
+#endif
 	};
 	static const struct sde_connector_ops wb_ops = {
 		.post_init =    sde_wb_connector_post_init,
@@ -3107,22 +3132,6 @@ end:
 	return 0;
 }
 
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-static int sde_kms_iris5_operate(struct msm_kms *kms,
-		u32 operate_type, struct msm_iris_operate_value *operate_value)
-{
-	int ret = -EINVAL;
-
-	if (operate_type == DRM_MSM_IRIS_OPERATE_CONF) {
-		ret = iris5_operate_conf(operate_value);
-	} else if (operate_type == DRM_MSM_IRIS_OPERATE_TOOL) {
-		ret = iris5_operate_tool(operate_value);
-	}
-
-	return ret;
-}
-#endif // OPLUS_FEATURE_PXLW_IRIS5
-
 static const struct msm_kms_funcs kms_funcs = {
 	.hw_init         = sde_kms_hw_init,
 	.postinit        = sde_kms_postinit,
@@ -3154,7 +3163,7 @@ static const struct msm_kms_funcs kms_funcs = {
 	.postopen = _sde_kms_post_open,
 	.check_for_splash = sde_kms_check_for_splash,
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-	.iris5_operate = sde_kms_iris5_operate,
+	.iris_operate = iris_sde_kms_iris_operate,
 #endif
 	.get_mixer_count = sde_kms_get_mixer_count,
 };

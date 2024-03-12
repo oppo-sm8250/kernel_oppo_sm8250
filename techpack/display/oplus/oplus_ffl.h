@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_ffl.h
 ** Description : oplus ffl feature
 ** Version : 1.0

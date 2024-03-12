@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_onscreenfingerprint.h
 ** Description : oplus onscreenfingerprint feature
 ** Version : 1.0
@@ -20,11 +20,20 @@
 #include "dsi_parser.h"
 #include "sde_encoder_phys.h"
 
-
 #define FFL_FP_LEVEL 150
 
+extern int oplus_onscreenfp_status;
+
+enum CUST_ALPHA_ENUM{
+	CUST_A_NO = 0,
+	CUST_A_TRANS,  /* alpha = 0, transparent */
+	CUST_A_OPAQUE, /* alpha = 255, opaque */
+};
+
+void oplus_set_aod_dim_alpha(int cust);
 
 int oplus_get_panel_brightness(void);
+int oplus_get_panel_power_mode(void);
 
 int dsi_panel_parse_oplus_fod_config(struct dsi_panel *panel);
 
@@ -50,7 +59,7 @@ bool _sde_encoder_setup_dither_for_onscreenfingerprint(struct sde_encoder_phys *
 						  void *dither_cfg, int len, struct sde_hw_pingpong *hw_pp);
 
 int sde_plane_check_fingerprint_layer(const struct drm_plane_state *drm_state);
-int oplus_display_set_dimlayer_hbm(void *data);
-int oplus_display_get_dimlayer_hbm(void *data);
-
+int oplus_display_panel_set_dimlayer_hbm(void *data);
+int oplus_display_panel_get_dimlayer_hbm(void *data);
+int oplus_display_panel_notify_fp_press(void *data);
 #endif /*_OPLUS_ONSCREENFINGERPRINT_H_*/

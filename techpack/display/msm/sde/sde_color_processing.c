@@ -1373,12 +1373,10 @@ static void _sde_cp_crtc_enable_hist_irq(struct sde_crtc *sde_crtc)
 }
 
 #ifdef OPLUS_BUG_STABILITY
-/*Mark.Yao@PSW.MM.Display.LCD.Stable,2019-04-28 fix pcc abnormal on onscreenfinger scene */
 extern struct drm_msm_pcc oplus_save_pcc;
 extern bool oplus_pcc_enabled;
 extern bool oplus_skip_pcc;
 #endif
-
 static int sde_cp_crtc_checkfeature(struct sde_cp_node *prop_node,
 	struct sde_crtc *sde_crtc, struct sde_crtc_state *sde_crtc_state)
 {
@@ -1792,12 +1790,12 @@ void sde_cp_crtc_apply_properties(struct drm_crtc *crtc)
 	struct sde_cp_node *prop_node = NULL, *n = NULL;
 	struct sde_hw_ctl *ctl;
 	u32 num_mixers = 0, i = 0;
-	int rc = 0;
-	bool need_flush = false;
 	#ifdef OPLUS_BUG_STABILITY
 	/*Mark.Yao@PSW.MM.Display.LCD.Stable,2019-04-28 fix pcc abnormal on onscreenfinger scene */
 	bool dirty_pcc = false;
 	#endif /* OPLUS_BUG_STABILITY */
+	int rc = 0;
+	bool need_flush = false;
 
 	if (!crtc || !crtc->dev) {
 		DRM_ERROR("invalid crtc %pK dev %pK\n", crtc,
@@ -1825,16 +1823,8 @@ void sde_cp_crtc_apply_properties(struct drm_crtc *crtc)
 	if (dirty_pcc) {
 		set_dspp_flush = true;
 	}
+	if (!dirty_pcc)
 	#endif /* OPLUS_BUG_STABILITY */
-
-	/* Check if dirty lists are empty and ad features are disabled for
-	 * early return. If ad properties are active then we need to issue
-	 * dspp flush.
-	 **/
-	#ifdef OPLUS_BUG_STABILITY
-	/*Mark.Yao@PSW.MM.Display.LCD.Stable,2019-04-28 fix pcc abnormal on onscreenfinger scene */
-	if (!dirty_pcc) {
-	#endif
 	if (list_empty(&sde_crtc->dirty_list) &&
 			list_empty(&sde_crtc->ad_dirty) &&
 			list_empty(&sde_crtc->ad_active) &&
@@ -1842,9 +1832,6 @@ void sde_cp_crtc_apply_properties(struct drm_crtc *crtc)
 		DRM_DEBUG_DRIVER("all lists are empty\n");
 		goto exit;
 	}
-	#ifdef OPLUS_BUG_STABILITY
-	}
-	#endif
 
 	rc = sde_cp_crtc_set_pu_features(crtc, &need_flush);
 	if (rc) {

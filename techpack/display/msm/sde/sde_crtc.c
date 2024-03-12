@@ -49,10 +49,20 @@
 #include <linux/notifier.h>
 #include "oplus_display_private_api.h"
 #include "oplus_onscreenfingerprint.h"
+#include "oplus_aod.h"
 
 extern int oplus_dimlayer_fingerprint_failcount;
 extern int oplus_underbrightness_alpha;
 extern int msm_drm_notifier_call_chain(unsigned long val, void *v);
+extern int oplus_request_power_status;
+#endif
+
+#ifdef OPLUS_FEATURE_ADFR
+#include "oplus_adfr.h"
+#endif
+
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+extern int igc_lut_update;
 #endif
 
 #define SDE_PSTATES_MAX (SDE_STAGE_MAX * 4)
@@ -2500,6 +2510,12 @@ static void sde_crtc_frame_event_work(struct kthread_work *work)
 				(fevent->event & SDE_ENCODER_FRAME_EVENT_ERROR)
 				? SDE_FENCE_SIGNAL_ERROR : SDE_FENCE_SIGNAL);
 
+#ifdef OPLUS_FEATURE_ADFR
+	if (oplus_adfr_is_support()) {
+		sde_crtc_adfr_handle_frame_event(crtc, fevent);
+	}
+#endif
+
 	if (fevent->event & SDE_ENCODER_FRAME_EVENT_PANEL_DEAD)
 		SDE_ERROR("crtc%d ts:%lld received panel dead event\n",
 				crtc->base.id, ktime_to_ns(fevent->ts));
@@ -2510,7 +2526,6 @@ static void sde_crtc_frame_event_work(struct kthread_work *work)
 	SDE_ATRACE_END("crtc_frame_event");
 }
 #ifdef OPLUS_BUG_STABILITY
-/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-07-25 support onscreenfinger */
 extern u32 oplus_onscreenfp_vblank_count;
 extern ktime_t oplus_onscreenfp_pressed_time;
 #endif /* OPLUS_BUG_STABILITY */
@@ -2582,6 +2597,8 @@ void sde_crtc_complete_commit(struct drm_crtc *crtc,
 							msecs_to_jiffies(17));
 				}
 			}
+			pr_err("fingerprint status: %s",
+			       blank ? "pressed" : "up");
 			msm_drm_notifier_call_chain(MSM_DRM_ONSCREENFINGERPRINT_EVENT,
 					&notifier_data);
 		}
@@ -3381,6 +3398,9 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct sde_crtc_state *cstate;
 	struct sde_kms *sde_kms;
 	int idle_time = 0;
+#ifdef OPLUS_BUG_STABILITY
+	struct dsi_display *display = get_main_display();
+#endif /*OPLUS_BUG_STABILITY*/
 
 	if (!crtc || !crtc->dev || !crtc->dev->dev_private) {
 		SDE_ERROR("invalid crtc\n");
@@ -3418,6 +3438,14 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 
 	event_thread = &priv->event_thread[crtc->index];
 	idle_time = sde_crtc_get_property(cstate, CRTC_PROP_IDLE_TIMEOUT);
+#ifdef OPLUS_BUG_STABILITY
+	if (display && display->panel) {
+		if (display->panel->oplus_priv.dfps_idle_off)
+			idle_time = 0;
+	} else {
+		pr_err("%s : display or display->panel is NULL\n", __func__);
+	}
+#endif /*OPLUS_BUG_STABILITY*/
 
 	/*
 	 * If no mixers has been allocated in sde_crtc_atomic_check(),
@@ -4702,7 +4730,6 @@ static int _sde_crtc_check_secure_state(struct drm_crtc *crtc,
 /* Gou shengjun@PSW.MM.Display.LCD.Feature,2018-11-21
  * Add for OnScreenFingerprint
 */
-extern int oplus_onscreenfp_status;
 extern int lcd_closebl_flag_fp;
 extern int oplus_dimlayer_hbm;
 extern int oplus_dimlayer_bl_alpha_value;
@@ -4720,6 +4747,7 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 	int aod_index = -1;
 	int zpos = INT_MAX;
 	int mode;
+	int panel_power_mode;
 	int fp_mode = oplus_onscreenfp_status;
 	int dimlayer_hbm = oplus_dimlayer_hbm;
 	int dimlayer_bl = 0;
@@ -4775,6 +4803,7 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 	cstate->fingerprint_mode = false;
 	cstate->fingerprint_pressed = false;
 
+	/* initalize dim layer */
 	if (dimlayer_hbm || dimlayer_bl) {
 		if (fp_index >= 0 && fppressed_index >= 0) {
 			if (pstates[fp_index].stage >= pstates[fppressed_index].stage) {
@@ -4790,38 +4819,74 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 			return 0;
 		}
 
-		if (dimlayer_hbm)
+		if (dimlayer_hbm && (oplus_get_panel_brightness() != 0)) {
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+			struct dsi_display *display = get_main_display();
+
+			if (display == NULL || display->panel == NULL)
+				return false;
+
+			if ((!strcmp(display->panel->oplus_priv.vendor_name, "AMB655UV01") && (display->panel->oplus_priv.is_oplus_project))) {
+				//if pw set panel brightness,need delay hbm on&dimming layer to next frame.
+				if(igc_lut_update == 1) {
+					igc_lut_update = 0;
+					return 0;
+				}
+			}
+#endif
 			cstate->fingerprint_mode = true;
+		}
 		else
 			cstate->fingerprint_mode = false;
 
 		SDE_DEBUG("debug for get cstate->fingerprint_mode = %d\n", cstate->fingerprint_mode);
+		panel_power_mode = oplus_get_panel_power_mode();
 
+		/* when aod layer is present */
 		if (aod_index >= 0) {
-			if (zpos > pstates[aod_index].stage)
-				zpos = pstates[aod_index].stage;
-			pstates[aod_index].stage++;
+			/* set dimlayer alpha transparent, appear AOD layer by force */
+			if (((fp_index >= 0) || (fppressed_index < 0)) &&
+				((panel_power_mode == SDE_MODE_DPMS_LP1) || (panel_power_mode == SDE_MODE_DPMS_LP2))) {
+				oplus_set_aod_dim_alpha(CUST_A_TRANS);
+			}
+			if (((fp_index >= 0) || (fppressed_index < 0)) &&
+				(panel_power_mode == SDE_MODE_DPMS_ON)) {
+				oplus_set_aod_dim_alpha(CUST_A_OPAQUE);
+			}
+			/*
+			 * set dimlayer alpha opaque, disappear AOD layer by force when pressed down
+			 * and SDE_MODE_DPMS_LP1/SDE_MODE_DPMS_LP2
+			 */
+			if (((fp_mode == 1) && (panel_power_mode != SDE_MODE_DPMS_ON))
+				|| (oplus_request_power_status == OPLUS_DISPLAY_POWER_ON))
+				oplus_set_aod_dim_alpha(CUST_A_OPAQUE);
+
+		} else { /* when screen on, restore dimlayer alpha */
+			if (oplus_get_panel_brightness() != 0)
+				oplus_set_aod_dim_alpha(CUST_A_NO);
+		}
+
+		SDE_DEBUG("aod_index = %d, fp_index= %d, fppressed_index = %d, fp_mode=%d, panel_power_mode = %d, bl=%d\n",
+			aod_index, fp_index, fppressed_index, fp_mode, panel_power_mode, oplus_get_panel_brightness());
+
+		/* find the min zpos in fp_index/fppressed_index stage to dim layer, then fp_index/fppressed_index stage increase one */
+		if (fp_index >= 0) {
+			if (zpos > pstates[fp_index].stage)
+				zpos = pstates[fp_index].stage;
 		}
 		if (fppressed_index >= 0) {
 			if (zpos > pstates[fppressed_index].stage)
 				zpos = pstates[fppressed_index].stage;
-			pstates[fppressed_index].stage++;
-		}
-		if (fp_index >= 0) {
-			if (zpos > pstates[fp_index].stage)
-				zpos = pstates[fp_index].stage;
-			pstates[fp_index].stage++;
 		}
 
+		/* increase zpos(sde stage) which is on the dim layer, stage which is under dim layer zpos preserve */
 		for (i = 0; i < cnt; i++) {
-			if (i == fp_index || i == fppressed_index ||
-			    i == aod_index)
-				continue;
 			if (pstates[i].stage >= zpos) {
 				pstates[i].stage++;
 			}
 		}
 
+		/* when no aod_index/fppressed_index/fp_index layer, dim layer's zpos is the most stage */
 		if (zpos == INT_MAX) {
 			zpos = 0;
 			for (i = 0; i < cnt; i++) {
@@ -4837,7 +4902,11 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 			SDE_EVT32(zpos, fp_index, aod_index, fppressed_index, cstate->num_dim_layers);
 			return -EINVAL;
 		}
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+		if (fppressed_index >= 0 && !(is_oplus_ramless_aod() && cstate->base.mode.flags & DRM_MODE_FLAG_CMD_MODE_PANEL))
+#else
 		if (fppressed_index >= 0)
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
 			cstate->fingerprint_pressed = true;
 		else
 			cstate->fingerprint_pressed = false;
@@ -4845,6 +4914,7 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		SDE_DEBUG("debug for get cstate->fingerprint_pressed = %d\n", cstate->fingerprint_pressed);
 	} else {
 		oplus_underbrightness_alpha = 0;
+		oplus_set_aod_dim_alpha(CUST_A_NO);
 		cstate->fingerprint_dim_layer = NULL;
 		cstate->fingerprint_mode = false;
 		cstate->fingerprint_pressed = false;
@@ -5076,9 +5146,12 @@ static int _sde_crtc_atomic_check_pstates(struct drm_crtc *crtc,
 		return rc;
 
 #ifdef OPLUS_BUG_STABILITY
-/* Gou shengjun@PSW.MM.Display.Service.Feature,2018/11/21
- * For OnScreenFingerprint feature
-*/
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+	rc = oplus_ramless_panel_display_atomic_check(crtc, state);
+	if (rc)
+		return rc;
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+
 	rc = sde_crtc_onscreenfinger_atomic_check(cstate, pstates, cnt);
 	if (rc)
 		return rc;

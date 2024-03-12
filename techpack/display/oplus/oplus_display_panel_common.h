@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_display_panel_common.c
 ** Description : oplus display panel common feature
 ** Version : 1.0
@@ -24,8 +24,8 @@
 #include "dsi_pwr.h"
 #include "sde_dbg.h"
 
-#define PANEL_REG_MAX_LENS 64
-#define PANEL_TX_MAX_BUF 256
+#define PANEL_REG_MAX_LENS 28
+#define PANEL_TX_MAX_BUF 112
 
 struct panel_id
 {
@@ -34,16 +34,13 @@ struct panel_id
 	uint32_t DC;
 };
 
-struct panel_info
-{
+struct panel_info{
 	char version[32];
 	char manufacture[32];
 };
 
-struct panel_serial_number
-{
-	uint32_t date;		 /*year:month:day:hour  8bit uint*/
-	uint32_t precise_time; /* minute:second:reserved:reserved 8bit uint*/
+struct panel_serial_number {
+    char serial_number[40];
 };
 
 struct display_timing_info {
@@ -55,9 +52,10 @@ struct display_timing_info {
 };
 
 enum {
-	REG_WRITE = 0,
-	REG_READ,
-	REG_X,
+	NONE_TYPE = 0,
+	LCM_DC_MODE_TYPE,
+	LCM_BRIGHTNESS_TYPE,
+	MAX_INFO_TYPE,
 };
 
 struct panel_reg_get {
@@ -72,25 +70,32 @@ struct panel_reg_rw {
 	uint32_t value[PANEL_REG_MAX_LENS]; /*for read, value is empty, just user get function for read the value*/
 };
 
+int dsi_panel_read_panel_reg(struct dsi_display_ctrl *ctrl, struct dsi_panel *panel, u8 cmd, void *rbuf,  size_t len);
 int oplus_display_panel_get_id(void *buf);
 int oplus_display_panel_get_max_brightness(void *buf);
 int oplus_display_panel_set_max_brightness(void *buf);
+int oplus_display_panel_get_brightness(void *buf);
 int oplus_display_panel_get_vendor(void *buf);
 int oplus_display_panel_get_ccd_check(void *buf);
 int oplus_display_panel_get_serial_number(void *buf);
-int oplus_display_set_audio_ready(void *data);
-int oplus_display_dump_info(void *data);
-int oplus_display_get_panel_dsc(void *data);
-int oplus_display_get_closebl_flag(void *data);
-int oplus_display_set_closebl_flag(void *data);
-int oplus_display_get_panel_reg(void *data);
-int oplus_display_set_panel_reg(void *data);
-int oplus_display_notify_panel_blank(void *data);
-int oplus_display_set_spr(void *data);
-int oplus_display_get_spr(void *data);
-int oplus_display_get_roundcorner(void *data);
-int oplus_display_set_dynamic_osc_clock(void *data);
-int oplus_display_get_dynamic_osc_clock(void *data);
+int oplus_display_panel_set_audio_ready(void *data);
+int oplus_display_panel_dump_info(void *data);
+int oplus_display_panel_get_dsc(void *data);
+int oplus_display_panel_get_closebl_flag(void *data);
+int oplus_display_panel_set_closebl_flag(void *data);
+int oplus_display_panel_get_reg(void *data);
+int oplus_display_panel_set_reg(void *data);
+int oplus_display_panel_notify_blank(void *data);
+int oplus_display_panel_set_spr(void *data);
+int oplus_display_panel_get_spr(void *data);
+int oplus_display_panel_get_roundcorner(void *data);
+int oplus_display_panel_set_dynamic_osc_clock(void *data);
+int oplus_display_panel_get_dynamic_osc_clock(void *data);
 int __oplus_display_set_mca(int mode);
 int dsi_display_set_mca(struct dsi_display *display);
+int oplus_display_get_softiris_color_status(void *data);
+int oplus_display_panel_hbm_lightspot_check(void);
+int oplus_display_set_dither_status(void *buf);
+int oplus_display_get_dither_status(void *buf);
+int oplus_dsi_update_dynamic_osc_clock(void);
 #endif /*_OPLUS_DISPLAY_PANEL_COMMON_H_*/

@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_display_panel_seed.h
 ** Description : oplus display panel seed feature
 ** Version : 1.0
@@ -24,6 +24,12 @@
 #include "dsi_pwr.h"
 #include "sde_dbg.h"
 
+#define OPLUS_SEED_MODE0 0
+#define OPLUS_SEED_MODE1 1
+#define OPLUS_SEED_MODE2 2
+#define OPLUS_SEED_MODE3 3
+#define OPLUS_SEED_MODE4 4
+
 int oplus_display_panel_get_seed(void *data);
 int oplus_display_panel_set_seed(void *data);
 int oplus_dsi_update_seed_mode(void);
@@ -31,5 +37,6 @@ int __oplus_display_set_seed(int mode);
 int dsi_panel_seed_mode(struct dsi_panel *panel, int mode);
 int dsi_panel_seed_mode_unlock(struct dsi_panel *panel, int mode);
 int dsi_display_seed_mode(struct dsi_display *display, int mode);
+int dsi_panel_dc_seed_mode_unlock(struct dsi_panel *panel, int mode);
 
 #endif

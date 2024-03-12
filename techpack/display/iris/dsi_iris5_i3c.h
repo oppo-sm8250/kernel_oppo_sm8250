@@ -1,37 +1,30 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
- *  Copyright (c) 2017-2020, Pixelworks, Inc.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, Pixelworks, Inc.
  *
- *  These files contain modifications made by Pixelworks, Inc., in 2019-2020.
+ * These files contain modifications made by Pixelworks, Inc., in 2015-2020.
  */
-
-
-#ifndef DSI_IRIS5_I3C_H
-#define DSI_IRIS5_I3C_H
+#ifndef DSI_IRIS_I3C_H
+#define DSI_IRIS_I3C_H
 
 #include <linux/i2c.h>
 #include <linux/of.h>
+#include "dsi_iris5_i2c.h"
 
 #define I2C_LEGACY_CMD_ENABLE 0
 
-#define IRIS5_CMD_I2C_SR    0x09
-#define IRIS5_CMD_I2C_BR    0x08
-#define IRIS5_CMD_I2C_SW    0x04
-#define IRIS5_CMD_I2C_BW    0x00
-#define IRIS5_CMD_I2C_DW    0x0C
-#define IRIS5_CMD_I2C_BSW   0x05
-#define IRIS5_CMD_I2C_LUT   0x0F
+#define IRIS_CMD_I2C_SR    0x09
+#define IRIS_CMD_I2C_BR    0x08
+#define IRIS_CMD_I2C_SW    0x04
+#define IRIS_CMD_I2C_BW    0x00
+#define IRIS_CMD_I2C_DW    0x0C
+#define IRIS_CMD_I2C_BSW   0x05
+#define IRIS_CMD_I2C_LUT   0x0F
 
-struct addr_val{
+struct addr_val {
 	uint32_t addr;
 	uint32_t data;
-};
-
-struct iris_i2c_msg{
-	uint32_t   *payload;
-	uint32_t   len;
-	uint32_t   type;
 };
 
 enum PATH_TYPE {

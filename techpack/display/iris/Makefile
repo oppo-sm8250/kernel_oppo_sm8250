@@ -15,4 +15,11 @@ obj-y +=	dsi_iris5_ioctl.o \
 		dsi_iris5_cmds.o \
 		dsi_iris5_i3c.o \
 		dsi_iris5_dbg.o \
-		dsi_iris5_loop_back.o
+		dsi_iris5_loop_back.o \
+		dsi_iris5_extended.o \
+		dsi_iris5_frc.o \
+		dsi_iris5_gpio.o \
+		dsi_iris5_i2c.o \
+		dsi_iris5_timing_switch.o \
+		msm_iris5_extended.o \
+		sde_iris5_extended.o

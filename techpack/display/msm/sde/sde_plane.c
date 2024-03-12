@@ -1122,33 +1122,6 @@ static inline void _sde_plane_setup_csc(struct sde_plane *psde)
 		{ 0x40, 0x3ac, 0x40, 0x3c0, 0x40, 0x3c0,},
 		{ 0x00, 0x3ff, 0x00, 0x3ff, 0x00, 0x3ff,},
 	};
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-	static const struct sde_csc_cfg hdrYUV = {
-		{
-			0x00010000, 0x00000000, 0x00000000,
-			0x00000000, 0x00010000, 0x00000000,
-			0x00000000, 0x00000000, 0x00010000,
-		},
-		{ 0x0, 0x0, 0x0,},
-		{ 0x0, 0x0, 0x0,},
-		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
-		{ 0x0, 0x3ff, 0x0, 0x3ff, 0x0, 0x3ff,},
-	};
-	static const struct sde_csc_cfg hdrRGB10 = {
-		/* S15.16 format */
-		{
-			0x00012A15, 0x00000000, 0x0001ADBE,
-			0x00012A15, 0xFFFFD00B, 0xFFFF597E,
-			0x00012A15, 0x0002244B, 0x00000000,
-		},
-		/* signed bias */
-		{ 0xffc0, 0xfe00, 0xfe00,},
-		{ 0x0, 0x0, 0x0,},
-		/* unsigned clamp */
-		{ 0x40, 0x3ac, 0x40, 0x3c0, 0x40, 0x3c0,},
-		{ 0x00, 0x3ff, 0x00, 0x3ff, 0x00, 0x3ff,},
-  };
-#endif
 
 	if (!psde) {
 		SDE_ERROR("invalid plane\n");
@@ -1163,11 +1136,7 @@ static inline void _sde_plane_setup_csc(struct sde_plane *psde)
 	else
 		psde->csc_ptr = (struct sde_csc_cfg *)&sde_csc_YUV2RGB_601L;
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-	// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	if (iris_get_feature()&& iris5_hdr_enable_get() == 1)
-		psde->csc_ptr = (struct sde_csc_cfg *)&hdrYUV;
-	else if (iris_get_feature()&& iris5_hdr_enable_get() == 2)
-		psde->csc_ptr = (struct sde_csc_cfg *)&hdrRGB10;
+	iris_sde_plane_setup_csc(psde->csc_ptr);
 #endif
 
 	SDE_DEBUG_PLANE(psde, "using 0x%X 0x%X 0x%X...\n",
@@ -3169,6 +3138,11 @@ static void _sde_plane_update_format_and_rects(struct sde_plane *psde,
 	if (psde->pipe_hw->ops.setup_dgm_csc)
 		psde->pipe_hw->ops.setup_dgm_csc(psde->pipe_hw,
 			pstate->multirect_index, psde->csc_usr_ptr);
+#if defined(PXLW_IRIS_DUAL)
+	if (psde->pipe_hw->ops.setup_csc_v2)
+		psde->pipe_hw->ops.setup_csc_v2(psde->pipe_hw,
+			fmt, psde->csc_usr_ptr);
+#endif
 }
 
 static void _sde_plane_update_sharpening(struct sde_plane *psde)

@@ -14,6 +14,7 @@ obj-$(CONFIG_DRM_OPLUS) += oplus_dsi_support.o \
 	oplus_aod.o \
 	oplus_ffl.o \
 	oplus_display_panel.o \
+	oplus_display_panel_cabc.o \
 	oplus_display_panel_power.o \
 	oplus_display_panel_seed.o \
 	oplus_display_panel_common.o \

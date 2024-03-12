@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2018,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_dsi_support.c
 ** Description : display driver private management
 ** Version : 1.0
@@ -63,9 +63,9 @@ int set_oplus_display_vendor(const char * display_name) {
 	if (!strcmp(display_name,"qcom,mdss_dsi_oplus19065_samsung_1440_3168_dsc_cmd")) {
 		oplus_display_vendor = OPLUS_SAMSUNG_ANA6706_DISPLAY_FHD_DSC_CMD_PANEL;
 		register_device_proc("lcd", "ANA6706", "samsung1024");
-	} else if (!strcmp(display_name,"qcom,mdss_dsi_samsung_oneplus_dsc_cmd")) {
-		oplus_display_vendor = OPLUS_SAMSUNG_ONEPLUS_DISPLAY_FHD_DSC_CMD_PANEL;
-		register_device_proc("lcd", "oneplus", "samsung1024");
+	} else if (!strcmp(display_name,"qcom,mdss_dsi_samsung_oplus_dsc_cmd")) {
+		oplus_display_vendor = OPLUS_SAMSUNG_OPLUS_DISPLAY_FHD_DSC_CMD_PANEL;
+		register_device_proc("lcd", "oplus", "samsung1024");
 	} else {
 		oplus_display_vendor = OPLUS_DISPLAY_UNKNOW;
 		pr_err("%s panel vendor info set failed!", __func__);

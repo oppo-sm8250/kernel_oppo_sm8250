@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_dc_diming.h
 ** Description : oplus dc_diming feature
 ** Version : 1.0
@@ -31,6 +31,8 @@ struct dsi_panel_cmd_set * oplus_dsi_update_seed_backlight(struct dsi_panel *pan
 int oplus_display_panel_get_dim_alpha(void *buf);
 int oplus_display_panel_set_dim_alpha(void *buf);
 int oplus_display_panel_get_dim_dc_alpha(void *buf);
-int oplus_display_get_dimlayer_enable(void *data);
-int oplus_display_set_dimlayer_enable(void *data);
+int oplus_display_panel_get_dimlayer_enable(void *data);
+int oplus_display_panel_set_dimlayer_enable(void *data);
+int dsi_panel_parse_oplus_dc_config(struct dsi_panel *panel);
+int oplus_dsi_display_enable_and_waiting_for_next_te_irq(void);
 #endif /*_OPLUS_DC_DIMING_H_*/

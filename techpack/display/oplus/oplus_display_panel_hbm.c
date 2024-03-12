@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_display_panel_hbm.c
 ** Description : oplus display panel hbm feature
 ** Version : 1.0
@@ -12,7 +12,9 @@
 **  Li.Sheng	   2020/07/06		1.0		   Build this feature
 ******************************************************************/
 #include "oplus_display_panel_hbm.h"
+#include "oplus_dc_diming.h"
 #include "oplus_dsi_support.h"
+#include "oplus_display_panel_common.h"
 
 int hbm_mode = 0;
 DEFINE_MUTEX(oplus_hbm_lock);
@@ -93,9 +95,25 @@ int dsi_panel_hbm_off(struct dsi_panel *panel)
 		goto error;
 	}
 
-	dsi_panel_set_backlight(panel, panel->bl_config.bl_level);
-
-	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_HBM_OFF);
+	if (!strcmp(panel->oplus_priv.vendor_name, "S6E3HC3")) {
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_HBM_OFF);
+		dsi_panel_set_backlight(panel, panel->bl_config.bl_level);
+	} else {
+		dsi_panel_set_backlight(panel, panel->bl_config.bl_level);
+		if ((!strcmp(panel->oplus_priv.vendor_name, "AMS643YE01") ||
+			!strcmp(panel->oplus_priv.vendor_name, "AMS643YE01IN20057"))
+			&& (panel->bl_config.bl_level > panel->bl_config.brightness_normal_max_level)) {
+			if (!strcmp(panel->name, "samsung ams643ye01 in 20127 amoled fhd+ panel")) {
+				rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_HBM_ENTER1_SWITCH);
+				oplus_dsi_display_enable_and_waiting_for_next_te_irq();
+				rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_HBM_ENTER2_SWITCH);
+			} else {
+				rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_HBM_ENTER_SWITCH);
+			}
+		} else {
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_HBM_OFF);
+		}
+	}
 	if (rc) {
 		pr_err("[%s] failed to send DSI_CMD_HBM_OFF cmds, rc=%d\n",
 				panel->name, rc);
@@ -132,6 +150,11 @@ int dsi_display_hbm_on(struct dsi_display *display)
 	rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
 				DSI_CORE_CLK, DSI_CLK_OFF);
 	}
+
+	if (!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3")) {
+		usleep_range(36000, 36100);
+	}
+
 	mutex_unlock(&display->display_lock);
 
 	return rc;
@@ -219,7 +242,7 @@ int oplus_display_panel_set_hbm(void *buf)
 	int ret = 0;
 
 	sscanf(buf, "%du", &temp_save);
-	printk(KERN_INFO "%s oplus_display_set_hbm = %d\n", __func__, (*temp_save));
+	printk(KERN_INFO "%s oplus_display_panel_set_hbm = %d\n", __func__, (*temp_save));
 	if (get_oplus_display_power_status() != OPLUS_DISPLAY_POWER_ON) {
 		printk(KERN_ERR	 "%s oplus_display_set_hbm = %d, but now display panel status is not on\n", __func__, (*temp_save));
 		return -EFAULT;
@@ -231,12 +254,24 @@ int oplus_display_panel_set_hbm(void *buf)
 	}
 	__oplus_display_set_hbm((*temp_save));
 
-	if ((hbm_mode > 1) &&(hbm_mode <= 10)) {
-		ret = dsi_display_normal_hbm_on(get_main_display());
-	} else if (hbm_mode == 1) {
-		ret = dsi_display_hbm_on(get_main_display());
-	} else if (hbm_mode == 0) {
-		ret = dsi_display_hbm_off(get_main_display());
+	if (!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3")) {
+		if((hbm_mode > 1) &&(hbm_mode <= 10)) {
+			ret = dsi_display_normal_hbm_on(get_main_display());
+		} else if(hbm_mode == 1) {
+			ret = dsi_display_normal_hbm_on(get_main_display());
+		} else if(hbm_mode == 0) {
+			ret = dsi_display_hbm_off(get_main_display());
+		} else if (hbm_mode == display->panel->bl_config.brightness_max_level) {
+			ret = oplus_display_panel_hbm_lightspot_check();
+		}
+	} else {
+		if ((hbm_mode > 1) &&(hbm_mode <= 10)) {
+			ret = dsi_display_normal_hbm_on(get_main_display());
+		} else if (hbm_mode == 1) {
+			ret = dsi_display_hbm_on(get_main_display());
+		} else if (hbm_mode == 0) {
+			ret = dsi_display_hbm_off(get_main_display());
+		}
 	}
 
 	if (ret) {

@@ -1,6 +1,6 @@
 /***************************************************************
 ** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
+** OPLUS_BUG_STABILITY
 ** File : oplus_onscreenfingerprint.c
 ** Description : oplus onscreenfingerprint feature
 ** Version : 1.0
@@ -15,24 +15,35 @@
 #include "sde_crtc.h"
 #include "oplus_onscreenfingerprint.h"
 #include "oplus_display_private_api.h"
-
+#include "oplus_display_panel.h"
+#include "oplus_aod.h"
+#include "oplus_display_panel_cabc.h"
+#ifdef OPLUS_FEATURE_ADFR
+#include "oplus_adfr.h"
+#endif
 #define DSI_PANEL_OPLUS_DUMMY_VENDOR_NAME  "PanelVendorDummy"
 #define DSI_PANEL_OPLUS_DUMMY_MANUFACTURE_NAME  "dummy1024"
 
 bool oplus_pcc_enabled = false;
 bool oplus_skip_pcc = false;
+bool apollo_backlight_enable = false;
 struct drm_msm_pcc oplus_save_pcc;
 int oplus_dimlayer_hbm = 0;
+int oplus_aod_dim_alpha = CUST_A_NO;
 
 extern int oplus_underbrightness_alpha;
 extern int oplus_dimlayer_dither_threshold;
-extern u32 oplus_last_backlight;
 extern int oplus_panel_alpha;
 extern int hbm_mode;
 extern bool oplus_ffl_trigger_finish;
+extern int dynamic_osc_clock;
+extern ktime_t oplus_onscreenfp_pressed_time;
+extern u32 oplus_onscreenfp_vblank_count;
+int oplus_onscreenfp_status = 0;
 int oplus_dimlayer_hbm_vblank_count = 0;
 atomic_t oplus_dimlayer_hbm_vblank_ref = ATOMIC_INIT(0);
 bool oplus_enhance_mipi_strength = false;
+extern struct oplus_apollo_backlight_list *p_apollo_backlight;
 
 static struct oplus_brightness_alpha brightness_alpha_lut[] = {
 	{0, 0xff},
@@ -81,6 +92,12 @@ static struct oplus_brightness_alpha brightness_alpha_lut_dc[] = {
 	{223, 0x0},
 };
 
+void oplus_set_aod_dim_alpha(int cust)
+{
+	oplus_aod_dim_alpha = cust;
+	DSI_DEBUG("set oplus_aod_dim_alpha = %d\n", oplus_aod_dim_alpha);
+}
+
 int oplus_get_panel_brightness(void)
 {
 	struct dsi_display *display = get_main_display();
@@ -89,6 +106,16 @@ int oplus_get_panel_brightness(void)
 		return 0;
 
 	return display->panel->bl_config.bl_level;
+}
+
+int oplus_get_panel_power_mode(void)
+{
+	struct dsi_display *display = get_main_display();
+
+	if (!display)
+		return -1;
+
+	return display->panel->power_mode;
 }
 
 static int bl_to_alpha(int brightness)
@@ -129,10 +156,15 @@ static int bl_to_alpha(int brightness)
 
 static int bl_to_alpha_dc(int brightness)
 {
+	struct dsi_display *display = get_main_display();
 	int level = ARRAY_SIZE(brightness_alpha_lut_dc);
 	int i = 0;
 	int alpha;
 
+	if (!display->panel) {
+		pr_err("failed to find display panel\n");
+		return -EINVAL;
+	}
 	for (i = 0; i < ARRAY_SIZE(brightness_alpha_lut_dc); i++){
 		if (brightness_alpha_lut_dc[i].brightness >= brightness)
 			break;
@@ -147,16 +179,22 @@ static int bl_to_alpha_dc(int brightness)
 			brightness_alpha_lut_dc[i-1].brightness,
 			brightness_alpha_lut_dc[i].brightness,
 			brightness_alpha_lut_dc[i-1].alpha,
-			brightness_alpha_lut_dc[i].alpha, false);
+			brightness_alpha_lut_dc[i].alpha, display->panel->oplus_priv.bl_interpolate_alpha_dc_nosub);
 	return alpha;
 }
 
 static int brightness_to_alpha(int brightness)
 {
 	int alpha;
+	struct dsi_display *display = get_main_display();
 
-	if (brightness == 0 || brightness == 1)
-		brightness = oplus_last_backlight;
+	if (brightness == 0 || brightness == 1) {
+		if (!strcmp(display->panel->oplus_priv.vendor_name, "AMS643YE01IN20057")) {
+			/*do nothing*/
+		} else {
+			brightness = oplus_last_backlight;
+		}
+	}
 
 	if (oplus_dimlayer_hbm)
 		alpha = bl_to_alpha(brightness);
@@ -166,20 +204,78 @@ static int brightness_to_alpha(int brightness)
 	return alpha;
 }
 
+extern int oplus_display_fix_apollo_level(void);
+
+static int oplus_find_index_invmaplist(uint32_t bl_level)
+{
+	int index = 0;
+	int ret = -1;
+
+	if (bl_level == p_apollo_backlight->bl_level_last) {
+		index = p_apollo_backlight->bl_index_last;
+		return index;
+	}
+
+	if (!p_apollo_backlight->bl_fix) {
+		ret = oplus_display_fix_apollo_level();
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
+	for (index; index < p_apollo_backlight->bl_id_lens; index++) {
+		if (p_apollo_backlight->apollo_bl_list[index] == bl_level) {
+			p_apollo_backlight->bl_index_last = index;
+			p_apollo_backlight->bl_level_last = bl_level;
+			return index;
+		}
+	}
+
+	pr_err("%s error\n", __func__);
+	return -1;
+}
 static int oplus_get_panel_brightness_to_alpha(void)
 {
 	struct dsi_display *display = get_main_display();
+	int index = 0;
+	uint32_t brightness_panel = 0;
 
-	if (!display)
+	if (!display || !display->panel) {
 		return 0;
+	}
 	if (oplus_panel_alpha)
 		return oplus_panel_alpha;
+
+	/* force dim layer alpha in AOD scene */
+	if (oplus_aod_dim_alpha != CUST_A_NO) {
+		if (oplus_aod_dim_alpha == CUST_A_TRANS)
+			return 0;
+		else if (oplus_aod_dim_alpha == CUST_A_OPAQUE)
+			return 255;
+	}
 
 	if (hbm_mode)
 		return 0;
 
 	if (!oplus_ffl_trigger_finish)
 		return brightness_to_alpha(FFL_FP_LEVEL);
+
+	if (apollo_backlight_enable) {
+		if (p_apollo_backlight) {
+			index = oplus_find_index_invmaplist(display->panel->bl_config.bl_level);
+			if (index >= 0) {
+				DSI_DEBUG("[%s] index = %d, panel_level = %d, apollo_level = %d",
+						__func__,
+						index,
+						p_apollo_backlight->panel_bl_list[index],
+						p_apollo_backlight->apollo_bl_list[index]);
+				brightness_panel = p_apollo_backlight->panel_bl_list[index];
+				return brightness_to_alpha(brightness_panel);
+			}
+		} else {
+			DSI_ERR("invalid p_apollo_backlight\n");
+		}
+	}
 
 	return brightness_to_alpha(display->panel->bl_config.bl_level);
 }
@@ -202,7 +298,7 @@ int dsi_panel_parse_oplus_fod_config(struct dsi_panel *panel)
 
 	arr = utils->get_property(utils->data, "oplus,dsi-fod-brightness", &length);
 	if (!arr) {
-		DSI_ERR("[%s] oplus,dsi-fod-brightness  not found\n", panel->name);
+		DSI_DEBUG("[%s] oplus,dsi-fod-brightness  not found\n", panel->name);
 		return -EINVAL;
 	}
 
@@ -266,9 +362,20 @@ static int dsi_panel_parse_oplus_backlight_remapping_config(struct dsi_panel *pa
 	if (panel->host_config.ext_bridge_mode)
 		return 0;
 
+	panel->oplus_priv.bl_interpolate_nosub = utils->read_bool(utils->data,
+			"oplus,bl_interpolate_nosub");
+
+	panel->oplus_priv.bl_interpolate_remap_nosub = utils->read_bool(utils->data,
+			"oplus,bl_interpolate_remapping_nosub");
+	pr_info("support bl_interpolate_remap_nosub: %s\n", panel->oplus_priv.bl_interpolate_remap_nosub ? "true" : "false");
+
+	panel->oplus_priv.bl_interpolate_alpha_dc_nosub = utils->read_bool(utils->data,
+			"oplus,bl_interpolate_alpha_dc_nosub");
+	pr_info("support bl_interpolate_alpha_dc_nosub: %s\n", panel->oplus_priv.bl_interpolate_alpha_dc_nosub ? "true" : "false");
+
 	arr = utils->get_property(utils->data, "oplus,dsi-brightness-remapping", &length);
 	if (!arr) {
-		DSI_ERR("[%s] oplus,dsi-fod-brightness  not found\n", panel->name);
+		DSI_DEBUG("[%s] oplus,dsi-fod-brightness  not found\n", panel->name);
 		return -EINVAL;
 	}
 
@@ -276,9 +383,6 @@ static int dsi_panel_parse_oplus_backlight_remapping_config(struct dsi_panel *pa
 		DSI_ERR("[%s] oplus,dsi-fod-brightness length error\n", panel->name);
 		return -EINVAL;
 	}
-
-	panel->oplus_priv.bl_interpolate_nosub = utils->read_bool(utils->data,
-			"oplus,bl_interpolate_nosub");
 
 	DSI_DEBUG("RESET SEQ LENGTH = %d, interpolate_nosub = %d\n", length, panel->oplus_priv.bl_interpolate_nosub ? 1 : 0);
 	length = length / sizeof(u32);
@@ -323,6 +427,10 @@ error:
 int dsi_panel_parse_oplus_config(struct dsi_panel *panel)
 {
 	struct dsi_parser_utils *utils = &panel->utils;
+	int ret = 0;
+	panel->oplus_priv.is_oplus_project = utils->read_bool(utils->data,
+				"oplus,is-oplus-project");
+	DSI_INFO("dsi is_oplus_project: %s", panel->oplus_priv.is_oplus_project ? "true" : "false");
 
 	dsi_panel_parse_oplus_fod_config(panel);
 	dsi_panel_parse_oplus_backlight_remapping_config(panel);
@@ -340,6 +448,13 @@ int dsi_panel_parse_oplus_config(struct dsi_panel *panel)
 		panel->oplus_priv.manufacture_name = DSI_PANEL_OPLUS_DUMMY_MANUFACTURE_NAME;
 	}
 
+	panel->oplus_priv.aod_on_fod_off = utils->read_bool(utils->data,
+				"oplus,aod_on_fod_off");
+
+	panel->oplus_priv.dfps_idle_off = utils->read_bool(utils->data,
+		"oplus,dfps-idle-off");
+	DSI_INFO("oplus,dfps-idle-off: %s", panel->oplus_priv.dfps_idle_off ? "true" : "false");
+
 	if (!strcmp(panel->oplus_priv.vendor_name, "ANA6706")) {
 		oplus_enhance_mipi_strength = true;
 	} else {
@@ -349,6 +464,99 @@ int dsi_panel_parse_oplus_config(struct dsi_panel *panel)
 	panel->oplus_priv.is_pxlw_iris5 = utils->read_bool(utils->data,
 				"oplus,is_pxlw_iris5");
 	DSI_INFO("is_pxlw_iris5: %s", panel->oplus_priv.is_pxlw_iris5 ? "true" : "false");
+
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+/* Yuwei.Zhang@MULTIMEDIA.DISPLAY.LCD, 2020/09/25, sepolicy for aod ramless */
+	panel->oplus_priv.is_aod_ramless = utils->read_bool(utils->data,
+			"oplus,aod_ramless");
+	DSI_INFO("aod ramless mode: %s", panel->oplus_priv.is_aod_ramless ? "true" : "false");
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+
+	/* Gang.Wang@MULTIMEDIA.DISPLAY.LCD.Feature,2020-10-09 optimize osc adaptive */
+	panel->oplus_priv.is_osc_support = utils->read_bool(utils->data, "oplus,osc-support");
+	pr_info("[%s]osc mode support: %s", __func__, panel->oplus_priv.is_osc_support ? "Yes" : "Not");
+	if (panel->oplus_priv.is_osc_support) {
+		ret = utils->read_u32(utils->data, "oplus,mdss-dsi-osc-clk-mode0-rate",
+					&panel->oplus_priv.osc_clk_mode0_rate);
+		if (ret) {
+			pr_err("[%s]failed get panel parameter: oplus,mdss-dsi-osc-clk-mode0-rate\n", __func__);
+			panel->oplus_priv.osc_clk_mode0_rate = 0;
+		}
+		dynamic_osc_clock = panel->oplus_priv.osc_clk_mode0_rate;
+		panel->oplus_priv.osc_clk_rate_lastest = dynamic_osc_clock;
+
+		ret = utils->read_u32(utils->data, "oplus,mdss-dsi-osc-clk-mode1-rate",
+					&panel->oplus_priv.osc_clk_mode1_rate);
+		if (ret) {
+			pr_err("[%s]failed get panel parameter: oplus,mdss-dsi-osc-clk-mode1-rate\n", __func__);
+			panel->oplus_priv.osc_clk_mode1_rate = 0;
+		}
+
+		/* Xupengcheng@MULTIMEDIA.DISPLAY.LCD.Feature,2021-11-19 osc rewrite support */
+		panel->oplus_priv.is_osc_rewrite_support = utils->read_bool(utils->data, "oplus,osc-rewrite-support");
+		pr_info("[%s]osc rewrite clk rate support: %s", __func__, panel->oplus_priv.is_osc_rewrite_support ? "Yes" : "Not");
+		if (panel->oplus_priv.is_osc_rewrite_support) {
+			ret = utils->read_u32(utils->data, "oplus,mdss-dsi-osc-rewrite-rate",
+							&panel->oplus_priv.osc_rewrite_clk_rate);
+			if (ret) {
+				pr_err("[%s]failed get panel parameter: oplus,mdss-dsi-osc-rewrite-rate \n", __func__);
+				panel->oplus_priv.osc_rewrite_clk_rate = 0;
+			}
+		}
+	}
+	apollo_backlight_enable = utils->read_bool(utils->data,
+				"oplus,apollo_backlight_enable");
+	DSI_INFO("apollo_backlight_enable: %s", apollo_backlight_enable ? "true" : "false");
+
+#ifdef OPLUS_FEATURE_ADFR
+	/* Lauwo.Zhong@MM.Display.LCD.Feature,2021-01-14 add for adfr hardware revision compatibility */
+	if (oplus_adfr_is_support()) {
+		if (oplus_adfr_get_vsync_mode() == OPLUS_EXTERNAL_TE_TP_VSYNC) {
+			/* power on with vsync_switch_gpio high bacause default timing is fhd OA 60hz */
+			panel->vsync_switch_gpio_level = 1;
+			/* default resolution is FHD when use mux switch */
+			panel->cur_h_active = 1080;
+		}
+	}
+#endif /* OPLUS_FEATURE_ADFR */
+
+#ifdef CONFIG_REGULATOR_TPS65132
+	/*Jianxiong.Zeng@MULTIMEDIA.DISPLAY.Feature,2020/12/1 optimize TPS65132 compatibility*/
+	panel->oplus_priv.is_tps65132_support = utils->read_bool(utils->data,  "oplus,tps65132_support");
+	DSI_INFO("oplus,tps65132_support;: %s", panel->oplus_priv.is_tps65132_support ? "true" : "false");
+#endif /* CONFIG_REGULATOR_TPS65132 */
+
+	/*Pengcheng.Xu@MULTIMEDIA.DISPLAY.Feature,2021/11/16 optimize support 90fps switch*/
+	panel->oplus_priv.is_90fps_switch = utils->read_bool(utils->data,  "oplus,90fps_switch");
+	DSI_INFO("oplus,is_90fps_switch: %s", panel->oplus_priv.is_90fps_switch ? "true" : "false");
+	/*Pengcheng.Xu@MULTIMEDIA.DISPLAY.Feature,2021/12/09 support dc seed switch*/
+	panel->oplus_priv.is_dc_seed_support = utils->read_bool(utils->data,  "oplus,dc_seed_support");
+	DSI_INFO("oplus,dc_seed_support: %s", panel->oplus_priv.is_dc_seed_support ? "true" : "false");
+
+#ifdef OPLUS_BUG_STABILITY
+/*Yaqiang.Shi@RM.Display.LCD.Driver, add for 90Hz and 120Hz gamma switch*/
+	panel->oplus_priv.gamma_switch_enable = utils->read_bool(utils->data,
+				"oplus,gamma_switch_enable");
+	DSI_INFO("gamma_switch_enable: %s", panel->oplus_priv.gamma_switch_enable ? "true" : "false");
+#endif /*OPLUS_BUG_STABILITY*/
+
+	panel->oplus_priv.lcd_cabc_support = utils->read_bool(utils->data,  "oplus,lcd-cabc-support");
+	DSI_INFO("oplus,lcd-cabc-support: %s", panel->oplus_priv.lcd_cabc_support ? "true" : "false");
+
+	panel->oplus_priv.low_light_adjust_gamma_support = utils->read_bool(utils->data,  "oplus,low-light-adjust-gamma-support");
+	DSI_INFO("oplus,low-light-adjust-gamma-support: %s", panel->oplus_priv.low_light_adjust_gamma_support ? "true" : "false");
+	if (panel->oplus_priv.low_light_adjust_gamma_support) {
+		ret = utils->read_u32(utils->data, "oplus,low-light-adjust-gamma-level",
+				&panel->oplus_priv.low_light_adjust_gamma_level);
+		if (ret) {
+			pr_err("[%s]failed get panel parameter: oplus,low-light-adjust-gamma-level\n", __func__);
+			panel->oplus_priv.low_light_adjust_gamma_level = 0;
+		} else {
+			DSI_INFO("oplus,low-light-adjust-gamma-level: %d", panel->oplus_priv.low_light_adjust_gamma_level);
+		}
+
+		panel->oplus_priv.low_light_gamma_is_adjusted = false;
+	}
 
 	return 0;
 }
@@ -368,6 +576,7 @@ int dsi_panel_parse_oplus_mode_config(struct dsi_display_mode *mode,
 		priv_info->fod_on_vblank = 0;
 	} else {
 		priv_info->fod_on_vblank = val;
+		DSI_INFO("oplus,fod-on-vblank is %d", val);
 	}
 
 	rc = utils->read_u32(utils->data, "oplus,fod-off-vblank", &val);
@@ -376,6 +585,7 @@ int dsi_panel_parse_oplus_mode_config(struct dsi_display_mode *mode,
 		priv_info->fod_off_vblank = 0;
 	} else {
 		priv_info->fod_off_vblank = val;
+		DSI_INFO("oplus,fod-off-vblank is %d", val);
 	}
 
 	return 0;
@@ -434,10 +644,15 @@ int sde_crtc_config_fingerprint_dim_layer(struct drm_crtc_state *crtc_state, int
 	struct sde_hw_dim_layer *fingerprint_dim_layer;
 	int alpha = oplus_get_panel_brightness_to_alpha();
 	struct sde_kms *kms;
+	struct dsi_display *display = get_main_display();
 
 	kms = _sde_crtc_get_kms_(crtc_state->crtc);
 	if (!kms || !kms->catalog) {
 		SDE_ERROR("invalid kms\n");
+		return -EINVAL;
+	}
+	if (!display || !display->panel) {
+		SDE_ERROR("failed get_main_display\n");
 		return -EINVAL;
 	}
 
@@ -455,6 +670,8 @@ int sde_crtc_config_fingerprint_dim_layer(struct drm_crtc_state *crtc_state, int
 	fingerprint_dim_layer = &cstate->dim_layer[cstate->num_dim_layers];
 	fingerprint_dim_layer->flags = SDE_DRM_DIM_LAYER_INCLUSIVE;
 	fingerprint_dim_layer->stage = stage + SDE_STAGE_0;
+
+	DSI_DEBUG("fingerprint_dim_layer: stage = %d, alpha = %d\n", stage, alpha);
 
 	fingerprint_dim_layer->rect.x = 0;
 	fingerprint_dim_layer->rect.y = 0;
@@ -539,6 +756,12 @@ bool _sde_encoder_setup_dither_for_onscreenfingerprint(struct sde_encoder_phys *
 {
 	struct drm_encoder *drm_enc = phys->parent;
 	struct drm_msm_dither dither;
+	struct dsi_display *display = get_main_display();
+
+	if (!display || !display->panel) {
+		SDE_ERROR("failed get_main_display\n");
+		return -EINVAL;
+	}
 
 	if (!drm_enc || !drm_enc->crtc)
 		return -EFAULT;
@@ -557,10 +780,24 @@ bool _sde_encoder_setup_dither_for_onscreenfingerprint(struct sde_encoder_phys *
 	}
 
 	memcpy(&dither, dither_cfg, len);
-	dither.c0_bitdepth = 6;
-	dither.c1_bitdepth = 6;
-	dither.c2_bitdepth = 6;
-	dither.c3_bitdepth = 6;
+	/* Reduce the intensity of dither to 3 only in compass project */
+	if (!strncmp(display->panel->oplus_priv.vendor_name, "ANA6706", 7)) {
+		dither.c0_bitdepth = 8;
+		dither.c1_bitdepth = 8;
+		dither.c2_bitdepth = 8;
+		dither.c3_bitdepth = 8;
+	} else if (!strncmp(display->panel->oplus_priv.vendor_name, "AMB655XL08", 10)) {
+		/* config the intensity of dither to 2 3 3 3 for JIN/HIMA*/
+		dither.c0_bitdepth = 6;
+		dither.c1_bitdepth = 8;
+		dither.c2_bitdepth = 8;
+		dither.c3_bitdepth = 8;
+	} else {
+		dither.c0_bitdepth = 6;
+		dither.c1_bitdepth = 6;
+		dither.c2_bitdepth = 6;
+		dither.c3_bitdepth = 6;
+	}
 	dither.temporal_en = 1;
 
 	phys->hw_pp->ops.setup_dither(hw_pp, &dither, len);
@@ -580,7 +817,7 @@ int sde_plane_check_fingerprint_layer(const struct drm_plane_state *drm_state)
 	return sde_plane_get_property(pstate, PLANE_PROP_CUSTOM);
 }
 
-int oplus_display_get_dimlayer_hbm(void *data)
+int oplus_display_panel_get_dimlayer_hbm(void *data)
 {
 	uint32_t *dimlayer_hbm = data;
 
@@ -589,7 +826,7 @@ int oplus_display_get_dimlayer_hbm(void *data)
 	return 0;
 }
 
-int oplus_display_set_dimlayer_hbm(void *data)
+int oplus_display_panel_set_dimlayer_hbm(void *data)
 {
 	struct dsi_display *display = get_main_display();
 	struct drm_connector *dsi_connector = display->drm_conn;
@@ -614,10 +851,172 @@ int oplus_display_set_dimlayer_hbm(void *data)
 	}
 	oplus_dimlayer_hbm = value;
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_BUG_STABILITY
 /* Hu Jie@PSW.MM.Display.Lcd.Stability, 2019-09-27, add log at display key evevnt */
 	pr_err("debug for oplus_display_set_dimlayer_hbm set oplus_dimlayer_hbm = %d\n", oplus_dimlayer_hbm);
 #endif
+
+	return 0;
+}
+
+int oplus_display_panel_notify_fp_press(void *data)
+{
+	struct dsi_display *display = get_main_display();
+	struct drm_device *drm_dev = display->drm_dev;
+	struct drm_connector *dsi_connector = display->drm_conn;
+	struct drm_mode_config *mode_config = &drm_dev->mode_config;
+	struct msm_drm_private *priv = drm_dev->dev_private;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	struct drm_crtc *crtc;
+	int onscreenfp_status = 0;
+	int vblank_get = -EINVAL;
+	int err = 0;
+	int i;
+	bool if_con = false;
+	uint32_t *p_onscreenfp_status = data;
+
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+/* Yuwei.Zhang@MULTIMEDIA.DISPLAY.LCD, 2020/09/25, sepolicy for aod ramless */
+	struct drm_display_mode *cmd_mode = NULL;
+	struct drm_display_mode *vid_mode = NULL;
+	struct drm_display_mode *mode = NULL;
+	bool mode_changed = false;
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+
+	if (!dsi_connector || !dsi_connector->state || !dsi_connector->state->crtc) {
+		pr_err("[%s]: display not ready\n", __func__);
+		return -EINVAL;
+	}
+	
+	onscreenfp_status = (*p_onscreenfp_status);
+
+	onscreenfp_status = !!onscreenfp_status;
+
+	if (onscreenfp_status == oplus_onscreenfp_status)
+		return 0;
+
+	pr_info("hidl notify fingerpress %s\n", onscreenfp_status ? "on" : "off");
+
+	vblank_get = drm_crtc_vblank_get(dsi_connector->state->crtc);
+	if (vblank_get) {
+		pr_err("failed to get crtc vblank\n", vblank_get);
+	}
+	oplus_onscreenfp_status = onscreenfp_status;
+
+	if_con = false;/*if_con = onscreenfp_status && (OPLUS_DISPLAY_AOD_SCENE == get_oplus_display_scene());*/
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+	/* Yuwei.Zhang@MULTIMEDIA.DISPLAY.LCD, 2020/09/25, sepolicy for aod ramless */
+	if_con = if_con && !display->panel->oplus_priv.is_aod_ramless;
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+	if (if_con) {
+		/* enable the clk vote for CMD mode panels */
+		if (display->config.panel_mode == DSI_OP_CMD_MODE) {
+			dsi_display_clk_ctrl(display->dsi_clk_handle,
+					DSI_ALL_CLKS, DSI_CLK_ON);
+		}
+
+		mutex_lock(&display->panel->panel_lock);
+
+		if (display->panel->panel_initialized)
+			err = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_AOD_HBM_ON);
+
+		mutex_unlock(&display->panel->panel_lock);
+		if (err)
+			pr_err("failed to setting aod hbm on mode %d\n", err);
+
+		if (display->config.panel_mode == DSI_OP_CMD_MODE) {
+			dsi_display_clk_ctrl(display->dsi_clk_handle,
+					DSI_ALL_CLKS, DSI_CLK_OFF);
+		}
+	}
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+	/* Yuwei.Zhang@MULTIMEDIA.DISPLAY.LCD, 2020/09/25, sepolicy for aod ramless */
+	if (!display->panel->oplus_priv.is_aod_ramless) {
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+		oplus_onscreenfp_vblank_count = drm_crtc_vblank_count(
+			dsi_connector->state->crtc);
+		oplus_onscreenfp_pressed_time = ktime_get();
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+	/* Yuwei.Zhang@MULTIMEDIA.DISPLAY.LCD, 2020/09/25, sepolicy for aod ramless */
+	}
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+
+	drm_modeset_lock_all(drm_dev);
+
+	state = drm_atomic_state_alloc(drm_dev);
+	if (!state)
+		goto error;
+
+	state->acquire_ctx = mode_config->acquire_ctx;
+	crtc = dsi_connector->state->crtc;
+	crtc_state = drm_atomic_get_crtc_state(state, crtc);
+	for (i = 0; i < priv->num_crtcs; i++) {
+		if (priv->disp_thread[i].crtc_id == crtc->base.id) {
+			if (priv->disp_thread[i].thread)
+				kthread_flush_worker(&priv->disp_thread[i].worker);
+		}
+	}
+
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+/* Yuwei.Zhang@MULTIMEDIA.DISPLAY.LCD, 2020/09/25, sepolicy for aod ramless */
+	if (display->panel->oplus_priv.is_aod_ramless) {
+		struct drm_display_mode *set_mode = NULL;
+
+		if (oplus_display_mode == 2)
+			goto error;
+
+		list_for_each_entry(mode, &dsi_connector->modes, head) {
+			if (drm_mode_vrefresh(mode) == 0)
+				continue;
+			if (mode->flags & DRM_MODE_FLAG_VID_MODE_PANEL)
+				vid_mode = mode;
+			if (mode->flags & DRM_MODE_FLAG_CMD_MODE_PANEL)
+				cmd_mode = mode;
+		}
+
+		set_mode = oplus_display_mode ? vid_mode : cmd_mode;
+		set_mode = onscreenfp_status ? vid_mode : set_mode;
+		if (!crtc_state->active || !crtc_state->enable)
+			goto error;
+
+		if (set_mode && drm_mode_vrefresh(set_mode) != drm_mode_vrefresh(&crtc_state->mode)) {
+			mode_changed = true;
+		} else {
+			mode_changed = false;
+		}
+
+		if (mode_changed) {
+			display->panel->dyn_clk_caps.dyn_clk_support = false;
+			drm_atomic_set_mode_for_crtc(crtc_state, set_mode);
+		}
+
+		wake_up(&oplus_aod_wait);
+	}
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+
+	err = drm_atomic_commit(state);
+	drm_atomic_state_put(state);
+
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+/* Yuwei.Zhang@MULTIMEDIA.DISPLAY.LCD, 2020/09/25, sepolicy for aod ramless */
+	if (display->panel->oplus_priv.is_aod_ramless && mode_changed) {
+		for (i = 0; i < priv->num_crtcs; i++) {
+			if (priv->disp_thread[i].crtc_id == crtc->base.id) {
+				if (priv->disp_thread[i].thread) {
+					kthread_flush_worker(&priv->disp_thread[i].worker);
+				}
+			}
+		}
+		if (oplus_display_mode == 1)
+			display->panel->dyn_clk_caps.dyn_clk_support = true;
+	}
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+
+error:
+	drm_modeset_unlock_all(drm_dev);
+	if (!vblank_get)
+		drm_crtc_vblank_put(dsi_connector->state->crtc);
 
 	return 0;
 }

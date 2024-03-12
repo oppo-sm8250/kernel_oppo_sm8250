@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
- *  Copyright (c) 2017-2020, Pixelworks, Inc.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, Pixelworks, Inc.
  *
- *  These files contain modifications made by Pixelworks, Inc., in 2019-2020.
+ * These files contain modifications made by Pixelworks, Inc., in 2019-2020.
  */
-
 #include <drm/drm_bridge.h>
 #include <drm/drm_encoder.h>
 #include "dsi_drm.h"
@@ -18,68 +17,85 @@
 #include "dsi_iris5_mode_switch.h"
 #include "dsi_iris5_lp.h"
 #include "dsi_iris5_pq.h"
-#include "iris_log.h"
+#include "dsi_iris5_gpio.h"
+#include "dsi_iris5_timing_switch.h"
+#include "dsi_iris5_log.h"
 
 #define DEBUG_READ_PMU
-
-static int gpio_pulse_delay = 16 * 16 * 4 * 10 / POR_CLOCK;
-static int gpio_cmd_delay = 10;
-
 #define DEFAULT_ABYP_LP_MODE ABYP_POWER_DOWN_PLL
 
-static int debug_lp_opt = 0;
+static int debug_lp_opt;
 extern uint8_t iris_pq_update_path;
 
 /* abyp light up option (need panel off/on to take effect)
-bit[0]: 0 -- light up with PT, 1 -- light up with ABYP
-bit[1]: 0 -- efuse mode is ABYP, 1 -- efuse mode is PT
-bit[2]: 0 -- use mipi command to switch, 1 -- use GPIO to switch
-bit[3]: 0 -- non force, 1 -- force abyp during panel switch
-*/
-static int debug_on_opt = 0x0;
+ * bit[0]: 0 -- light up with PT, 1 -- light up with ABYP
+ * bit[1]: 0 -- efuse mode is ABYP, 1 -- efuse mode is PT
+ * bit[2]: 0 -- use mipi command to switch, 1 -- use GPIO to switch
+ * bit[3]: 0 -- non force, 1 -- force abyp during panel switch
+ */
+static int debug_on_opt;
 
-static bool iris_lce_power = false;
+static bool iris_lce_power;
 
 static bool iris_bsram_power; /* BSRAM domain power status */
 
 #define IRIS_TRACE_FPS       0x01
 #define IRIS_TRACE_CADENCE   0X02
-static int debug_trace_opt = 0x0;
-#ifdef CONFIG_DEBUG_FS
+static int debug_trace_opt;
 static int debug_abyp_gpio_status = -1;
-#endif
+
+int32_t iris_parse_lp_ctrl(struct device_node *np, struct iris_cfg *pcfg)
+{
+	int32_t rc = 0;
+	u8 vals[3];
+
+	rc = of_property_read_u8_array(np, "pxlw,low-power", vals, 3);
+	if (rc) {
+		IRIS_LOGE("%s(), failed to find low power property, return: %d",
+				__func__, rc);
+		return 0;
+	}
+
+	pcfg->lp_ctrl.dynamic_power = (bool)vals[0];
+	pcfg->lp_ctrl.ulps_lp = (bool)vals[1];
+	pcfg->lp_ctrl.abyp_enable = (bool)vals[2];
+	IRIS_LOGI("%s(), parse low power info: %d %d %d",
+			__func__, vals[0], vals[1], vals[2]);
+
+	return rc;
+}
+
 void iris_lp_preinit(void)
 {
 	struct iris_cfg *pcfg;
 
 	pcfg = iris_get_cfg();
-	if (iris_virtual_display(pcfg->display) || pcfg->valid < 2)
+	if (iris_virtual_display(pcfg->display) || pcfg->valid < PARAM_PARSED)
 		return;
 
 	if (debug_on_opt & 0x1)
 		pcfg->abypss_ctrl.abypass_mode = ANALOG_BYPASS_MODE;
 	IRIS_LOGI("%s:%d, pcfg->abypss_ctrl.abypass_mode = %d", __func__, __LINE__, pcfg->abypss_ctrl.abypass_mode);
 
-	iris_one_wired_cmd_init(pcfg->panel);
+	iris_init_one_wired();
 }
 
-/* clear some pmu domains*/
+/* clear some pmu domains */
 static void iris_clear_pmu(void)
 {
 	struct iris_update_regval regval;
 	struct iris_cfg *pcfg;
 
-	pcfg =  iris_get_cfg();
+	pcfg = iris_get_cfg();
 
 	iris_bsram_power = false;
 
 	regval.ip = IRIS_IP_SYS;
 	regval.opt_id = ID_SYS_PMU_CTRL;
-	regval.mask = 0x000000b8; /*clear MIPI2, BSRAM, FRC, DSCU*/
+	regval.mask = 0x000000b8; /*clear MIPI2, BSRAM, FRC, DSCU */
 	regval.value = 0x0;
 
 	iris_update_bitmask_regval_nonread(&regval, true);
-
 }
 
 /* init iris low power */
@@ -88,12 +104,12 @@ void iris_lp_init(void)
 	struct iris_cfg *pcfg;
 
 	pcfg = iris_get_cfg();
-	if (iris_virtual_display(pcfg->display) || pcfg->valid < 2)
+	if (iris_virtual_display(pcfg->display) || pcfg->valid < PARAM_PARSED)
 		return;
 
 	IRIS_LOGI("lp dynamic_power:%d, ulps_lp:%d, abyp_lp_enable:%d",
-		pcfg->lp_ctrl.dynamic_power, pcfg->lp_ctrl.ulps_lp,
-		pcfg->lp_ctrl.abyp_enable);
+			pcfg->lp_ctrl.dynamic_power, pcfg->lp_ctrl.ulps_lp,
+			pcfg->lp_ctrl.abyp_enable);
 
 	if (pcfg->lp_ctrl.dynamic_power) {
 		IRIS_LOGD(" [%s, %d] open psr_mif osd first address eco.", __func__, __LINE__);
@@ -106,11 +122,10 @@ void iris_lp_init(void)
 
 	iris_clear_pmu();
 
-	if (pcfg->lp_ctrl.ulps_lp) {
+	if (pcfg->lp_ctrl.ulps_lp)
 		iris_ulps_source_sel(ULPS_MAIN);
-	} else {
+	else
 		iris_ulps_source_sel(ULPS_NONE);
-	}
 }
 
 /*== PMU related APIs ==*/
@@ -168,6 +183,7 @@ static int iris_pmu_power_set(enum iris_pmu_domain domain_id, bool on)
 #endif
 	bool is_ulps_enable = 0;
 	uint8_t path = iris_pq_update_path;
+
 	regval.ip = IRIS_IP_SYS;
 	regval.opt_id = ID_SYS_PMU_CTRL;
 	regval.mask = domain_id;
@@ -191,20 +207,19 @@ static int iris_pmu_power_set(enum iris_pmu_domain domain_id, bool on)
 		}
 		pmu_ctrl = (reg_pmu_ctrl >> 2) & 0xff;
 
-		for(i=0; i<10; i++) {
+		for (i = 0; i < 10; i++) {
 			top_pmu_status = iris_ocp_read(REG_ADDR_PMU_STATUS, DSI_CMD_SET_STATE_HS);
 			pmu_status = ((top_pmu_status>>8)&0x3) + (((top_pmu_status>>15)&0x1)<<2) +
-					(((top_pmu_status>>11)&0x1)<<3) + (((top_pmu_status>>10)&0x1)<<4) +
-					(((top_pmu_status>>12)&0x7)<<5);
+				(((top_pmu_status>>11)&0x1)<<3) + (((top_pmu_status>>10)&0x1)<<4) +
+				(((top_pmu_status>>12)&0x7)<<5);
 			IRIS_LOGI("read pmu ctrl 0x%08x top_pmu_status 0x%08x, pmu_status 0x%02x",
-				reg_pmu_ctrl, top_pmu_status, pmu_status);
+					reg_pmu_ctrl, top_pmu_status, pmu_status);
 
-			if (pmu_status == pmu_ctrl) {
+			if (pmu_status == pmu_ctrl)
 				break;
-			} else {
-				IRIS_LOGE("Err %d: pmu_status: 0x%08x != pmu_ctrl 0x%02x", i, pmu_status, pmu_ctrl);
-				usleep_range(1000 * 10, 1000 * 10 + 1);
-			}
+
+			IRIS_LOGE("Err %d: pmu_status: 0x%08x != pmu_ctrl 0x%02x", i, pmu_status, pmu_ctrl);
+			usleep_range(1000 * 10, 1000 * 10 + 1);
 		}
 		if (i == 10) {
 			IRIS_LOGE("Err: return!");
@@ -220,6 +235,7 @@ static bool iris_pmu_power_get(enum iris_pmu_domain domain_id)
 {
 	uint32_t pmu_ctrl;
 	uint32_t  *payload = NULL;
+
 	payload = iris_get_ipopt_payload_data(IRIS_IP_SYS, ID_SYS_PMU_CTRL, 2);
 	pmu_ctrl = payload[0];
 	return ((pmu_ctrl & domain_id) != 0);
@@ -256,6 +272,7 @@ void iris_video_abyp_power(bool on)
 int iris_pmu_mipi2_set(bool on)
 {
 	int rt = 0;
+
 	if (((debug_lp_opt & 0x1) == 0x1) && !on) {
 		IRIS_LOGI("%s: not power down!", __func__);
 		return 0;
@@ -271,6 +288,8 @@ int iris_pmu_bsram_set(bool on)
 	int rt = 0;
 	bool is_ulps_enable = 0;
 	uint8_t path = iris_pq_update_path;
+	int i = 0;
+
 	if (((debug_lp_opt & 0x2) == 0x2) && !on) {
 		IRIS_LOGI("%s: not power down!", __func__);
 		return 0;
@@ -291,6 +310,11 @@ int iris_pmu_bsram_set(bool on)
 		is_ulps_enable = iris_disable_ulps(path);
 		iris_update_pq_opt(&popt, 1, path);
 		iris_enable_ulps(path, is_ulps_enable);
+		if(on){
+                    udelay(100);
+                    for(i = 0; i < 10; i++)
+                        iris_pmu_power_set(BSRAM_PWR,on);
+	       }
 	} else {
 		IRIS_LOGW("%s: cur %d == on %d", __func__, iris_bsram_power, on);
 		return 2;
@@ -308,6 +332,7 @@ bool iris_pmu_bsram_get(void)
 int iris_pmu_frc_set(bool on)
 {
 	int rt = 0;
+
 	if (((debug_lp_opt & 0x4) == 0x4) && !on) {
 		IRIS_LOGI("%s: not power down!", __func__);
 		return 0;
@@ -326,6 +351,7 @@ bool iris_pmu_frc_get(void)
 int iris_pmu_dscu_set(bool on)
 {
 	int rt = 0;
+
 	if (((debug_lp_opt & 0x8) == 0x8) && !on) {
 		IRIS_LOGI("%s: not power down!", __func__);
 		return 0;
@@ -339,6 +365,7 @@ int iris_pmu_dscu_set(bool on)
 int iris_pmu_lce_set(bool on)
 {
 	int rt = 0;
+
 	if (((debug_lp_opt & 0x10) == 0x10) && !on) {
 		IRIS_LOGI("%s: not power down!", __func__);
 		return 0;
@@ -405,9 +432,9 @@ void iris_ulps_source_sel(enum iris_ulps_sel ulps_sel)
 	iris_update_bitmask_regval_nonread(&regval, false);
 	iris_init_update_ipopt(&popt, IRIS_IP_SYS, regval.opt_id, regval.opt_id, 0);
 	iris_update_pq_opt(&popt, 1, PATH_DSI);
-	IRIS_LOGI("ulps source sel: %d", ulps_sel);
+	IRIS_LOGD("ulps source sel: %d", ulps_sel);
 
-	if(ulps_sel == ULPS_NONE)
+	if (ulps_sel == ULPS_NONE)
 		pcfg->lp_ctrl.ulps_lp = false;
 	else
 		pcfg->lp_ctrl.ulps_lp = true;
@@ -420,16 +447,17 @@ bool iris_ulps_enable_get(void)
 	pcfg = iris_get_cfg();
 
 	IRIS_LOGI("ulps ap:%d, iris:%d",
-		pcfg->display->panel->ulps_feature_enabled, pcfg->lp_ctrl.ulps_lp);
+			pcfg->display->panel->ulps_feature_enabled, pcfg->lp_ctrl.ulps_lp);
 
-	if(pcfg->display->panel->ulps_feature_enabled && pcfg->lp_ctrl.ulps_lp)
+	if (pcfg->display->panel->ulps_feature_enabled && pcfg->lp_ctrl.ulps_lp)
 		return true;
 	else
 		return false;
 }
 
 /* TE delay or EVS delay select.
-   0: TE delay; 1: EVS delay */
+ * 0: TE delay; 1: EVS delay
+ */
 void iris_te_select(int sel)
 {
 	struct iris_update_ipopt popt[IP_OPT_MAX];
@@ -454,97 +482,8 @@ void iris_te_select(int sel)
 
 /*== Analog bypass related APIs ==*/
 
-/* init one wired command GPIO */
-int iris_one_wired_cmd_init(struct dsi_panel *panel)
-{
-	int one_wired_gpio = 0;
-	int one_wired_status_gpio = 0;
-	struct iris_cfg *pcfg = NULL;
 
-	if (!panel)
-		return -EINVAL;
-
-	pcfg = iris_get_cfg();
-	one_wired_gpio = panel->reset_config.abyp_gpio;
-
-	IRIS_LOGI("%s: %d", __func__, __LINE__);
-
-	if (!gpio_is_valid(one_wired_gpio)) {
-		pcfg->abypss_ctrl.analog_bypass_disable = true;
-
-		IRIS_LOGE("%s:%d, one wired GPIO not configured",
-			   __func__, __LINE__);
-		return 0;
-	}
-
-	gpio_direction_output(one_wired_gpio, 0);
-
-	one_wired_status_gpio = panel->reset_config.abyp_status_gpio;
-	if (!gpio_is_valid(one_wired_status_gpio)) {
-		IRIS_LOGE("%s(%d), ABYP status GPIO not configured.",
-			__func__, __LINE__);
-		return 0;
-	}
-
-	gpio_direction_input(one_wired_status_gpio);
-
-	return 0;
-}
-
-/* send one wired commands via GPIO */
-void iris_one_wired_cmd_send(
-		struct dsi_panel *panel, int cmd)
-{
-	int cnt = 0;
-	u32 start_end_delay = 0, pulse_delay = 0;
-	unsigned long flags;
-	struct iris_cfg *pcfg;
-	int one_wired_gpio = panel->reset_config.abyp_gpio;
-
-	pcfg = iris_get_cfg();
-
-	if (!gpio_is_valid(one_wired_gpio)) {
-		IRIS_LOGE("%s:%d, one wired GPIO not configured",
-			   __func__, __LINE__);
-		return;
-	}
-
-	start_end_delay = 16 * 16 * 16 * 10 / POR_CLOCK;  /*us*/
-	pulse_delay = gpio_pulse_delay;  /*us*/
-
-	IRIS_LOGD("cmd:%d, pulse:%d, delay:%d",
-			cmd, pulse_delay, gpio_cmd_delay);
-	if (1 == cmd)
-		IRIS_LOGD("POWER_UP_SYS");
-	else if (2 == cmd)
-		IRIS_LOGD("ENTER_ANALOG_BYPASS");
-	else if (3 == cmd)
-		IRIS_LOGD("EXIT_ANALOG_BYPASS");
-	else if (4 == cmd)
-		IRIS_LOGD("POWER_DOWN_SYS");
-	else if (6 == cmd)
-		IRIS_LOGD("FORCE_ENTER_ANALOG_BYPASS");
-	else if (7 == cmd)
-		IRIS_LOGD("FORCE_EXIT_ANALOG_BYPASS");
-	else if (8 == cmd)
-		IRIS_LOGD("POWER_UP_MIPI");
-	else if (9 == cmd)
-		IRIS_LOGD("POWER_DOWN_MIPI");
-
-	spin_lock_irqsave(&pcfg->iris_lock, flags);
-	for (cnt = 0; cnt < cmd; cnt++) {
-		gpio_set_value(one_wired_gpio, 1);
-		udelay(pulse_delay);
-		gpio_set_value(one_wired_gpio, 0);
-		udelay(pulse_delay);
-	}
-	udelay(gpio_cmd_delay);
-	spin_unlock_irqrestore(&pcfg->iris_lock, flags);
-	/*end*/
-	udelay(start_end_delay);
-}
-
-static struct drm_encoder * iris_get_drm_encoder_handle(void)
+static struct drm_encoder *iris_get_drm_encoder_handle(void)
 {
 	struct iris_cfg *pcfg;
 
@@ -558,7 +497,7 @@ static struct drm_encoder * iris_get_drm_encoder_handle(void)
 
 void iris_sde_encoder_rc_lock(void)
 {
-	struct drm_encoder * drm_enc = NULL;
+	struct drm_encoder *drm_enc = NULL;
 
 	drm_enc = iris_get_drm_encoder_handle();
 
@@ -567,7 +506,7 @@ void iris_sde_encoder_rc_lock(void)
 
 void iris_sde_encoder_rc_unlock(void)
 {
-	struct drm_encoder * drm_enc = NULL;
+	struct drm_encoder *drm_enc = NULL;
 
 	drm_enc = iris_get_drm_encoder_handle();
 
@@ -575,9 +514,9 @@ void iris_sde_encoder_rc_unlock(void)
 }
 
 /* Switch ABYP by mipi commands
-   enter_abyp: true -- Enter ABYP;
-               false -- Exit ABYP
-*/
+ * enter_abyp: true -- Enter ABYP;
+ * false -- Exit ABYP
+ */
 static void iris_mipi_abyp_switch(bool enter_abyp)
 {
 	if (enter_abyp) {
@@ -589,32 +528,18 @@ static void iris_mipi_abyp_switch(bool enter_abyp)
 	}
 }
 
-static int iris_abyp_status_gpio_check(struct dsi_panel *panel)
-{
-	int abyp_status_gpio = 0;
-
-	if (!panel) {
-		IRIS_LOGE("%s(), invalid input parameter.", __func__);
-		return -1;
-	}
-
-	if (!gpio_is_valid(panel->reset_config.abyp_status_gpio)) {
-		IRIS_LOGE("%s(), ABYP status GPIO is not configured.", __func__);
-		return -1;
-	}
-	abyp_status_gpio = gpio_get_value(panel->reset_config.abyp_status_gpio);
-	IRIS_LOGI("%s(), ABYP status: %d.", __func__, abyp_status_gpio);
-
-	return abyp_status_gpio;
-}
-
 bool iris_fast_cmd_abyp_enter(void)
 {
 	struct iris_cfg *pcfg;
 	int i;
 	int abyp_status_gpio;
+	ktime_t ktime0;
+	ktime_t ktime1;
+	uint32_t timeus;
 
 	pcfg = iris_get_cfg();
+	if (debug_lp_opt & 0x400)
+		ktime0 = ktime_get();
 
 	IRIS_LOGI("Enter abyp mode start");
 	/* HS enter abyp */
@@ -622,22 +547,35 @@ bool iris_fast_cmd_abyp_enter(void)
 	udelay(100);
 
 	/* check abyp gpio status */
-	for (i=0; i<10; i++) {
-		abyp_status_gpio = iris_abyp_status_gpio_check(pcfg->panel);
+	for (i = 0; i < 10; i++) {
+		abyp_status_gpio = iris_check_abyp_ready();
 		IRIS_LOGD("%s, ABYP status: %d.", __func__, abyp_status_gpio);
 		if (abyp_status_gpio == 1) {
+			if (debug_lp_opt & 0x400) {
+				ktime1 = ktime_get();
+				timeus = (u32)ktime_to_us(ktime1) - (u32)ktime_to_us(ktime0);
+				ktime0 = ktime1;
+				IRIS_LOGI("spend time switch ABYP %d us", timeus);
+			}
 			//power off domains, switch clocks mux
 			iris_send_ipopt_cmds(IRIS_IP_SYS, 0x22);
 			//power off PLL, gate clocks
 			iris_send_ipopt_cmds(IRIS_IP_SYS, 0x23);
 			IRIS_LOGD("ABYP enter LP");
+			if (debug_lp_opt & 0x400) {
+				ktime1 = ktime_get();
+				timeus = (u32)ktime_to_us(ktime1) - (u32)ktime_to_us(ktime0);
+				ktime0 = ktime1;
+				IRIS_LOGI("spend time ABYP LP %d us", timeus);
+			}
+
 			pcfg->abypss_ctrl.abypass_mode = ANALOG_BYPASS_MODE;
 			break;
 		}
 		udelay(3 * 1000);
 	}
 	if (abyp_status_gpio == 0) {
-		IRIS_LOGE("Enter abyp mode Failed!!!");
+		IRIS_LOGE("Enter abyp mode Failed!");
 		return true;
 	}
 	IRIS_LOGI("Enter abyp done");
@@ -646,30 +584,71 @@ bool iris_fast_cmd_abyp_enter(void)
 
 bool iris_fast_cmd_abyp_exit(void)
 {
-	struct dsi_display * display = NULL;
+	struct dsi_display *display = NULL;
 	struct iris_cfg *pcfg;
 	int abyp_status_gpio;
+	int next_fps, next_vres;
+	bool high;
+	ktime_t ktime0;
+	ktime_t ktime1;
+	uint32_t timeus;
 
 	pcfg = iris_get_cfg();
 
 	display = pcfg->display;
+	next_fps = pcfg->panel->cur_mode->timing.refresh_rate;
+	next_vres = pcfg->panel->cur_mode->timing.v_active;
+	if ((next_fps == HIGH_FREQ) && (next_vres == FHD_H))
+		high = true;
+	else
+		high = false;
+
+	if (debug_lp_opt & 0x400)
+		ktime0 = ktime_get();
 
 	IRIS_LOGI("Exit abyp mode start");
-	iris_one_wired_cmd_send(pcfg->panel, POWER_DOWN_MIPI);
+	IRIS_LOGI("cur_fps:%d, cur_vres:%d, next_fps:%d, next_vres:%d, high:%d",
+			pcfg->cur_fps_in_iris, pcfg->cur_vres_in_iris, next_fps, next_vres, high);
+
+	iris_send_one_wired_cmd(IRIS_POWER_DOWN_MIPI);
 	udelay(3500);
-	iris_one_wired_cmd_send(pcfg->panel, POWER_UP_MIPI);
+	iris_send_one_wired_cmd(IRIS_POWER_UP_MIPI);
 	udelay(3500);
+	if (debug_lp_opt & 0x400) {
+		ktime1 = ktime_get();
+		timeus = (u32)ktime_to_us(ktime1) - (u32)ktime_to_us(ktime0);
+		ktime0 = ktime1;
+		IRIS_LOGI("spend time MIPI off/on %d us", timeus);
+	}
 
 	if (pcfg->iris_initialized) {
-		//ungate clocks & power on PLL
-		iris_send_ipopt_cmds(IRIS_IP_SYS, 0x20);
-		udelay(100);
-		//switch clock mux & power on domains
-		iris_send_ipopt_cmds(IRIS_IP_SYS, 0x21);
-		//configure MIPI and other domains via DMA
-		iris_send_ipopt_cmds(IRIS_IP_DMA, 0xe9);
-		udelay(100);
-		IRIS_LOGD("configure mipi");
+		if ((pcfg->cur_fps_in_iris == next_fps) && (pcfg->cur_vres_in_iris == next_vres)) {
+			//ungate clocks & power on PLLs
+			iris_send_ipopt_cmds(IRIS_IP_SYS, 0x20);
+			udelay(100);
+			//switch clock mux & power on domains
+			iris_send_ipopt_cmds(IRIS_IP_SYS, 0x21);
+			//configure MIPI and other domains via DMA
+			iris_send_ipopt_cmds(IRIS_IP_DMA, 0xE9);
+			udelay(100);
+			IRIS_LOGD("configure DMA");
+		} else {
+			//ungate clocks && re-program PLL
+			iris_send_ipopt_cmds(IRIS_IP_SYS, high ? 0x28:0x27);
+			udelay(100);
+			//switch clock mux & power on domains
+			iris_send_ipopt_cmds(IRIS_IP_SYS, 0x21);
+
+			//configure MIPI Rx
+			iris_send_ipopt_cmds(IRIS_IP_RX, high ? 0xF2:0xF1);
+		}
+		if (debug_lp_opt & 0x400) {
+			ktime1 = ktime_get();
+			timeus = (u32)ktime_to_us(ktime1) - (u32)ktime_to_us(ktime0);
+			ktime0 = ktime1;
+			IRIS_LOGI("spend time ABP send LP command %d us", timeus);
+		}
+
 	} else {
 		//ungate clocks, power on MIPI PLL
 		iris_send_ipopt_cmds(IRIS_IP_SYS, 0x24);
@@ -680,23 +659,42 @@ bool iris_fast_cmd_abyp_exit(void)
 
 	/* exit abyp */
 	abyp_status_gpio = iris_exit_abyp(false);
-
+	if (debug_lp_opt & 0x400) {
+		ktime1 = ktime_get();
+		timeus = (u32)ktime_to_us(ktime1) - (u32)ktime_to_us(ktime0);
+		ktime0 = ktime1;
+		IRIS_LOGI("spend time switch to PT %d us", timeus);
+	}
 	if (abyp_status_gpio == 0) {
 		if (pcfg->iris_initialized == false) {
-			iris5_lightup(pcfg->panel, NULL);
+			iris_lightup(pcfg->panel, NULL);
 			pcfg->iris_initialized = true;
 			IRIS_LOGI("%s, light up iris", __func__);
 		} else {
+			if (pcfg->cur_vres_in_iris != next_vres) {
+				//resolution change (may have fps change)
+				iris_send_timing_switch_pkt();
+				iris_send_ipopt_cmds(IRIS_IP_DMA, 0xE9);
+				udelay(200);
+			} else if (pcfg->cur_fps_in_iris != next_fps) {
+				//only fps change
+				iris_send_ipopt_cmds(IRIS_IP_RX, high ? 0xE1:0xE0);
+				iris_set_out_frame_rate(next_fps);
+				iris_send_ipopt_cmds(IRIS_IP_DMA, 0xE9);
+				udelay(200);
+			}
 			iris_send_ipopt_cmds(IRIS_IP_SYS, ID_SYS_PMU_CTRL);
-			iris_send_ipopt_cmds(IRIS_IP_PWIL, 0x51); /*WA force enable PWIL capture*/
-			iris_send_ipopt_cmds(IRIS_IP_DMA, 0xe5);
-			IRIS_LOGD("trigger dma");
-			//iris_send_ipopt_cmds(IRIS_IP_RX, ID_RX_EXIT_TTL);
-
-			//for dynamic fps switch, update DTG setting if need
-			if(pcfg->cur_fps_in_iris != pcfg->next_fps_for_iris)
-				iris_set_out_frame_rate(pcfg->next_fps_for_iris);
+			if (debug_lp_opt & 0x400) {
+				ktime1 = ktime_get();
+				timeus = (u32)ktime_to_us(ktime1) - (u32)ktime_to_us(ktime0);
+				ktime0 = ktime1;
+				IRIS_LOGI("spend time PT HS commmand %d us", timeus);
+			}
 		}
+
+		pcfg->cur_fps_in_iris = next_fps;
+		pcfg->cur_vres_in_iris = next_vres;
+		iris_update_frc_fps(pcfg->cur_fps_in_iris & 0xFF);
 
 		//mutex_lock(&pcfg->abypss_ctrl.abypass_mutex);
 		pcfg->abypss_ctrl.pending_mode = MAX_MODE;
@@ -707,7 +705,7 @@ bool iris_fast_cmd_abyp_exit(void)
 		return true;
 	}
 
-	IRIS_LOGE("Exit abyp failed!");
+	IRIS_LOGE("Exit abyp mode Failed!");
 	return false;
 }
 
@@ -727,16 +725,16 @@ void iris_video_abyp_enter(void)
 	iris_video_abyp_power(false);
 	IRIS_LOGI("power down other domains");
 
-	iris_one_wired_cmd_send(pcfg->panel, ENTER_ANALOG_BYPASS);
+	iris_send_one_wired_cmd(IRIS_ENTER_ANALOG_BYPASS);
 	IRIS_LOGI("enter abyp");
 
 	/* check abyp gpio status */
-	for (i=0; i<3; i++) {
+	for (i = 0; i < 3; i++) {
 		udelay(10 * 1000);
-		abyp_status_gpio = iris_abyp_status_gpio_check(pcfg->panel);
+		abyp_status_gpio = iris_check_abyp_ready();
 		IRIS_LOGD("%s(%d), ABYP status: %d.", __func__, __LINE__, abyp_status_gpio);
 		if (abyp_status_gpio == 1) {
-			iris_one_wired_cmd_send(pcfg->panel, POWER_DOWN_MIPI);
+			iris_send_one_wired_cmd(IRIS_POWER_DOWN_MIPI);
 			//IRIS_LOGI("power down mipi");
 			pcfg->abypss_ctrl.abypass_mode = ANALOG_BYPASS_MODE;
 			break;
@@ -755,17 +753,17 @@ void iris_video_abyp_exit(void)
 	IRIS_LOGI("%s", __func__);
 
 
-	iris_one_wired_cmd_send(pcfg->panel, POWER_UP_MIPI);
+	iris_send_one_wired_cmd(IRIS_POWER_UP_MIPI);
 	//IRIS_LOGI("power up mipi");
 	udelay(10 * 1000);
 
-	iris_one_wired_cmd_send(pcfg->panel, EXIT_ANALOG_BYPASS);
+	iris_send_one_wired_cmd(IRIS_EXIT_ANALOG_BYPASS);
 	//IRIS_LOGI("exit abyp");
 
 	/* check abyp gpio status */
-	for (i=0; i<3; i++) {
+	for (i = 0; i < 3; i++) {
 		udelay(10 * 1000);
-		abyp_status_gpio = iris_abyp_status_gpio_check(pcfg->panel);
+		abyp_status_gpio = iris_check_abyp_ready();
 		IRIS_LOGI("%s(%d), ABYP status: %d.", __func__, __LINE__, abyp_status_gpio);
 		if (abyp_status_gpio == 0) {
 			pcfg->abypss_ctrl.abypass_mode = PASS_THROUGH_MODE;
@@ -820,9 +818,9 @@ int iris_pt_to_abyp_switch(void)
 		*pswitch_state = ANALOG_BYPASS_CHECK_STATE;
 		break;
 	case ANALOG_BYPASS_CHECK_STATE:
-		abyp_status_gpio = iris_abyp_status_gpio_check(pcfg->panel);
+		abyp_status_gpio = iris_check_abyp_ready();
 		if (abyp_status_gpio == 1) {
-			iris_one_wired_cmd_send(pcfg->panel, POWER_DOWN_MIPI);
+			iris_send_one_wired_cmd(IRIS_POWER_DOWN_MIPI);
 			IRIS_LOGD("power down mipi");
 			pcfg->abypss_ctrl.abypass_mode = ANALOG_BYPASS_MODE;
 			IRIS_LOGE("Enter abyp done");
@@ -862,17 +860,18 @@ int iris_abyp_to_pt_switch(void)
 	if (pcfg->iris_initialized == false) {
 		/* light up iris */
 		int i;
-		iris_one_wired_cmd_send(pcfg->panel, POWER_UP_MIPI);
+
+		iris_send_one_wired_cmd(IRIS_POWER_UP_MIPI);
 		udelay(5000);
 		iris_mipi_abyp_switch(false);
-		for (i=0; i<10; i++) {
-			abyp_status_gpio = iris_abyp_status_gpio_check(pcfg->panel);
+		for (i = 0; i < 10; i++) {
+			abyp_status_gpio = iris_check_abyp_ready();
 			if (abyp_status_gpio == 0)
 				break;
 			udelay(5000);
 		}
 		if (abyp_status_gpio == 0) {
-			iris5_lightup(pcfg->panel, NULL);
+			iris_lightup(pcfg->panel, NULL);
 			pcfg->iris_initialized = true;
 			IRIS_LOGI("%s, light up iris", __func__);
 			//mutex_lock(&pcfg->abypss_ctrl.abypass_mutex);
@@ -889,7 +888,7 @@ int iris_abyp_to_pt_switch(void)
 	case POWER_UP_STATE:
 		kt0 = ktime_get();
 		/* exit low power mode */
-		iris_one_wired_cmd_send(pcfg->panel, POWER_UP_MIPI);
+		iris_send_one_wired_cmd(IRIS_POWER_UP_MIPI);
 		*pswitch_state = CONFIG_MIPI_STATE;
 		IRIS_LOGI("power up");
 		//udelay(3500);
@@ -907,13 +906,13 @@ int iris_abyp_to_pt_switch(void)
 
 	case ANALOG_BYPASS_EXIT_STATE:
 		/* exit abyp */
-		//iris_one_wired_cmd_send(pcfg->panel, EXIT_ANALOG_BYPASS);
+		//iris_send_one_wired_cmd(IRIS_EXIT_ANALOG_BYPASS);
 		iris_mipi_abyp_switch(false);
 		IRIS_LOGI("send exit abyp");
 		*pswitch_state = ANALOG_BYPASS_CHECK_STATE;
 		break;
 	case ANALOG_BYPASS_CHECK_STATE:
-		abyp_status_gpio = iris_abyp_status_gpio_check(pcfg->panel);
+		abyp_status_gpio = iris_check_abyp_ready();
 		if (abyp_status_gpio == 0) {
 			iris_send_ipopt_cmds(IRIS_IP_SYS, ID_SYS_PMU_CTRL);
 			IRIS_LOGI("set pmu");
@@ -932,7 +931,7 @@ int iris_abyp_to_pt_switch(void)
 		IRIS_LOGE("Exit abyp done");
 		kt1 = ktime_get();
 		IRIS_LOGI("abyp->pt: total_time: %d us",
-			((u32) ktime_to_us(kt1) - (u32) ktime_to_us(kt0)));
+				((u32) ktime_to_us(kt1) - (u32) ktime_to_us(kt0)));
 		//mutex_lock(&pcfg->abypss_ctrl.abypass_mutex);
 		pcfg->abypss_ctrl.pending_mode = MAX_MODE;
 		pcfg->abypss_ctrl.abypass_mode = PASS_THROUGH_MODE;
@@ -976,9 +975,9 @@ bool iris_abypass_switch_proc(struct dsi_display *display, int mode, bool pendin
 		return pt_mode;
 	}
 
-	SDE_ATRACE_BEGIN("iris_abypass_switch_proc");
+	SDE_ATRACE_BEGIN("iris_abyp_switch");
 	mutex_lock(&pcfg->abypss_ctrl.abypass_mutex);
-	dport_status = mode & PQ_SWITCH_MASK;
+	dport_status = mode & PQ_SWITCH_MASK; // check pq switch mask
 	// Check GPIO or mipi inside abyp_enter, abyp_exit
 	if ((mode & BIT(0)) == ANALOG_BYPASS_MODE) {
 		if (first)
@@ -998,34 +997,35 @@ bool iris_abypass_switch_proc(struct dsi_display *display, int mode, bool pendin
 			iris_video_abyp_exit();
 			pt_mode = true;
 		}
-		// Soft Iris switch iris PQ
+		/* Soft Iris switch iris PQ: Close dport after enter PT imediately,
+		 * IrisService will open dport after PQ switch
+		 */
 		if (dport_status && pt_mode)
 			iris_dom_set(0);
 	} else
 		IRIS_LOGE("%s: switch mode: %d not supported!", __func__, mode);
 	mutex_unlock(&pcfg->abypss_ctrl.abypass_mutex);
-	SDE_ATRACE_END("iris_abypass_switch_proc");
+	SDE_ATRACE_END("iris_abyp_switch");
 
 	return pt_mode;
 }
 
-void iris_abyp_lp(int mode) //CID90440
+void iris_abyp_lp(int mode)
 {
-	struct iris_cfg *pcfg = iris_get_cfg_by_index(DSI_PRIMARY);
 	int abyp_status_gpio;
 
-	abyp_status_gpio = iris_abyp_status_gpio_check(pcfg->panel);
+	abyp_status_gpio = iris_check_abyp_ready();
 	IRIS_LOGD("%s(%d), ABYP status: %d, lp_mode: %d",
-		__func__, __LINE__, abyp_status_gpio, mode);
+			__func__, __LINE__, abyp_status_gpio, mode);
 
 	if (abyp_status_gpio == 1) {
 		if (mode == ABYP_POWER_DOWN_SYS)
-			iris_one_wired_cmd_send(pcfg->panel, POWER_DOWN_SYS);
+			iris_send_one_wired_cmd(IRIS_POWER_DOWN_SYS);
 		else if (mode == ABYP_POWER_DOWN_MIPI)
-			iris_one_wired_cmd_send(pcfg->panel, POWER_DOWN_MIPI);
-		else if (mode == ABYP_POWER_DOWN_PLL) {
+			iris_send_one_wired_cmd(IRIS_POWER_DOWN_MIPI);
+		else if (mode == ABYP_POWER_DOWN_PLL)
 			iris_send_ipopt_cmds(IRIS_IP_SYS, 0x26);
-		} else
+		else
 			IRIS_LOGW("[%s:%d] mode: %d error", __func__, __LINE__, mode);
 	} else {
 		IRIS_LOGW("iris is not in ABYP mode");
@@ -1037,11 +1037,10 @@ int iris_exit_abyp(bool one_wired)
 {
 	int i = 0;
 	int abyp_status_gpio;
-	struct iris_cfg *pcfg = iris_get_cfg();
 
 	/* try to exit abyp */
 	if (one_wired) {
-		iris_one_wired_cmd_send(pcfg->panel, EXIT_ANALOG_BYPASS);
+		iris_send_one_wired_cmd(IRIS_EXIT_ANALOG_BYPASS);
 		udelay(2000);
 	} else {
 		iris_mipi_abyp_switch(false); /* switch by MIPI command */
@@ -1050,12 +1049,11 @@ int iris_exit_abyp(bool one_wired)
 	IRIS_LOGI("send exit abyp, one_wired:%d.", one_wired);
 
 	/* check abyp gpio status */
-	for (i=0; i<10; i++) {
-		abyp_status_gpio = iris_abyp_status_gpio_check(pcfg->panel);
+	for (i = 0; i < 10; i++) {
+		abyp_status_gpio = iris_check_abyp_ready();
 		IRIS_LOGD("%s, ABYP status: %d.", __func__, abyp_status_gpio);
-		if (abyp_status_gpio == 0) {
+		if (abyp_status_gpio == 0)
 			break;
-		}
 		udelay(3 * 1000);
 	}
 
@@ -1064,11 +1062,6 @@ int iris_exit_abyp(bool one_wired)
 
 int iris_lightup_opt_get(void)
 {
-	struct iris_cfg *pcfg = iris_get_cfg();
-
-	if (pcfg && pcfg->lightup_no_fw)
-		debug_on_opt = 0x09;
-
 	return debug_on_opt;
 }
 
@@ -1081,71 +1074,73 @@ void iris_lp_setting_off(void)
 
 #define CHECK_KICKOFF_FPS_CADNENCE
 #if defined(CHECK_KICKOFF_FPS_CADNENCE)
-int getFrameDiff(long timeDiff) {
-        int frameDiff;
-        if (timeDiff < 11) // 16.7-5 ms
-                frameDiff = 0;
-        else if (timeDiff < 28) // 33.3-5
-                frameDiff = 1;
-        else if (timeDiff < 45)    // 50-5
-                frameDiff = 2;
-        else if (timeDiff < 61)    // 66.7-5
-                frameDiff = 3;
-        else if (timeDiff < 78)    // 83.3-5
-                frameDiff = 4;
-        else if (timeDiff < 95)    // 100 - 5
-                frameDiff = 5;
-        else if (timeDiff < 111)   // 116.7 - 5
-                frameDiff = 6;
-        else
-                frameDiff = 7;
-        return frameDiff;
+int getFrameDiff(long timeDiff)
+{
+	int frameDiff;
+
+	if (timeDiff < 11) // 16.7-5 ms
+		frameDiff = 0;
+	else if (timeDiff < 28) // 33.3-5
+		frameDiff = 1;
+	else if (timeDiff < 45)    // 50-5
+		frameDiff = 2;
+	else if (timeDiff < 61)    // 66.7-5
+		frameDiff = 3;
+	else if (timeDiff < 78)    // 83.3-5
+		frameDiff = 4;
+	else if (timeDiff < 95)    // 100 - 5
+		frameDiff = 5;
+	else if (timeDiff < 111)   // 116.7 - 5
+		frameDiff = 6;
+	else
+		frameDiff = 7;
+	return frameDiff;
 }
 
 #define CHECK_KICKOFF_FPS_DURATION      5 /*EVERY 5s*/
 
 void iris_check_kickoff_fps_cadence(void)
 {
-        static u32 kickoff_cnt = 0;
-        u32 timeusDelta = 0;
-        static ktime_t ktime_kickoff_start;
-        static u32 us_last_kickoff;
-        ktime_t ktime_kickoff;
-        static u32 cadence[10];
-        static int cdIndex = 0;
-        u32 us_timediff;
+	static u32 kickoff_cnt;
+	u32 timeusDelta = 0;
+	static ktime_t ktime_kickoff_start;
+	static u32 us_last_kickoff;
+	ktime_t ktime_kickoff;
+	static u32 cadence[10];
+	static int cdIndex;
+	u32 us_timediff;
 
-        if(kickoff_cnt == 0) {
-                kickoff_cnt++;
-                ktime_kickoff_start = ktime_get();
-                memset(cadence, 0, sizeof(cadence));
-                cdIndex = 0;
-                cadence[cdIndex++] = 0;
-                us_last_kickoff = (u32)ktime_to_us(ktime_kickoff_start);
-        } else {
-                kickoff_cnt++;
-                ktime_kickoff = ktime_get();
-                timeusDelta = (u32)ktime_to_us(ktime_kickoff) - (u32)ktime_to_us(ktime_kickoff_start);
-                us_timediff = (u32)ktime_to_us(ktime_kickoff) - us_last_kickoff;
-                us_last_kickoff = (u32)ktime_to_us(ktime_kickoff);
-                if(cdIndex> 9)
-                        cdIndex = 0;
+	if (kickoff_cnt == 0) {
+		kickoff_cnt++;
+		ktime_kickoff_start = ktime_get();
+		memset(cadence, 0, sizeof(cadence));
+		cdIndex = 0;
+		cadence[cdIndex++] = 0;
+		us_last_kickoff = (u32)ktime_to_us(ktime_kickoff_start);
+	} else {
+		kickoff_cnt++;
+		ktime_kickoff = ktime_get();
+		timeusDelta = (u32)ktime_to_us(ktime_kickoff) - (u32)ktime_to_us(ktime_kickoff_start);
+		us_timediff = (u32)ktime_to_us(ktime_kickoff) - us_last_kickoff;
+		us_last_kickoff = (u32)ktime_to_us(ktime_kickoff);
+		if (cdIndex > 9)
+			cdIndex = 0;
 
-                cadence[cdIndex++] = getFrameDiff((us_timediff+500)/1000);//16667
-                if (timeusDelta > 1000000*CHECK_KICKOFF_FPS_DURATION) {
-                        if ((debug_trace_opt&IRIS_TRACE_FPS) == IRIS_TRACE_FPS)
-                                IRIS_LOGI("iris: kickoff fps % d", kickoff_cnt/CHECK_KICKOFF_FPS_DURATION);
-                        if ((debug_trace_opt&IRIS_TRACE_CADENCE) == IRIS_TRACE_CADENCE)
-                                IRIS_LOGI("iris: Latest cadence: %d %d %d %d %d, %d %d %d %d %d",
-                                        cadence[0], cadence[1], cadence[2], cadence[3], cadence[4],
-                                        cadence[5], cadence[6], cadence[7], cadence[8], cadence[9]);
-                        kickoff_cnt = 0;
-                }
-        }
+		cadence[cdIndex++] = getFrameDiff((us_timediff+500)/1000);//16667
+		if (timeusDelta > 1000000*CHECK_KICKOFF_FPS_DURATION) {
+			if ((debug_trace_opt&IRIS_TRACE_FPS) == IRIS_TRACE_FPS)
+				IRIS_LOGI("iris: kickoff fps % d", kickoff_cnt/CHECK_KICKOFF_FPS_DURATION);
+			if ((debug_trace_opt&IRIS_TRACE_CADENCE) == IRIS_TRACE_CADENCE)
+				IRIS_LOGI("iris: Latest cadence: %d %d %d %d %d, %d %d %d %d %d",
+						cadence[0], cadence[1], cadence[2], cadence[3], cadence[4],
+						cadence[5], cadence[6], cadence[7], cadence[8], cadence[9]);
+			kickoff_cnt = 0;
+		}
+	}
 }
 #endif
 
-int iris5_prepare_for_kickoff(void *phys_enc)
+int iris_prepare_for_kickoff(void *phys_enc)
 {
 	struct sde_encoder_phys *phys_encoder = phys_enc;
 	struct sde_connector *c_conn = NULL;
@@ -1162,15 +1157,15 @@ int iris5_prepare_for_kickoff(void *phys_enc)
 	if (c_conn == NULL)
 		return -EFAULT;
 
-    if(c_conn->connector_type != DRM_MODE_CONNECTOR_DSI)
-        return 0;
+	if (c_conn->connector_type != DRM_MODE_CONNECTOR_DSI)
+		return 0;
 
 	display = c_conn->display;
 	if (display == NULL)
 		return -EFAULT;
 
 	pcfg = iris_get_cfg_by_index(DSI_PRIMARY);
-	if (iris_virtual_display(display) || pcfg->valid < 2)
+	if (iris_virtual_display(display) || pcfg->valid < PARAM_PARSED)
 		return 0;
 
 #if defined(CHECK_KICKOFF_FPS_CADNENCE)
@@ -1196,32 +1191,44 @@ void iris_power_up_mipi(void)
 	struct iris_cfg *pcfg = iris_get_cfg();
 	struct dsi_display *display = pcfg->display;
 
-	if (iris_virtual_display(display)) {
+	if (iris_virtual_display(display))
 		return;
-	}
 
 	IRIS_LOGI("%s(%d), power up mipi", __func__, __LINE__);
-	iris_one_wired_cmd_send(pcfg->panel, POWER_UP_MIPI);
+	iris_send_one_wired_cmd(IRIS_POWER_UP_MIPI);
 	udelay(3500);
 }
 
 void iris_reset_mipi(void)
 {
-    struct iris_cfg *pcfg = iris_get_cfg();
+	iris_send_one_wired_cmd(IRIS_POWER_DOWN_MIPI);
+	IRIS_LOGI("%s(%d), power down mipi", __func__, __LINE__);
+	udelay(3500);
 
-    iris_one_wired_cmd_send(pcfg->panel, POWER_DOWN_MIPI);
-    IRIS_LOGI("%s(%d), power down mipi", __func__, __LINE__);
-    udelay(3500);
-
-    iris_one_wired_cmd_send(pcfg->panel, POWER_UP_MIPI);
-    IRIS_LOGI("%s(%d), power up mipi", __func__, __LINE__);
-    udelay(3500);
+	iris_send_one_wired_cmd(IRIS_POWER_UP_MIPI);
+	IRIS_LOGI("%s(%d), power up mipi", __func__, __LINE__);
+	udelay(3500);
 }
 
+int iris_get_abyp_mode(struct dsi_panel *panel)
+{
+	struct iris_cfg *pcfg = iris_get_cfg_by_index(DSI_PRIMARY);
+	struct iris_cfg *pcfg2 = iris_get_cfg_by_index(DSI_SECONDARY);
+
+	IRIS_LOGD("%s(%d), secondary: %d abyp mode: %d, %d",
+			__func__, __LINE__,
+			panel->is_secondary,
+			pcfg->abypss_ctrl.abypass_mode,
+			pcfg2->abypss_ctrl.abypass_mode);
+	return (!panel->is_secondary) ?
+		pcfg->abypss_ctrl.abypass_mode : pcfg2->abypss_ctrl.abypass_mode;
+}
+
+
 /*== Low Power debug related ==*/
-#ifdef CONFIG_DEBUG_FS
+
 static ssize_t iris_abyp_dbg_write(struct file *file,
-	const char __user *buff, size_t count, loff_t *ppos)
+		const char __user *buff, size_t count, loff_t *ppos)
 {
 	unsigned long val;
 	struct iris_cfg *pcfg;
@@ -1232,46 +1239,46 @@ static ssize_t iris_abyp_dbg_write(struct file *file,
 	if (kstrtoul_from_user(buff, count, 0, &val))
 		return -EFAULT;
 
-	if (0 == val) {
+	if (val == 0) {
 		iris_fast_cmd_abyp_exit();
 		IRIS_LOGI("abyp->pt, %d", cnt);
-	} else if (1 == val) {
+	} else if (val == 1) {
 		iris_fast_cmd_abyp_enter();
 		IRIS_LOGI("pt->abyp, %d", cnt);
-	} else if (2 == val) {
+	} else if (val == 2) {
 		iris_video_abyp_enter();
-	} else if (3 == val) {
+	} else if (val == 3) {
 		iris_video_abyp_exit();
-	} else if (11 <= val && val <= 19) {
+	} else if (val >= 11 && val <= 19) {
 		IRIS_LOGI("%s one wired %d", __func__, (int)(val - 10));
-		iris_one_wired_cmd_send(pcfg->panel, (int)(val - 10));
-	} else if (20 == val) {
+		iris_send_one_wired_cmd((int)(val - 10));
+	} else if (val == 20) {
 		iris_send_ipopt_cmds(IRIS_IP_SYS, 5);
 		IRIS_LOGI("miniPMU abyp->pt");
-	} else if (21 == val) {
+	} else if (val == 21) {
 		iris_send_ipopt_cmds(IRIS_IP_SYS, 4);
 		IRIS_LOGI("miniPMU pt->abyp");
-	} else if (22 == val) {
+	} else if (val == 22) {
 		iris_send_ipopt_cmds(IRIS_IP_TX, 4);
 		IRIS_LOGI("Enable Tx");
-	} else if (23 == val) {
+	} else if (val == 23) {
 		// mutex_lock(&g_debug_mfd->switch_lock);
-		iris5_lightup(pcfg->panel, &(pcfg->panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_ABYP]));
+		iris_lightup(pcfg->panel, &(pcfg->panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_ABYP]));
 		// mutex_unlock(&g_debug_mfd->switch_lock);
 		IRIS_LOGI("lightup Iris abyp_panel_cmds");
-	} else if (24 == val) {
+	} else if (val == 24) {
 		iris_abypass_switch_proc(pcfg->display, PASS_THROUGH_MODE, false, true);
-	} else if (25 == val) {
+	} else if (val == 25) {
 		iris_abypass_switch_proc(pcfg->display, ANALOG_BYPASS_MODE, false, true);
-	} else if (100 == val) {
-		debug_abyp_gpio_status = iris_abyp_status_gpio_check(pcfg->panel);
+	} else if (val == 100) {
+		debug_abyp_gpio_status = iris_check_abyp_ready();
 	}
 
 	return count;
 }
 
 static ssize_t iris_lp_dbg_write(struct file *file,
-	const char __user *buff, size_t count, loff_t *ppos)
+		const char __user *buff, size_t count, loff_t *ppos)
 {
 	unsigned long val;
 	struct iris_cfg *pcfg;
@@ -1281,58 +1288,58 @@ static ssize_t iris_lp_dbg_write(struct file *file,
 	if (kstrtoul_from_user(buff, count, 0, &val))
 		return -EFAULT;
 
-	if (0 == val) {
+	if (val == 0) {
 		iris_dynamic_power_set(false);
 		iris_ulps_source_sel(ULPS_NONE);
 		IRIS_LOGE("disable dynamic & ulps low power.");
-	} else if (1 == val) {
+	} else if (val == 1) {
 		iris_dynamic_power_set(true);
 		iris_ulps_source_sel(ULPS_MAIN);
 		IRIS_LOGE("enable dynamic & ulps low power.");
-	} else if (2 == val) {
+	} else if (val == 2) {
 		IRIS_LOGE("dynamic power: %d", iris_dynamic_power_get());
 		IRIS_LOGE("abyp enable: %d", pcfg->lp_ctrl.abyp_enable);
 		IRIS_LOGE("ulps enable: %d", iris_ulps_enable_get());
-	} else if (3 == val) {
+	} else if (val == 3) {
 		pcfg->lp_ctrl.abyp_enable = true;
 		IRIS_LOGE("enable abyp.");
-	} else if (4 == val) {
+	} else if (val == 4) {
 		pcfg->lp_ctrl.abyp_enable = false;
 		IRIS_LOGE("disable abyp.");
-	} else if (5 == val) {
+	} else if (val == 5) {
 		iris_ulps_source_sel(ULPS_MAIN);
 		IRIS_LOGE("enable iris ulps lp.");
-	} else if (6 == val) {
+	} else if (val == 6) {
 		iris_ulps_source_sel(ULPS_NONE);
 		IRIS_LOGE("disable iris ulps lp.");
-	} else if (11 == val) {
+	} else if (val == 11) {
 		iris_pmu_mipi2_set(true);
-	} else if (12 == val) {
+	} else if (val == 12) {
 		iris_pmu_mipi2_set(false);
-	} else if (13 == val) {
+	} else if (val == 13) {
 		iris_pmu_bsram_set(true);
-	} else if (14 == val) {
+	} else if (val == 14) {
 		iris_pmu_bsram_set(false);
-	} else if (15 == val) {
+	} else if (val == 15) {
 		iris_pmu_frc_set(true);
-	} else if (16 == val) {
+	} else if (val == 16) {
 		iris_pmu_frc_set(false);
-	} else if (17 == val) {
+	} else if (val == 17) {
 		iris_pmu_dscu_set(true);
-	} else if (18 == val) {
+	} else if (val == 18) {
 		iris_pmu_dscu_set(false);
-	} else if (19 == val) {
+	} else if (val == 19) {
 		iris_pmu_lce_set(true);
-	} else if (20 == val) {
+	} else if (val == 20) {
 		iris_pmu_lce_set(false);
-	} else if (254 == val) {
+	} else if (val == 254) {
 		IRIS_LOGI("lp_opt usages:");
 		IRIS_LOGI("bit 0 -- MIPI2");
 		IRIS_LOGI("bit 1 -- BSRAM");
 		IRIS_LOGI("bit 2 -- FRC");
 		IRIS_LOGI("bit 3 -- DSCU");
 		IRIS_LOGI("bit 4 -- LCE");
-	} else if (255 == val) {
+	} else if (val == 255) {
 		IRIS_LOGI("lp debug usages:");
 		IRIS_LOGI("0  -- disable dynamic & ulps low power.");
 		IRIS_LOGI("1  -- enable dynamic & ulps low power.");
@@ -1355,7 +1362,7 @@ static ssize_t iris_lp_dbg_write(struct file *file,
 	return count;
 }
 
-int iris_lp_debugfs_init(struct dsi_display *display)
+int iris_dbgfs_lp_init(struct dsi_display *display)
 {
 	struct iris_cfg *pcfg;
 	static const struct file_operations iris_abyp_dbg_fops = {
@@ -1374,49 +1381,45 @@ int iris_lp_debugfs_init(struct dsi_display *display)
 		pcfg->dbg_root = debugfs_create_dir("iris", NULL);
 		if (IS_ERR_OR_NULL(pcfg->dbg_root)) {
 			IRIS_LOGE("debugfs_create_dir for iris_debug failed, error %ld",
-				PTR_ERR(pcfg->dbg_root));
+					PTR_ERR(pcfg->dbg_root));
 			return -ENODEV;
 		}
 	}
 
-	debugfs_create_u32("pulse_delay", 0644, pcfg->dbg_root,
-		(u32 *)&gpio_pulse_delay);
-
-	debugfs_create_u32("cmd_delay", 0644, pcfg->dbg_root,
-		(u32 *)&gpio_cmd_delay);
-
 	debugfs_create_u32("lp_opt", 0644, pcfg->dbg_root,
-		(u32 *)&debug_lp_opt);
+			(u32 *)&debug_lp_opt);
 
 	debugfs_create_u32("abyp_opt", 0644, pcfg->dbg_root,
-		(u32 *)&debug_on_opt);
+			(u32 *)&debug_on_opt);
 
 	debugfs_create_u32("abyp_gpio", 0644, pcfg->dbg_root,
-		(u32 *)&debug_abyp_gpio_status);
+			(u32 *)&debug_abyp_gpio_status);
 
 	debugfs_create_u32("trace", 0644, pcfg->dbg_root,
-		(u32 *)&debug_trace_opt);
+			(u32 *)&debug_trace_opt);
+
+	debugfs_create_u32("dual_test", 0644, pcfg->dbg_root,
+		(u32 *)&pcfg->dual_test);
 
 	debugfs_create_bool("esd_enable", 0644, pcfg->dbg_root,
-		&(pcfg->lp_ctrl.esd_enable));
+			&(pcfg->lp_ctrl.esd_enable));
 
 	debugfs_create_u32("esd_cnt", 0644, pcfg->dbg_root,
-		(u32 *)&(pcfg->lp_ctrl.esd_cnt));
+			(u32 *)&(pcfg->lp_ctrl.esd_cnt));
 
 	if (debugfs_create_file("abyp", 0644, pcfg->dbg_root, display,
 				&iris_abyp_dbg_fops) == NULL) {
 		IRIS_LOGE("%s(%d): debugfs_create_file: index fail",
-			__FILE__, __LINE__);
+				__FILE__, __LINE__);
 		return -EFAULT;
 	}
 
 	if (debugfs_create_file("lp", 0644, pcfg->dbg_root, display,
 				&iris_lp_dbg_fops) == NULL) {
 		IRIS_LOGE("%s(%d): debugfs_create_file: index fail",
-			__FILE__, __LINE__);
+				__FILE__, __LINE__);
 		return -EFAULT;
 	}
 
 	return 0;
 }
-#endif

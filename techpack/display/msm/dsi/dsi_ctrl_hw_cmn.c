@@ -681,7 +681,7 @@ void dsi_ctrl_hw_cmn_kickoff_command(struct dsi_ctrl_hw *ctrl,
 
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 	// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, set DMA FIFO read and write watermark to 15/16 full */
-	if (iris_get_feature())
+	if (iris_is_chip_supported())
 		reg = 0x33;
 #endif
 	DSI_W32(ctrl, DSI_DMA_FIFO_CTRL, reg);

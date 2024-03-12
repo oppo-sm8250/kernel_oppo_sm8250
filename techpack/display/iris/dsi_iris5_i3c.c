@@ -1,13 +1,12 @@
-//  SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-only
 /*
-  *  Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
-  *  Copyright (c) 2015-2020, Pixelworks, Inc.
-  *
-  *  These files contain modifications made by Pixelworks, Inc., in 2015-2020.
-  */
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, Pixelworks, Inc.
+ *
+ * These files contain modifications made by Pixelworks, Inc., in 2015-2020.
+ */
 
 
-//#include <asm-generic/uaccess.h>
 #include <linux/fs.h>
 #include <linux/mutex.h>
 #include <linux/debugfs.h>
@@ -23,7 +22,7 @@
 #include <linux/time.h>
 #include "dsi_iris5_i3c.h"
 
-#define IRIS_COMPATIBLE_NAME  "pixelworks,iris5"
+#define IRIS_COMPATIBLE_NAME  "pixelworks,iris"
 #define IRIS_I2C_DRIVER_NAME  "pixelworks"
 
 #define I2C_DBG_TAG      "iris_i2c"
@@ -38,8 +37,8 @@
 static bool iris_i3c_status; //1: busy, 0: idle
 
 /*
-*pixelworks extend i2c
-*/
+ *pixelworks extend i2c
+ */
 enum {
 	MSMFB_IRIS_I2C_READ = 0x01,
 	MSMFB_IRIS_I2C_WRITE = 0X02,
@@ -101,8 +100,9 @@ static int iris_i2c_cmd_four_read(struct addr_val *val, int len)
 	struct i2c_client *client = iris_i2c_handle;
 
 
-	/*for ret value need to be N * len
-		 * N is cmd + val+ ret (4+1+1,4+2+2,4+4+4)*/
+	/* for ret value need to be N * len
+	 * N is cmd + val+ ret (4+1+1,4+2+2,4+4+4)
+	 */
 	uint8_t *twelve_data_list = NULL;
 	struct i2c_msg *msgs = NULL;
 
@@ -152,12 +152,12 @@ static int iris_i2c_cmd_four_read(struct addr_val *val, int len)
 	for (i = 0; i < len; i++) {
 		pos = 12 * i + 8;
 		val[i].data = (twelve_data_list[pos] << 0)      |
-						(twelve_data_list[pos + 1] << 8)  |
-						(twelve_data_list[pos + 2] << 16) |
-						(twelve_data_list[pos + 3] << 24);
+			(twelve_data_list[pos + 1] << 8)  |
+			(twelve_data_list[pos + 2] << 16) |
+			(twelve_data_list[pos + 3] << 24);
 	}
 I2C_READ_ERR:
-	//pr_err("%s: line:%d, ret:%d \n", __func__,__LINE__, ret);
+	//pr_err("%s: line:%d, ret:%d\n", __func__,__LINE__, ret);
 	kfree(twelve_data_list);
 	twelve_data_list = NULL;
 	kfree(msgs);
@@ -190,7 +190,7 @@ static int iris_i2c_send_msg(struct i2c_msg *msgs, int len)
 	if (retry == 3) {
 		pr_err("iris can not transfer msgs\n");
 		print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 4,
-					(uint8_t *)(msgs[0].buf) + 1, 8, false);
+				(uint8_t *)(msgs[0].buf) + 1, 8, false);
 		return -EINVAL;
 	}
 
@@ -214,13 +214,14 @@ static int iris_i2c_cmd_four_write(struct addr_val *val, int len)
 	struct i2c_client *client = iris_i2c_handle;
 	struct i2c_msg *msgs = NULL;
 
-	/*for ret value need to be N * len
-		 * N is cmd + addr+ val (4+1+1,4+2+2,4+4+4)*/
+	/* for ret value need to be N * len
+	 * N is cmd + addr+ val (4+1+1,4+2+2,4+4+4)
+	 */
 	uint8_t *twelve_data_list = NULL;
 
 	twelve_data_list = kmalloc(12 * len * sizeof(twelve_data_list[0]), GFP_KERNEL);
 	if (!twelve_data_list) {
-	    pr_err("[iris5] %s: fail to alloc memory\n", __func__);
+		pr_err("[iris] %s: fail to alloc memory\n", __func__);
 		return -ENOMEM;
 	}
 
@@ -260,8 +261,9 @@ static int iris_i2c_cmd_four_write(struct addr_val *val, int len)
 
 
 
-		/*according to I2C_MSM_BAM_CONS_SZ in i2c_msm_v2.h
-	the write msg should be less than 32 */
+	/* according to I2C_MSM_BAM_CONS_SZ in i2c_msm_v2.h
+	 * the write msg should be less than 32
+	 */
 	if (len <= MAX_TRANSFER_MSG_LEN) {
 		ret = iris_i2c_send_msg(msgs, len);
 		if (ret != 0)
@@ -319,12 +321,12 @@ static int iris_i2c_rw(uint32_t type, struct addr_val *val, int len)
 	struct i2c_client *client = iris_i2c_handle;
 
 	if (!client) {
-		pr_err("iris i2c handle is NULL \n");
+		pr_err("iris i2c handle is NULL\n");
 		return -EACCES;
 	}
 
 	if (!val || len == 0) {
-		pr_err("the return buf = %p or len = %d \n", val, len);
+		pr_err("the return buf = %p or len = %d\n", val, len);
 		return -EINVAL;
 	}
 
@@ -339,8 +341,8 @@ static int iris_i2c_ocp_single_read(uint32_t *ptr, uint32_t len)
 	u8 *p = NULL;
 
 	p = kmalloc(sizeof(*val_tmp) * (len+1), GFP_KERNEL);
-	if (NULL == p) {
-		pr_err("[iris5] %s: allocate memory fails\n", __func__);
+	if (p == NULL) {
+		pr_err("[iris] %s: allocate memory fails\n", __func__);
 		return -EINVAL;
 	}
 
@@ -353,9 +355,8 @@ static int iris_i2c_ocp_single_read(uint32_t *ptr, uint32_t len)
 
 	ret = iris_i2c_rw(FOUR_BYTE_REG_LEN_READ, val_tmp, len);
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < len; i++)
 		ptr[i] = val_tmp[i].data;
-	}
 
 	kfree(p);
 	p = NULL;
@@ -386,14 +387,14 @@ static int iris_i2c_ocp_burst_read(uint32_t *ptr, uint32_t dlen)
 	msg_len = byte_count;
 
 	iris_payload = kmalloc(sizeof(iris_payload[0]) * (8+msg_len), GFP_KERNEL);
-	if (NULL == iris_payload) {
-		pr_err("[iris5] %s: allocate memory fails\n", __func__);
+	if (iris_payload == NULL) {
+		pr_err("[iris] %s: allocate memory fails\n", __func__);
 		return -EINVAL;
 	}
 
 	if ((dlen == 0) || (dlen > 65536/4)) {
-		pr_err("[iris5] %s: len equal to 0 or too long\n", __func__);
-		kfree(iris_payload); //CID799184
+		pr_err("[iris] %s: len equal to 0 or too long\n", __func__);
+		kfree(iris_payload);
 		return -EINVAL;
 	}
 
@@ -407,10 +408,10 @@ static int iris_i2c_ocp_burst_read(uint32_t *ptr, uint32_t dlen)
 	iris_payload[7] = ((start_addr >> 24) & 0xff);
 
 	for (i = 0; i < reg_num; i++) {
-	   iris_payload[i*4 + 8] = 0x00;
-	   iris_payload[i*4 + 9] = 0x00;
-	   iris_payload[i*4 + 10] = 0x00;
-	   iris_payload[i*4 + 11] = 0x00;
+		iris_payload[i*4 + 8] = 0x00;
+		iris_payload[i*4 + 9] = 0x00;
+		iris_payload[i*4 + 10] = 0x00;
+		iris_payload[i*4 + 11] = 0x00;
 	}
 
 	msgs[0].addr = slave_addr;
@@ -429,7 +430,7 @@ static int iris_i2c_ocp_burst_read(uint32_t *ptr, uint32_t dlen)
 		ret = 0;
 	} else {
 		ret = ret < 0 ? ret : -EIO;
-		pr_err("[iris5] %s: i2c_transfer failed, ret=%d\n", __func__, ret);
+		pr_err("[iris] %s: i2c_transfer failed, ret=%d\n", __func__, ret);
 	}
 
 	for (i = 0; i < reg_num; i++) {
@@ -449,6 +450,7 @@ static int iris_i2c_ocp_burst_read(uint32_t *ptr, uint32_t dlen)
 int iris_i2c_ocp_read(uint32_t *ptr, uint32_t len, bool is_burst)
 {
 	int ret = -1;
+
 	if (!iris_i2c_handle)
 		return -EINVAL;
 
@@ -487,7 +489,7 @@ int iris_i2c_ocp_burst_write(uint32_t *arr, uint32_t dlen)
 	}
 
 	if ((dlen == 0) || (dlen > 65536/4)) {
-		pr_err("[iris5] %s: len equal to 0 or too long\n", __func__);
+		pr_err("[iris] %s: len equal to 0 or too long\n", __func__);
 		return -EINVAL;
 	}
 
@@ -503,8 +505,8 @@ int iris_i2c_ocp_burst_write(uint32_t *arr, uint32_t dlen)
 	msg_len = 8 + reg_num * 4;
 
 	iris_payload = kmalloc(sizeof(iris_payload[0]) * msg_len + 1, GFP_KERNEL);
-	if (NULL == iris_payload) {
-		pr_err("[iris5] %s: allocate memory fails\n", __func__);
+	if (iris_payload == NULL) {
+		pr_err("[iris] %s: allocate memory fails\n", __func__);
 		return -EINVAL;
 	}
 
@@ -519,11 +521,11 @@ int iris_i2c_ocp_burst_write(uint32_t *arr, uint32_t dlen)
 	iris_payload[6] = ((start_addr >> 16) & 0xff);
 	iris_payload[7] = ((start_addr >> 24) & 0xff);
 
-	for(i = 0; i < reg_num; i++) {
-	   iris_payload[i*4 + 8] = ((lut_buffer[i] >> 0) & 0xff);
-	   iris_payload[i*4 + 9] = ((lut_buffer[i] >> 8) & 0xff);
-	   iris_payload[i*4 + 10] = ((lut_buffer[i] >> 16) & 0xff);
-	   iris_payload[i*4 + 11] = ((lut_buffer[i] >> 24) & 0xff);
+	for (i = 0; i < reg_num; i++) {
+		iris_payload[i*4 + 8] = ((lut_buffer[i] >> 0) & 0xff);
+		iris_payload[i*4 + 9] = ((lut_buffer[i] >> 8) & 0xff);
+		iris_payload[i*4 + 10] = ((lut_buffer[i] >> 16) & 0xff);
+		iris_payload[i*4 + 11] = ((lut_buffer[i] >> 24) & 0xff);
 	}
 
 	msgs.addr = slave_addr;
@@ -537,7 +539,7 @@ int iris_i2c_ocp_burst_write(uint32_t *arr, uint32_t dlen)
 		ret = 0;
 	} else {
 		ret = ret < 0 ? ret : -EIO;
-		pr_err("[iris5] %s: i2c_transfer failed, ret=%d\n", __func__, ret);
+		pr_err("[iris] %s: i2c_transfer failed, ret=%d\n", __func__, ret);
 	}
 
 	kfree(iris_payload);
@@ -555,8 +557,8 @@ int iris_i2c_ocp_single_write(uint32_t *arr, uint32_t dlen)
 	uint32_t tlen = dlen;
 
 	p = kmalloc(sizeof(*val_tmp) * (tlen+1), GFP_KERNEL);
-	if (NULL == p) {
-		pr_err("[iris5] %s: allocate memory fails\n", __func__);
+	if (p == NULL) {
+		pr_err("[iris] %s: allocate memory fails\n", __func__);
 		return -EINVAL;
 	}
 
@@ -613,7 +615,7 @@ int iris_i2c_direct_write(uint32_t *arr, uint32_t dlen, uint32_t type)
 	}
 
 	if ((dlen == 0) || (dlen > 65536/4)) {
-		pr_err("[iris5] %s: len equal to 0 or too long\n", __func__);
+		pr_err("[iris] %s: len equal to 0 or too long\n", __func__);
 		return -EINVAL;
 	}
 
@@ -630,8 +632,8 @@ int iris_i2c_direct_write(uint32_t *arr, uint32_t dlen, uint32_t type)
 	msg_len = 8 + reg_num * 4;
 
 	iris_payload = kmalloc(sizeof(iris_payload[0]) * msg_len + 1, GFP_KERNEL);
-	if (NULL == iris_payload) {
-		pr_err("[iris5] %s: allocate memory fails\n", __func__);
+	if (iris_payload == NULL) {
+		pr_err("[iris] %s: allocate memory fails\n", __func__);
 		return -EINVAL;
 	}
 
@@ -647,10 +649,10 @@ int iris_i2c_direct_write(uint32_t *arr, uint32_t dlen, uint32_t type)
 	iris_payload[7] = ((start_addr >> 24) & 0xff);
 
 	for (i = 0; i < reg_num; i++) {
-	   iris_payload[i*4 + 8] = ((lut_buffer[i] >> 0) & 0xff);
-	   iris_payload[i*4 + 9] = ((lut_buffer[i] >> 8) & 0xff);
-	   iris_payload[i*4 + 10] = ((lut_buffer[i] >> 16) & 0xff);
-	   iris_payload[i*4 + 11] = ((lut_buffer[i] >> 24) & 0xff);
+		iris_payload[i*4 + 8] = ((lut_buffer[i] >> 0) & 0xff);
+		iris_payload[i*4 + 9] = ((lut_buffer[i] >> 8) & 0xff);
+		iris_payload[i*4 + 10] = ((lut_buffer[i] >> 16) & 0xff);
+		iris_payload[i*4 + 11] = ((lut_buffer[i] >> 24) & 0xff);
 	}
 
 	msgs.addr = slave_addr;
@@ -664,7 +666,7 @@ int iris_i2c_direct_write(uint32_t *arr, uint32_t dlen, uint32_t type)
 		ret = 0;
 	} else {
 		ret = ret < 0 ? ret : -EIO;
-		pr_err("[iris5] %s: i2c_transfer failed, ret=%d\n", __func__, ret);
+		pr_err("[iris] %s: i2c_transfer failed, ret=%d\n", __func__, ret);
 	}
 
 	kfree(iris_payload);
@@ -697,17 +699,17 @@ int iris_i2c_burst_write(struct iris_i2c_msg *iris_i2c_msg, uint32_t iris_i2c_ms
 		return -EINVAL;
 	}
 
-	msgs = kmalloc( sizeof(struct i2c_msg) * iris_i2c_msg_num + 1, GFP_KERNEL );
-	if (NULL == msgs) {
-		pr_err("[iris5] %s:%d: allocate memory fails\n", __func__, __LINE__);
+	msgs = kmalloc(sizeof(struct i2c_msg) * iris_i2c_msg_num + 1, GFP_KERNEL);
+	if (msgs == NULL) {
+		pr_err("[iris] %s:%d: allocate memory fails\n", __func__, __LINE__);
 		return -EINVAL;
 	}
 	memset(msgs, 0x00, sizeof(struct i2c_msg) * iris_i2c_msg_num);
 
 	for (j = 0; j < iris_i2c_msg_num; j++) {
 		ocp_type = 0;
-		if ((iris_i2c_msg[j].type & 0x0f) == 0x0c)
-			ocp_type = iris_i2c_msg[j].type >> 12 | 0x000c;
+		if ((iris_i2c_msg[j].base_addr & 0x0f) == 0x0c)
+			ocp_type = iris_i2c_msg[j].base_addr >> 12 | 0x000c;
 		start_addr = iris_i2c_msg[j].payload[0];
 		cmd = ocp_type & 0xff;
 		lut_buffer = iris_i2c_msg[j].payload + 1;
@@ -719,8 +721,8 @@ int iris_i2c_burst_write(struct iris_i2c_msg *iris_i2c_msg, uint32_t iris_i2c_ms
 
 		iris_payload = NULL;
 		iris_payload = kmalloc(sizeof(iris_payload[0]) * msg_len + 1, GFP_KERNEL);
-		if (NULL == iris_payload) {
-			pr_err("[iris5] %s %d: allocate memory fails\n", __func__, __LINE__);
+		if (iris_payload == NULL) {
+			pr_err("[iris] %s %d: allocate memory fails\n", __func__, __LINE__);
 			goto I2C_TRANSFER_ERR;
 		}
 
@@ -736,10 +738,10 @@ int iris_i2c_burst_write(struct iris_i2c_msg *iris_i2c_msg, uint32_t iris_i2c_ms
 		iris_payload[7] = ((start_addr >> 24) & 0xff);
 
 		for (i = 0; i < reg_num; i++) {
-		   iris_payload[i*4 + 8] = ((lut_buffer[i] >> 0) & 0xff);
-		   iris_payload[i*4 + 9] = ((lut_buffer[i] >> 8) & 0xff);
-		   iris_payload[i*4 + 10] = ((lut_buffer[i] >> 16) & 0xff);
-		   iris_payload[i*4 + 11] = ((lut_buffer[i] >> 24) & 0xff);
+			iris_payload[i*4 + 8] = ((lut_buffer[i] >> 0) & 0xff);
+			iris_payload[i*4 + 9] = ((lut_buffer[i] >> 8) & 0xff);
+			iris_payload[i*4 + 10] = ((lut_buffer[i] >> 16) & 0xff);
+			iris_payload[i*4 + 11] = ((lut_buffer[i] >> 24) & 0xff);
 		}
 
 		msgs[j].addr = slave_addr;
@@ -755,7 +757,7 @@ int iris_i2c_burst_write(struct iris_i2c_msg *iris_i2c_msg, uint32_t iris_i2c_ms
 		ret = 0;
 	} else {
 		ret = ret < 0 ? ret : -EIO;
-		pr_err("[iris5] %s: i2c_transfer failed, ret = %d\n", __func__, ret);
+		pr_err("[iris] %s: i2c_transfer failed, ret = %d\n", __func__, ret);
 	}
 
 
@@ -785,9 +787,9 @@ bool iris_i3c_status_get(void)
 static int iris_i2c_probe(struct i2c_client *client,
 		const struct i2c_device_id *dev_id)
 {
-	pr_err("%s,%d: %p \n", __func__, __LINE__, iris_i2c_handle);
+	pr_err("%s,%d: %p\n", __func__, __LINE__, iris_i2c_handle);
 	iris_i2c_handle = client;
-	pr_err("%s,%d: %p \n", __func__, __LINE__, iris_i2c_handle);
+	pr_err("%s,%d: %p\n", __func__, __LINE__, iris_i2c_handle);
 	return 0;
 }
 
@@ -803,7 +805,7 @@ static const struct i2c_device_id iris_i2c_id_table[] = {
 };
 
 
-static struct of_device_id iris_match_table[] = {
+static const struct of_device_id iris_match_table[] = {
 	{.compatible = IRIS_COMPATIBLE_NAME,},
 	{ },
 };
@@ -820,25 +822,26 @@ static struct i2c_driver plx_i2c_driver = {
 };
 
 
-int iris_i2c_bus_init(void)
+int iris_i3c_bus_init(void)
 {
 	int ret;
-	pr_err("%s,%d: initialize begin! \n", __func__, __LINE__);
+
+	pr_err("%s,%d: initialize begin!\n", __func__, __LINE__);
 	iris_i3c_status = false;
 	iris_i2c_handle = NULL;
 	ret = i2c_add_driver(&plx_i2c_driver);
 	pr_err("%s,%d: ret = %d\n", __func__, __LINE__, ret);
 	if (ret != 0)
-		pr_err("i2c add driver fail: %d \n", ret);
+		pr_err("i2c add driver fail: %d\n", ret);
 	return 0;
 }
 
-void iris_i2c_bus_exit(void)
+void iris_i3c_bus_exit(void)
 {
 	i2c_del_driver(&plx_i2c_driver);
 	iris_i2c_remove(iris_i2c_handle);
-	return;
 }
 
-module_init(iris_i2c_bus_init);
-module_exit(iris_i2c_bus_exit);
+module_init(iris_i3c_bus_init);
+module_exit(iris_i3c_bus_exit);
+
