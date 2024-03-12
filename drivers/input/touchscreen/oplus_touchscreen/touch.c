@@ -82,7 +82,7 @@ bool  tp_judge_ic_match_commandline(struct panel_info *panel_data)
     pr_err("Lcd module not found\n");
     return false;
 }
-
+EXPORT_SYMBOL(tp_judge_ic_match_commandline);
 
 int tp_util_get_vendor(struct hw_resource *hw_res, struct panel_info *panel_data)
 {
@@ -105,6 +105,15 @@ int tp_util_get_vendor(struct hw_resource *hw_res, struct panel_info *panel_data
 	if (prj_id == 19795){
         memcpy(panel_data->manufacture_info.version, "goodix_", 7);
     }
+	if (prj_id == 19015 || prj_id == 19016) {
+		memcpy(panel_data->manufacture_info.version, "0xbd3180000", 11);
+	}
+	if (prj_id == 19125) {
+		memcpy(panel_data->manufacture_info.version, "0xbd2830000", 11);
+	}
+	if (prj_id == 20801) {
+		memcpy(panel_data->manufacture_info.version, "0x504000000", 11);
+	}
     if (g_tp_ext_prj_name) {
         strncpy(panel_data->manufacture_info.version + strlen(panel_data->manufacture_info.version),
                 g_tp_ext_prj_name, 7);
@@ -135,46 +144,48 @@ int tp_util_get_vendor(struct hw_resource *hw_res, struct panel_info *panel_data
         panel_data->test_limit_name==NULL?"NO Limit":panel_data->test_limit_name);
     return 0;
 }
+EXPORT_SYMBOL(tp_util_get_vendor);
 
 int preconfig_power_control(struct touchpanel_data *ts)
-{/*
-    int pcb_verison = -1;
-  
-    pcb_verison = get_PCB_Version();
-    if (is_project(OPLUS_17107) || is_project(OPLUS_17127)) {
-        if ((is_project(OPLUS_17107) && ((pcb_verison < 4) || (pcb_verison == 5))) || (is_project(OPLUS_17127) && (pcb_verison == 1))) {
-        } else {
-            pr_err("[TP]set voltage to 3.0v\n");
-            ts->hw_res.vdd_volt = 3000000;
-        }
-    }
-   */
+{
     return 0;
 }
 EXPORT_SYMBOL(preconfig_power_control);
 
 int reconfig_power_control(struct touchpanel_data *ts)
 {
-/*
-    int pcb_verison = -1;
+    int ret = 0;
+    int prj_id = 0;
+    prj_id = get_project();
 
-    pcb_verison = get_PCB_Version();
-    if (is_project(OPLUS_17107) || is_project(OPLUS_17127)) {
-        if ((is_project(OPLUS_17107) && ((pcb_verison < 4) || (pcb_verison == 5))) || (is_project(OPLUS_17127) && (pcb_verison == 1))) {
-            pr_err("[TP]2v8 gpio free\n");
-            if (gpio_is_valid(ts->hw_res.enable2v8_gpio)) {
-                gpio_free(ts->hw_res.enable2v8_gpio);
-                ts->hw_res.enable2v8_gpio = -1;
-            }
+    if ((prj_id == 20135 || prj_id == 20137 || prj_id == 20139 || prj_id == 20235) && !strstr(saved_command_line, "20135samsung_amb655xl08_1080_2400_cmd_dvt")) {
+        pr_err("[TP]pcb is old version, need to reconfig the regulator.\n");
+        if (!IS_ERR_OR_NULL(ts->hw_res.vdd_2v8)) {
+            regulator_put(ts->hw_res.vdd_2v8);
+            ts->hw_res.vdd_2v8 = NULL;
+        }
+        ts->hw_res.vdd_2v8 = regulator_get(ts->dev, "vdd_dvt_2v8");
+        if (IS_ERR_OR_NULL(ts->hw_res.vdd_2v8)) {
+            pr_err("[TP]Regulator vdd2v8 get failed, ret = %d\n", ret);
         } else {
-            pr_err("[TP]2v8 regulator put\n");
-            if (!IS_ERR_OR_NULL(ts->hw_res.vdd_2v8)) {
-                regulator_put(ts->hw_res.vdd_2v8);
-                ts->hw_res.vdd_2v8 = NULL;
+            if (regulator_count_voltages(ts->hw_res.vdd_2v8) > 0) {
+                pr_err("[TP]set avdd voltage to %d uV\n", ts->hw_res.vdd_volt);
+                if (ts->hw_res.vdd_volt) {
+                    ret = regulator_set_voltage(ts->hw_res.vdd_2v8, ts->hw_res.vdd_volt, ts->hw_res.vdd_volt);
+                } else {
+                    ret = regulator_set_voltage(ts->hw_res.vdd_2v8, 3100000, 3100000);
+                }
+                if (ret) {
+                    dev_err(ts->dev, "Regulator set_vtg failed vdd rc = %d\n", ret);
+                }
+                ret = regulator_set_load(ts->hw_res.vdd_2v8, 200000);
+                if (ret < 0) {
+                    dev_err(ts->dev, "Failed to set vdd_2v8 mode(rc:%d)\n", ret);
+                }
             }
         }
     }
-*/
+
     return 0;
 }
 EXPORT_SYMBOL(reconfig_power_control);

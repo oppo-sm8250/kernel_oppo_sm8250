@@ -1,13 +1,7 @@
-/**************************************************************
- * Copyright (c)  2008- 2030  Oppo Mobile communication Corp.ltd
- * VENDOR_EDIT
- * File       : touchpanel_algorithm.h
- * Description: head file for Touch edge handle
- * Version   : 1.0
- * Date        : 2019-12-19
- * Author    : Ping.Zhang@Bsp.Group.Tp
- * TAG         : BSP.TP.Function
- ****************************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #ifndef _TOUCHPANEL_ALGORITHM_H_
 #define _TOUCHPANEL_ALGORITHM_H_

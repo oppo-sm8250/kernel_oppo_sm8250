@@ -1,17 +1,7 @@
-/***************************************************
- * File:sec_drivers_s6sy791.h
- * VENDOR_EDIT
- * Copyright (c)  2008- 2030  Oppo Mobile communication Corp.ltd.
- * Description:
- *             samsung s6sy791 driver
- * Version:1.0:
- * Date created:2018/01/10
- * Author: Cong.Dai@Bsp.Driver
- * TAG: BSP.TP.Init
- * *
- * -------------- Revision History: -----------------
- *  <author >  <data>  <version>  <desc>
- ***************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #ifndef SEC_H_S6SY791
 #define SEC_H_S6SY791
@@ -39,6 +29,8 @@
 #define GESTURE_M                               0x0A
 #define GESTURE_W                               0x0B
 #define GESTURE_DOUBLE_LINE                     0x0C
+#define GESTURE_SINGLE_TAP                      0x0E
+#define GESTURE_S                               0x0F
 #define GESTURE_EARSENSE                        0x0E
 
 #define RESET_TO_NORMAL_TIME                    (70)
@@ -303,6 +295,7 @@ struct chip_data_s6sy791 {
     bool                            irq_requested;
     int                             *in_suspend;
     int                             *fp_enable;
+	bool							auto_test_need_cal_support;
 #ifdef CONFIG_OPLUS_TP_APK
 
     bool lock_point_status;

@@ -1,17 +1,7 @@
-/***************************************************
- * File:sec_common.h
- * VENDOR_EDIT
- * Copyright (c)  2008- 2030  Oppo Mobile communication Corp.ltd.
- * Description:
- *             sec common driver
- * Version:1.0:
- * Date created:2018/01/22
- * Author: Cong.Dai@Bsp.Driver
- * TAG: BSP.TP.Init
- * *
- * -------------- Revision History: -----------------
- *  <author >  <data>  <version>  <desc>
- ***************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #ifndef SEC_H
 #define SEC_H
@@ -24,6 +14,9 @@
 #include <linux/time.h>
 
 #include "../touchpanel_common.h"
+
+#define Limit_ItemMagic     0x4F50504F
+#define Limit_ItemMagic_V2  0x4F504C53
 
 #define I2C_BURSTMAX                        (256)
 #define GRIP_PARAMETER_LEN                  (128)
@@ -74,12 +67,11 @@ struct sec_test_item_header {
 /*********PART3:Struct Area**********************/
 struct sec_proc_operations {
     void    (*auto_test)    (struct seq_file *s, void *chip_data, struct sec_testdata *sec_testdata);
-    void    (*calibrate)    (struct seq_file *s, void *chip_data);
     void    (*verify_calibration)    (struct seq_file *s, void *chip_data);
-    bool    (*get_cal_status)  (struct seq_file *s, void *chip_data);
     void    (*set_curved_rejsize)  (void *chip_data, uint8_t range_size);
     uint8_t (*get_curved_rejsize)  (void *chip_data);
     void    (*set_grip_handle)  (void *chip_data, int para_num, char *buf);
+    void    (*set_kernel_grip_para)  (int para);
 };
 
 /*********PART4:function declare*****************/

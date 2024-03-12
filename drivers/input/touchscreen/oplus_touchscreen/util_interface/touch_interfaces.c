@@ -1,17 +1,7 @@
-/***************************************************
- * File:touch_interfaces.c
- * VENDOR_EDIT
- * Copyright (c)  2008- 2030  Oppo Mobile communication Corp.ltd.
- * Description:
- *             Touch interface
- * Version:1.0:
- * Date created:2016/09/02
- * Author: Tong.han@Bsp.Driver
- * TAG: BSP.TP.Init
- * *
- * -------------- Revision History: -----------------
- *  <author >  <data>  <version>  <desc>
- ***************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #include <linux/kernel.h>
 #include <linux/module.h>

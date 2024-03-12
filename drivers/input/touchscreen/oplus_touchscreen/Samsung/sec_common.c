@@ -1,24 +1,14 @@
-/***************************************************
- * File:sec_common.c
- * VENDOR_EDIT
- * Copyright (c)  2008- 2030  Oppo Mobile communication Corp.ltd.
- * Description:
- *             sec common driver
- * Version:1.0:
- * Date created:2018/01/22
- * Author: Cong.Dai@Bsp.Driver
- * TAG: BSP.TP.Init
- * *
- * -------------- Revision History: -----------------
- *  <author >  <data>  <version>  <desc>
- ***************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #include "sec_common.h"
 
 /*******LOG TAG Declear*****************************/
 
 #define TPD_DEVICE "sec_common"
-#define TPD_INFO(a, arg...)  pr_info("[TP]"TPD_DEVICE ": " a, ##arg)
+#define TPD_INFO(a, arg...)  pr_err("[TP]"TPD_DEVICE ": " a, ##arg)
 #define TPD_DEBUG(a, arg...)\
     do{\
         if (tp_debug)\
@@ -133,7 +123,7 @@ void sec_raw_device_init(struct touchpanel_data *ts)
     struct device *sec_dev = NULL;
 
     #ifdef CONFIG_TOUCHPANEL_MTK_PLATFORM
-    sec_class = class_create(THIS_MODULE, "mtk_sec");
+    sec_class = class_create(THIS_MODULE, "sec_lsi");
     #else
     sec_class = class_create(THIS_MODULE, "sec");
     #endif
@@ -202,7 +192,7 @@ void sec_limit_read(struct seq_file *s, struct touchpanel_data *ts)
 
     for (m = 0; m < item_cnt; m++) {
         item_head = (struct sec_test_item_header *)(fw->data + p_item_offset[m]);
-        if (item_head->item_magic != 0x4F50504F) {
+        if (item_head->item_magic != Limit_ItemMagic && item_head->item_magic != Limit_ItemMagic_V2) {
             seq_printf(s, "item: %d limit data has some problem\n", item_head->item_bit);
             continue;
         }
@@ -464,71 +454,6 @@ static const struct file_operations tp_auto_test_proc_fops = {
     .release = single_release,
 };
 
-static int calibrate_fops_read_func(struct seq_file *s, void *v)
-{
-    struct touchpanel_data *ts = s->private;
-    struct sec_proc_operations *sec_ops = (struct sec_proc_operations *)ts->private_data;
-
-    if (!sec_ops->calibrate)
-        return 0;
-
-    disable_irq_nosync(ts->irq);
-    mutex_lock(&ts->mutex);
-    if (!ts->touch_count) {
-        sec_ops->calibrate(s, ts->chip_data);
-    } else {
-        seq_printf(s, "1 error, release touch on the screen\n");
-    }
-    mutex_unlock(&ts->mutex);
-    enable_irq(ts->irq);
-
-    return 0;
-}
-
-static int proc_calibrate_fops_open(struct inode *inode, struct file *file)
-{
-    return single_open(file, calibrate_fops_read_func, PDE_DATA(inode));
-}
-
-static const struct file_operations proc_calibrate_fops = {
-    .owner = THIS_MODULE,
-    .open  = proc_calibrate_fops_open,
-    .read  = seq_read,
-    .release = single_release,
-};
-
-static int cal_status_read_func(struct seq_file *s, void *v)
-{
-    bool cal_needed = false;
-    struct touchpanel_data *ts = s->private;
-    struct sec_proc_operations *sec_ops = (struct sec_proc_operations *)ts->private_data;
-
-    if (!sec_ops->get_cal_status)
-        return 0;
-
-    mutex_lock(&ts->mutex);
-    cal_needed = sec_ops->get_cal_status(s, ts->chip_data);
-    if (cal_needed) {
-        seq_printf(s, "1 error, need do calibration\n");
-    } else {
-        seq_printf(s, "0 error, calibration data is ok\n");
-    }
-    mutex_unlock(&ts->mutex);
-
-    return 0;
-}
-
-static int proc_cal_status_fops_open(struct inode *inode, struct file *file)
-{
-    return single_open(file, cal_status_read_func, PDE_DATA(inode));
-}
-
-static const struct file_operations proc_cal_status_fops = {
-    .owner = THIS_MODULE,
-    .open  = proc_cal_status_fops_open,
-    .read  = seq_read,
-    .release = single_release,
-};
 
 static ssize_t proc_curved_control_read(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
 {
@@ -635,6 +560,42 @@ static const struct file_operations proc_corner_control_ops = {
     .owner = THIS_MODULE,
 };
 
+static ssize_t proc_kernel_grip_para_write(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
+{
+    int para = 0;
+    char buf[10] = {0};
+    struct touchpanel_data *ts = PDE_DATA(file_inode(file));
+    struct sec_proc_operations *sec_ops = NULL;
+
+    if (!ts)
+        return count;
+
+    sec_ops = (struct sec_proc_operations *)ts->private_data;
+    if (!sec_ops->set_kernel_grip_para)
+        return count;
+
+    if (count > 10)
+        count = 10;
+    if (copy_from_user(buf, buffer, count)) {
+        TPD_DEBUG("%s: read proc input error.\n", __func__);
+        return count;
+    }
+
+    sscanf(buf, "%d", &para);
+
+    mutex_lock(&ts->mutex);
+    sec_ops->set_kernel_grip_para(para);
+    mutex_unlock(&ts->mutex);
+
+    return count;
+}
+
+static const struct file_operations proc_kernel_grip_para_ops = {
+    .write = proc_kernel_grip_para_write,
+    .open  = simple_open,
+    .owner = THIS_MODULE,
+};
+
 //proc/touchpanel/baseline_test
 int sec_create_proc(struct touchpanel_data *ts, struct sec_proc_operations *sec_ops)
 {
@@ -644,18 +605,6 @@ int sec_create_proc(struct touchpanel_data *ts, struct sec_proc_operations *sec_
     struct proc_dir_entry *prEntry_tmp = NULL;
     ts->private_data = sec_ops;
     prEntry_tmp = proc_create_data("baseline_test", 0666, ts->prEntry_tp, &tp_auto_test_proc_fops, ts);
-    if (prEntry_tmp == NULL) {
-        ret = -ENOMEM;
-        TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
-    }
-
-    prEntry_tmp = proc_create_data("calibration", 0666, ts->prEntry_tp, &proc_calibrate_fops, ts);
-    if (prEntry_tmp == NULL) {
-        ret = -ENOMEM;
-        TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
-    }
-
-    prEntry_tmp = proc_create_data("calibration_status", 0666, ts->prEntry_tp, &proc_cal_status_fops, ts);
     if (prEntry_tmp == NULL) {
         ret = -ENOMEM;
         TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
@@ -672,5 +621,12 @@ int sec_create_proc(struct touchpanel_data *ts, struct sec_proc_operations *sec_
         ret = -ENOMEM;
         TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
     }
+
+    prEntry_tmp = proc_create_data("kernel_grip_para", 0666, ts->prEntry_tp, &proc_kernel_grip_para_ops, ts);
+    if (prEntry_tmp == NULL) {
+        ret = -ENOMEM;
+        TPD_INFO("%s: Couldn't create proc entry, %d\n", __func__, __LINE__);
+    }
+
     return ret;
 }

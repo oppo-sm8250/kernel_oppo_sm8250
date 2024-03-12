@@ -33,6 +33,12 @@ config TOUCHPANEL_MULTI_NOFLASH
 	help
 	  Say Y here if you have multiple noflash touchscreen.
 
+config TOUCHPANEL_SYNAPTICS
+#	default y
+	bool "TP Synaptics_IC enable or not for OPLUS"
+	---help---
+	say Y to enable driver for Touchpanel using Synaptics_IC
+
 config TOUCHPANEL_SAMSUNG
 #	default y
 	bool "TP samsung IC enable or not for OPLUS"

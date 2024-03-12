@@ -1,13 +1,7 @@
-/**************************************************************
- * Copyright (c)  2008- 2030  Oppo Mobile communication Corp.ltd
- * VENDOR_EDIT
- * File       : touchpanel_algorithm.c
- * Description: source file for Touch edge handle
- * Version   : 1.0
- * Date        : 2019-12-19
- * Author    : Ping.Zhang@Bsp.Group.Tp
- * TAG         : BSP.TP.Function
- ****************************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #include "touchpanel_common.h"
 #include <touchpanel_algorithm.h>
@@ -15,11 +9,11 @@
 
 /*******Start of LOG TAG Declear**********************************/
 #define TPD_DEVICE "tp_algorithm"
-#define TPD_INFO(a, arg...)  pr_info("[TP]"TPD_DEVICE ": " a, ##arg)
+#define TPD_INFO(a, arg...)  pr_err("[TP]"TPD_DEVICE ": " a, ##arg)
 #define TPD_DEBUG(a, arg...)\
     do{\
         if (LEVEL_DEBUG == tp_debug)\
-            pr_warning("[TP]"TPD_DEVICE ": " a, ##arg);\
+            pr_err("[TP]"TPD_DEVICE ": " a, ##arg);\
     }while(0)
 
 #define TPD_DETAIL(a, arg...)\
@@ -148,6 +142,8 @@ static void KalmanFilter(int ResrcData, uint16_t *x_last, uint16_t *p_last,
     *p_last = (uint16_t)p_now;
 
     *x_last = (uint16_t)x_now;
+    TPD_DEBUG("R %d,Q %d, p_mid %d, p_now %d\n", R, Q, p_mid, p_now);
+
 }
 
 static void kalman_handle(struct touchpanel_data *ts, int obj_attention, struct point_info *points)
@@ -168,6 +164,9 @@ static void kalman_handle(struct touchpanel_data *ts, int obj_attention, struct 
             }
             KalmanFilter(points[i].x, &point_buf->kal_x_last.x, &point_buf->kal_p_last.x, point_buf->delta_time, algo_info->kalman_info_used);
             KalmanFilter(points[i].y, &point_buf->kal_x_last.y, &point_buf->kal_p_last.y, point_buf->delta_time, algo_info->kalman_info_used);
+            TPD_DEBUG("The point id %d before kalman is %d,%d,after kalman is %d,%d.\n",
+                     i, points[i].x, points[i].y, point_buf->kal_x_last.x, point_buf->kal_x_last.y);
+
             points[i].x = point_buf->kal_x_last.x;
             points[i].y = point_buf->kal_x_last.y;
         } else {
@@ -205,14 +204,18 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
                     && points[i].y < algo_info->stretch_info.top_end) {
 
                     if (algo_info->phone_direction & algo_info->stretch_info.top_open_dir) {
+                        TPD_INFO("The id %d maybe need top stretch point is %d,%d", i, points[i].x, points[i].y);
                         point_buf->status |= TOP_START;
+
                     }
                 } else if (algo_info->stretch_info.bottom_frame > 0
                            && points[i].y > algo_info->stretch_info.bottom_start
                            && points[i].y < algo_info->stretch_info.bottom_end) {
 
                     if (algo_info->phone_direction & algo_info->stretch_info.bottom_open_dir) {
+                        TPD_INFO("The id %d maybe need bottom stretch point is %d,%d", i, points[i].x, points[i].y);
                         point_buf->status |= BOTTOM_START;
+
                     }
                 }
 
@@ -222,14 +225,18 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
                     && points[i].x < algo_info->stretch_info.left_end) {
 
                     if (algo_info->phone_direction & algo_info->stretch_info.left_open_dir) {
+                        TPD_INFO("The id %d maybe need left stretch point is %d,%d", i, points[i].x, points[i].y);
                         point_buf->status |= LEFT_START;
+
                     }
                 } else if (algo_info->stretch_info.right_frame > 0
                            && points[i].x > algo_info->stretch_info.right_start
                            && points[i].x < algo_info->stretch_info.right_end) {
 
                     if (algo_info->phone_direction & algo_info->stretch_info.right_open_dir) {
+                        TPD_INFO("The id %d maybe need right stretch point is %d,%d", i, points[i].x, points[i].y);
                         point_buf->status |= RIGHT_START;
+
                     }
                 }
             }
@@ -238,6 +245,8 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
             if (point_buf->status & TOP_START) {
                 if (point_buf->down_point.y < points[i].y
                     && point_buf->touch_time <= algo_info->stretch_info.top_frame) {
+                    TPD_INFO("Start stretch, the origin point is id:%d, x:%d, y:%d.\n",
+                             i, points[i].x, points[i].y);
                     temp = points[i].y - point_buf->down_point.y;
                     temp = ((temp * algo_info->stretch_info.top_stretch_time) / (point_buf->touch_time + 1)) + 1;
                     if (point_buf->down_point.y < temp) {
@@ -246,6 +255,7 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
                     points[i].y = point_buf->down_point.y - temp;
 
                     point_buf->status &= ~TOP_START;
+                    TPD_INFO("Stretch point is y:%d time is %d.\n", points[i].y, point_buf->touch_time);
                 } else if (point_buf->down_point.y > points[i].y
                            || point_buf->down_point.x != points[i].x
                            || point_buf->touch_time > algo_info->stretch_info.top_frame) {
@@ -258,6 +268,9 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
             if (point_buf->status & BOTTOM_START) {
                 if (point_buf->down_point.y  > points[i].y
                     && point_buf->touch_time <= algo_info->stretch_info.bottom_frame) {
+                    TPD_INFO("Start stretch, the origin point is id:%d, x:%d, y:%d.\n",
+                             i, points[i].x, points[i].y);
+
                     temp = point_buf->down_point.y - points[i].y;
                     temp = ((temp * algo_info->stretch_info.bottom_stretch_time) / (point_buf->touch_time + 1)) + 1;
                     points[i].y = point_buf->down_point.y + temp;
@@ -266,6 +279,7 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
                     }
 
                     point_buf->status &= ~BOTTOM_START;
+                    TPD_INFO("Stretch point is y:%d time is %d.\n", points[i].y, point_buf->touch_time);
                 } else if (point_buf->down_point.y < points[i].y
                            || point_buf->down_point.x != points[i].x
                            || point_buf->touch_time > algo_info->stretch_info.bottom_frame) {
@@ -277,6 +291,8 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
             if (point_buf->status & LEFT_START) {
                 if (point_buf->down_point.x  < points[i].x
                     && point_buf->touch_time <= algo_info->stretch_info.left_frame) {
+                    TPD_INFO("Start stretch, the origin point is id:%d, x:%d, y:%d.\n",
+                             i, points[i].x, points[i].y);
                     temp = points[i].x - point_buf->down_point.x;
                     temp = ((temp * algo_info->stretch_info.left_stretch_time) / (point_buf->touch_time + 1)) + 1;
                     if (point_buf->down_point.x < temp) {
@@ -285,6 +301,7 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
                     points[i].x = point_buf->down_point.x - temp;
 
                     point_buf->status &= ~LEFT_START;
+                    TPD_INFO("Stretch point is x:%d time is %d.\n", points[i].x, point_buf->touch_time);
                 } else if (point_buf->down_point.x > points[i].x
                            || point_buf->down_point.y != points[i].y
                            || point_buf->touch_time > algo_info->stretch_info.left_frame) {
@@ -297,6 +314,9 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
             if (point_buf->status & RIGHT_START) {
                 if (point_buf->down_point.x  > points[i].x
                     && point_buf->touch_time <= algo_info->stretch_info.right_frame) {
+                    TPD_INFO("Start stretch, the origin point is id:%d, x:%d, y:%d.\n",
+                             i, points[i].x, points[i].y);
+
                     temp = point_buf->down_point.x - points[i].x;
                     temp = ((temp * algo_info->stretch_info.right_stretch_time) / (point_buf->touch_time + 1)) + 1;
                     points[i].x = point_buf->down_point.x + temp;
@@ -305,6 +325,7 @@ static int stretch_point_handle(struct touchpanel_data *ts, int obj_attention, s
                     }
 
                     point_buf->status &= ~RIGHT_START;
+                    TPD_INFO("Stretch point is x:%d time is %d.\n", points[i].x, point_buf->touch_time);
                 } else if (point_buf->down_point.x < points[i].x
                            || point_buf->down_point.y != points[i].y
                            || point_buf->touch_time > algo_info->stretch_info.right_frame) {
@@ -358,6 +379,7 @@ void switch_kalman_fun(struct touchpanel_data *ts, bool game_switch)
             ts->algo_info->point_buf[i].kal_x_last.x = INVALID_POINT;
         }
     }
+    TPD_INFO("The kalman switch is %d.\n",ts->algo_info->enable_kalman);
 }
 
 int touch_algorithm_handle(struct touchpanel_data *ts, int obj_attention, struct point_info *points)
@@ -377,6 +399,7 @@ int touch_algorithm_handle(struct touchpanel_data *ts, int obj_attention, struct
     delta = ktime_sub(calltime, algo_info->last_time);
     time_ms = (unsigned long long) ktime_to_ms(delta);
     algo_info->last_time = calltime;
+    TPD_DEBUG("delta time is %lld ms.\n", time_ms);
     if (time_ms > TIME_MAX) {
         time_ms = TIME_MAX;
     }
@@ -398,6 +421,8 @@ int touch_algorithm_handle(struct touchpanel_data *ts, int obj_attention, struct
 
         } else {
             if (point_buf->status != NORMAL) {// neep report click
+
+                TPD_INFO("The point is up before stretch id:%d, status: %d.\n", i, point_buf->status);
                 point_buf->status = CLICK_UP;
 
             } else {
@@ -433,7 +458,9 @@ void release_algorithm_points(struct touchpanel_data *ts)
         ts->algo_info->point_buf[i].touch_time = 0;
         ts->algo_info->point_buf[i].status = NORMAL;
     }
+    TPD_INFO("Reset the algorithm points\n");
 }
+
 
 static ssize_t proc_stretch_config_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
 {

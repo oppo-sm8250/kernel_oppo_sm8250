@@ -1,7 +1,7 @@
 /************************************************************************************
- ** File: - SDM660.LA.1.0\android\kernel\msm-4.4\drivers\soc\oplus\oplus_fp_common\oplus_fp_common.c
- ** VENDOR_EDIT
- ** Copyright (C), 2008-2017, OPLUS Mobile Comm Corp., Ltd
+ ** File: - source\android\kernel\msm-5.4\drivers\input\oplus_secure_drivers\oplus_secure_common\oplus_secure_common.c
+ ** OPLUS_FEATURE_SECURITY_COMMON
+ ** Copyright (C), 2020-2025, OPLUS Mobile Comm Corp., Ltd
  **
  ** Description:
  **      secure_common compatibility configuration
@@ -24,119 +24,176 @@
  **  Dongnan.Wu     2019/06/12     add 7150 platform support
  **  Ping.Liu       2019/10/16     add 7250 platform support.
  **  Dongnan.Wu     2020/08/07     modify proc inode name
+ **  Dongnan.Wu     2020/08/25     modify device & drive inode name
+ **  Bin.Li         2020/09/07     modify for secure common KO
+ **  Bin.Li         2021/09/04     modify for kernel 5.10
+ **  Meilin.Zhou    2021/11/18     modify for kernel 5.10 get sboot_state
  ************************************************************************************/
 
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 
-#if CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6763 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6771 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6779 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6885
-//#include <sec_boot_lib.h>
 #include <linux/uaccess.h>
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 855 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6125 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7150 \
-|| CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7250 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 8250 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7125
+#include <asm/uaccess.h>
+
 #include <linux/soc/qcom/smem.h>
-#else
-#include <soc/qcom/smem.h>
-#endif
 
 #include <linux/slab.h>
 #include <linux/seq_file.h>
 #include <linux/fs.h>
 #include <linux/of_gpio.h>
 
-#if CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 855 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6125 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7150 \
-|| CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7250 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 8250 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7125
-#include <linux/uaccess.h>
-#else
-#include <asm/uaccess.h>
-#endif
-
 #include <linux/delay.h>
 #include <linux/string.h>
 #include <linux/err.h>
+#include <linux/version.h>
 #include "../include/oplus_secure_common.h"
+#include <linux/init.h>
 
 #define OEM_FUSE_OFF        "0"
 #define OEM_FUSE_ON         "1"
 #define UNKNOW_FUSE_VALUE   "unkown fuse"
 #define FUSE_VALUE_LEN      15
 
-#if CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 660 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 845 \
-|| CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 670 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 710  /* sdm660, sdm845, sdm670, sdm710 */
-#define OEM_SEC_BOOT_REG 0x780350
-#define OEM_SEC_ENABLE_ANTIROLLBACK_REG 0x78019c
-#define OEM_SEC_OVERRIDE_1_REG 0x7860C4
-#define OEM_OVERRIDE_1_ENABLED_VALUE 0xffffffff
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 855
-#define OEM_SEC_BOOT_REG 0x7804D0
-#define OEM_SEC_ENABLE_ANTIROLLBACK_REG 0x78019C
-#define OEM_SEC_OVERRIDE_1_REG 0x7860C0
-#define OEM_OVERRIDE_1_ENABLED_VALUE 0x1
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6125
-#define OEM_SEC_BOOT_REG 0x1B40458
-#define OEM_SEC_ENABLE_ANTIROLLBACK_REG 0x1B401CC
-#define OEM_SEC_OVERRIDE_1_REG 0x7860C0
-#define OEM_OVERRIDE_1_ENABLED_VALUE 0x1
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7125
-#define OEM_SEC_BOOT_REG 0x780498
-#define OEM_SEC_ENABLE_ANTIROLLBACK_REG 0x7801CC
-#define OEM_SEC_OVERRIDE_1_REG 0x7860C0
-#define OEM_OVERRIDE_1_ENABLED_VALUE 0x1
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7150
-#define OEM_SEC_BOOT_REG 0x780460
-#define OEM_SEC_ENABLE_ANTIROLLBACK_REG 0x78019C
-#define OEM_SEC_OVERRIDE_1_REG 0x7860C0
-#define OEM_OVERRIDE_1_ENABLED_VALUE 0x1
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7250
-#define OEM_SEC_BOOT_REG 0x7805E8
-#define OEM_SEC_ENABLE_ANTIROLLBACK_REG 0x7801E4
-#define OEM_SEC_OVERRIDE_1_REG 0x7860C0
-#define OEM_OVERRIDE_1_ENABLED_VALUE 0x1
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 8250
-#define OEM_SEC_BOOT_REG 0x7805E8
-#define OEM_SEC_ENABLE_ANTIROLLBACK_REG 0x7801F4
-#define OEM_SEC_OVERRIDE_1_REG 0x7860C0
-#define OEM_OVERRIDE_1_ENABLED_VALUE 0x1
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 8953 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 8976  /* msm8953, 8976pro */
-#define OEM_SEC_BOOT_REG 0xA0154
-#endif
+#define SEC_REG_NODE       "oplus,sec_reg_num"
+#define SEC_ENABLE_ANTIROLLBACK_REG       "oplus,sec_en_anti_reg"
+#define SEC_OVERRIDE_1_REG       "oplus,sec_override1_reg"
+#define OVERRIDE_1_ENABLED_VALUE       "oplus,override1_en_value"
+#define CRYPTOKEY_UNSUPPORT_STATUS       "oplus,cryptokey_unsupport_status"
 
 static struct proc_dir_entry *oplus_secure_common_dir = NULL;
 static char* oplus_secure_common_dir_name = "oplus_secure_common";
 static struct secure_data *secure_data_ptr = NULL;
-static char g_fuse_value[FUSE_VALUE_LEN] = UNKNOW_FUSE_VALUE ;
+static char g_fuse_value[FUSE_VALUE_LEN] = UNKNOW_FUSE_VALUE;
+static uint32_t oem_sec_reg_num = 0;
+static uint32_t oem_sec_en_anti_reg = 0;
+static uint32_t oem_sec_override1_reg = 0;
+static uint32_t oem_override1_en_value = 0;
+static uint32_t oem_cryptokey_unsupport = 0;
+
+static int secure_common_parse_parent_dts(struct secure_data *secure_data)
+{
+    int ret = SECURE_OK;
+    int ret2 = SECURE_OK;
+    struct device *dev = NULL;
+    struct device_node *np = NULL;
+
+    if (!secure_data || !secure_data->dev) {
+        ret = -SECURE_ERROR_GENERAL;
+        goto exit;
+    }
+    dev = secure_data->dev;
+    np = dev->of_node;
+
+    ret = of_property_read_u32(np, SEC_REG_NODE, &(secure_data->sec_reg_num));
+    if (ret) {
+        dev_err(secure_data->dev, "the param %s is not found !\n", SEC_REG_NODE);
+        ret = -SECURE_ERROR_GENERAL;
+        goto exit;
+    }
+
+    ret = of_property_read_u32(np, SEC_ENABLE_ANTIROLLBACK_REG, &(secure_data->sec_en_anti_reg));
+    if (ret) {
+        dev_err(secure_data->dev, "the param %s is not found !\n", SEC_ENABLE_ANTIROLLBACK_REG);
+        ret = -SECURE_ERROR_GENERAL;
+        goto exit;
+    }
+
+    ret = of_property_read_u32(np, SEC_OVERRIDE_1_REG, &(secure_data->sec_override1_reg));
+    if (ret) {
+        dev_err(secure_data->dev, "the param %s is not found !\n", SEC_OVERRIDE_1_REG);
+        ret = -SECURE_ERROR_GENERAL;
+        goto exit;
+    }
+
+    ret = of_property_read_u32(np, OVERRIDE_1_ENABLED_VALUE, &(secure_data->override1_en_value));
+    if (ret) {
+        dev_err(secure_data->dev, "the param %s is not found !\n", OVERRIDE_1_ENABLED_VALUE);
+        ret = -SECURE_ERROR_GENERAL;
+        goto exit;
+    }
+
+    ret2 = of_property_read_u32(np, CRYPTOKEY_UNSUPPORT_STATUS, &oem_cryptokey_unsupport);
+    if (ret2) {
+        dev_err(secure_data->dev, "the param %s is not found !\n", CRYPTOKEY_UNSUPPORT_STATUS);
+    }
+
+    oem_sec_reg_num = secure_data->sec_reg_num;
+    oem_sec_en_anti_reg = secure_data->sec_en_anti_reg;
+    oem_sec_override1_reg = secure_data->sec_override1_reg;
+    oem_override1_en_value = secure_data->override1_en_value;
+    dev_info(secure_data->dev, "sec_reg_num: %d sec_en_anti_reg: %d sec_override1_reg: %d override1_en_value: %d\n", secure_data->sec_reg_num, secure_data->sec_en_anti_reg, secure_data->sec_override1_reg, secure_data->override1_en_value);
+
+exit:
+    return ret;
+}
+
+#if defined(MTK_PLATFORM)
+bool get_sboot_state_with_bootargs(void)
+{
+        struct device_node * of_chosen = NULL;
+        char *bootargs = NULL;
+
+        of_chosen = of_find_node_by_path("/chosen");
+        if (of_chosen) {
+                bootargs = (char *)of_get_property(of_chosen, "bootargs", NULL);
+                if (!bootargs) {
+                        pr_err("%s: failed to get bootargs\n", __func__);
+                } else {
+                        pr_err("%s: bootargs: %s\n", __func__, bootargs);
+                }
+        } else {
+                pr_err("%s: failed to get /chosen \n", __func__);
+        }
+        if (strstr(bootargs, "mtkboot.sbootstate=on")) {
+                pr_err("%s: success to get mtkboot.sbootstate=on in bootargs!\n", __func__);
+                return true;
+        } else {
+                pr_err("%s: fail to get mtkboot.sbootstate=on in bootargs!\n", __func__);
+                return false;
+        }
+}
+
+static bool is_sboot_support(void)
+{
+#if IS_MODULE(CONFIG_OPLUS_SECURE_COMMON)
+    return get_sboot_state_with_bootargs();
+#else
+    return strstr(saved_command_line, "androidboot.sbootstate=on") ? true : false;
+#endif
+}
+#endif
 
 secure_type_t get_secureType(void)
 {
         secure_type_t secureType = SECURE_BOOT_UNKNOWN;
-
-#if CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 660 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 845 \
-|| CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 670 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 710 \
-|| CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 855 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6125 \
-|| CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7150 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7250 \
-|| CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 8250 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7125
-/* sdm660, sdm845, sdm670, sdm710, sdm855 sm6125 sm7125 sm7150 sm7250 sm8250 */
-
+        #if defined(MTK_PLATFORM)
+        secureType = is_sboot_support() ? SECURE_BOOT_ON : SECURE_BOOT_OFF;
+        #else
         void __iomem *oem_config_base;
         uint32_t secure_oem_config1 = 0;
         uint32_t secure_oem_config2 = 0;
-        oem_config_base = ioremap(OEM_SEC_BOOT_REG, 4);
+        oem_config_base = ioremap(oem_sec_reg_num, 4);
         secure_oem_config1 = __raw_readl(oem_config_base);
         iounmap(oem_config_base);
         pr_err("secure_oem_config1 0x%x\n", secure_oem_config1);
 
-        oem_config_base = ioremap(OEM_SEC_ENABLE_ANTIROLLBACK_REG, 4);
+        oem_config_base = ioremap(oem_sec_en_anti_reg, 4);
         secure_oem_config2 = __raw_readl(oem_config_base);
         iounmap(oem_config_base);
+        #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+        secure_oem_config2 = secure_oem_config2 >> 16;
+        secure_oem_config2 = secure_oem_config2 & 0x0003;
         pr_err("secure_oem_config2 0x%x\n", secure_oem_config2);
-
+        if (secure_oem_config1 == 0) {
+                secureType = SECURE_BOOT_OFF;
+        } else if (secure_oem_config2 == 0x0001) {
+                secureType = SECURE_BOOT_ON_STAGE_1;
+        } else {
+                secureType = SECURE_BOOT_ON_STAGE_2;
+        }
+        #else
+        pr_err("secure_oem_config2 0x%x\n", secure_oem_config2);
         if (secure_oem_config1 == 0) {
                 secureType = SECURE_BOOT_OFF;
         } else if (secure_oem_config2 == 0) {
@@ -144,74 +201,8 @@ secure_type_t get_secureType(void)
         } else {
                 secureType = SECURE_BOOT_ON_STAGE_2;
         }
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 8953 /*msm8953*/
-
-        void __iomem *oem_config_base;
-        uint32_t secure_oem_config1 = 0;
-        oem_config_base = ioremap(OEM_SEC_BOOT_REG, 4);
-        secure_oem_config1 = __raw_readl(oem_config_base);
-        iounmap(oem_config_base);
-        pr_err("secure_oem_config1 0x%x\n", secure_oem_config1);
-
-        if (secure_oem_config1 == 0) {
-                secureType = SECURE_BOOT_OFF;
-        } else if (0 == strcmp(g_fuse_value, OEM_FUSE_OFF)) {
-                secureType = SECURE_BOOT_ON_STAGE_1;
-        } else if (0 == strcmp(g_fuse_value, OEM_FUSE_ON)) {
-                secureType = SECURE_BOOT_ON_STAGE_2;
-        } else {
-                secureType = SECURE_BOOT_ON;
-        }
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 8976 /*msm8976pro*/
-
-        void __iomem *oem_config_base;
-        uint32_t secure_oem_config1 = 0;
-        oem_config_base = ioremap(OEM_SEC_BOOT_REG, 4);
-        secure_oem_config1 = __raw_readl(oem_config_base);
-        iounmap(oem_config_base);
-        pr_err("secure_oem_config1 0x%x\n", secure_oem_config1);
-
-        if (secure_oem_config1 == 0) {
-                secureType = SECURE_BOOT_OFF;
-        } else {
-                secureType = SECURE_BOOT_ON;
-        }
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6763
-
-        if (g_hw_sbcen == 0) {
-                secureType = SECURE_BOOT_OFF;
-        } else {
-                secureType = SECURE_BOOT_ON;
-        }
-
-#elif CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6771
-
-        if (g_hw_sbcen == 0) {
-                secureType = SECURE_BOOT_OFF;
-        } else {
-                secureType = SECURE_BOOT_ON;
-        }
-
-#elif  CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6779
-
-        if (strstr(saved_command_line, "androidboot.sbootstate=on")) {
-                secureType = SECURE_BOOT_ON;
-        } else {
-                secureType = SECURE_BOOT_OFF;
-        }
-
-#elif  CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6885
-
-        if (g_hw_sbcen == 0) {
-                secureType = SECURE_BOOT_OFF;
-        } else {
-                secureType = SECURE_BOOT_ON;
-        }
-#endif
-
+        #endif
+        #endif
         return secureType;
 }
 
@@ -256,64 +247,98 @@ static ssize_t secureType_write_proc(struct file *filp, const char __user *buf,
         return count;
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+static const struct proc_ops secureType_proc_fops = {
+        .proc_read     = secureType_read_proc,
+        .proc_write    = secureType_write_proc,
+};
+#else
 static struct file_operations secureType_proc_fops = {
         .read = secureType_read_proc,
         .write = secureType_write_proc,
 };
+#endif
 
 static ssize_t secureSNBound_read_proc(struct file *file, char __user *buf,
                 size_t count, loff_t *off)
 {
-        char page[256] = {0};
-        int len = 0;
-        secure_device_sn_bound_state_t secureSNBound_state = SECURE_DEVICE_SN_BOUND_UNKNOWN;
+    char page[256] = {0};
+    int len = 0;
+    secure_device_sn_bound_state_t secureSNBound_state = SECURE_DEVICE_SN_BOUND_UNKNOWN;
 
-#if CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 660 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 845 \
-|| CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 670 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 710 /* sdm660, sdm845, sdm670, sdm710 */
-
+    if (oem_sec_override1_reg == 0x7860C4) {
         void __iomem *oem_config_base;
         uint32_t secure_override1_config = 0;
-        oem_config_base = ioremap(OEM_SEC_OVERRIDE_1_REG, 4);
+        oem_config_base = ioremap(oem_sec_override1_reg, 4);
         secure_override1_config = __raw_readl(oem_config_base);
         iounmap(oem_config_base);
         dev_info(secure_data_ptr->dev,"secure_override1_config 0x%x\n", secure_override1_config);
 
-        if (get_secureType() == SECURE_BOOT_ON_STAGE_2 && secure_override1_config != OEM_OVERRIDE_1_ENABLED_VALUE) {
+        if (get_secureType() == SECURE_BOOT_ON_STAGE_2 && secure_override1_config != oem_override1_en_value) {
                 secureSNBound_state = SECURE_DEVICE_SN_BOUND_OFF; /*secure stage2 devices not bind serial number*/
         } else {
                 secureSNBound_state = SECURE_DEVICE_SN_BOUND_ON;  /*secure stage2 devices bind serial number*/
         }
-
-
-#endif
-
-#if CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 855 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 6125 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7150 \
-|| CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7250 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 8250 || CONFIG_OPLUS_BSP_SECCOM_PLATFORM == 7125
+    } else {
         if (get_secureType() == SECURE_BOOT_ON_STAGE_2) {
                 secureSNBound_state = SECURE_DEVICE_SN_BOUND_OFF;
         }
-#endif
+    }
 
-        len = sprintf(page, "%d", secureSNBound_state);
+    len = sprintf(page, "%d", secureSNBound_state);
+    if (len > *off) {
+        len -= *off;
+    }
+    else {
+        len = 0;
+    }
 
-        if (len > *off) {
-                len -= *off;
-        }
-        else {
-                len = 0;
-        }
-
-        if (copy_to_user(buf, page, (len < count ? len : count))) {
-                return -EFAULT;
-        }
-        *off += len < count ? len : count;
-        return (len < count ? len : count);
+    if (copy_to_user(buf, page, (len < count ? len : count))) {
+        return -EFAULT;
+    }
+    *off += len < count ? len : count;
+    return (len < count ? len : count);
 }
 
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+static const struct proc_ops secureSNBound_proc_fops = {
+        .proc_read     = secureSNBound_read_proc,
+};
+#else
 static struct file_operations secureSNBound_proc_fops = {
         .read = secureSNBound_read_proc,
 };
+#endif
+
+static ssize_t CryptoKeyUnsupport_read_proc(struct file *file, char __user *buf,
+                size_t count, loff_t *off)
+{
+    char page[8] = {0};
+    int len = 0;
+
+    len = sprintf(page, "%d", oem_cryptokey_unsupport);
+    if (len > *off) {
+        len -= *off;
+    } else {
+        len = 0;
+    }
+
+    if (copy_to_user(buf, page, (len < count ? len : count))) {
+        return -EFAULT;
+    }
+    *off += len < count ? len : count;
+    return (len < count ? len : count);
+}
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+static const struct proc_ops CryptoKeyUnsupport_proc_fops = {
+        .proc_read = CryptoKeyUnsupport_read_proc,
+};
+#else
+static struct file_operations CryptoKeyUnsupport_proc_fops = {
+        .read = CryptoKeyUnsupport_read_proc,
+};
+#endif
 
 static int secure_register_proc_fs(struct secure_data *secure_data)
 {
@@ -340,6 +365,12 @@ static int secure_register_proc_fs(struct secure_data *secure_data)
                 return SECURE_ERROR_GENERAL;
         }
 
+        pentry = proc_create("CryptoKeyUnsupport", 0444, oplus_secure_common_dir, &CryptoKeyUnsupport_proc_fops);
+        if (!pentry) {
+                dev_err(secure_data->dev, "create CryptoKeyUnsupport proc failed.\n");
+                return SECURE_ERROR_GENERAL;
+        }
+
         return SECURE_OK;
 }
 
@@ -358,6 +389,12 @@ static int oplus_secure_common_probe(struct platform_device *secure_dev)
 
         secure_data->dev = dev;
         secure_data_ptr = secure_data;
+
+        //add to get the parent dts oplus_secure_common
+        ret = secure_common_parse_parent_dts(secure_data);
+        if (ret) {
+                goto exit;
+        }
 
         ret = secure_register_proc_fs(secure_data);
         if (ret) {
@@ -411,3 +448,5 @@ static void __exit oplus_secure_common_exit(void)
 
 fs_initcall(oplus_secure_common_init);
 module_exit(oplus_secure_common_exit)
+MODULE_DESCRIPTION("oplus secure common driver");
+MODULE_LICENSE("GPL");

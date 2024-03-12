@@ -43,6 +43,10 @@ typedef enum {
 
 struct secure_data {
         struct device *dev;
+        uint32_t sec_reg_num;
+        uint32_t sec_en_anti_reg;
+        uint32_t sec_override1_reg;
+        uint32_t override1_en_value;
 };
 
 #endif  /*_OPLUS_SECURE_COMMON_H_*/
