@@ -25,10 +25,8 @@ config OPLUS_SYSTEM_KERNEL_QCOM
 #endif /*CONFIG_OPLUS_SYSTEM_KERNEL*/
 
 #wen.luo@BSP.Kernel.Stability 2020/03/25 add for oplus kernel system
-source "drivers/soc/oplus/system/Kconfig"
 #endif /* VENDOR_EDIT */
 #ifdef OPLUS_FEATURE_SENSOR_SMEM
 #qiuzuolin@BSP.Sensor.Basic 2020/07/31 add for oplus sensor smem
 source "drivers/soc/oplus/sensor/Kconfig"
 #endif /* OPLUS_FEATURE_SENSOR_SMEM */
-source "drivers/soc/oplus/device_info/Kconfig"

@@ -11,11 +11,7 @@ config OPLUS_ARCH_FILE
 
 config OPLUS_COMMON_SOFT
   bool "config oplus common software"
-  select OPLUS_ARCH_FILE
   help
 	define this config to get project verion from sharemem.
 	Maybe this value is from CDT or dynamic identify by hardware
 	id.
-
-source "drivers/soc/oplus/system/oplus_project/Kconfig"
-source "drivers/soc/oplus/system/project_info/Kconfig"
