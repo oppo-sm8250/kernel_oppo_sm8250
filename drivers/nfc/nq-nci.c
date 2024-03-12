@@ -1521,6 +1521,7 @@ done:
 	kfree(nci_get_version_cmd);
 	kfree(nci_get_version_rsp);
 #else /* OPLUS_BUG_STABILITY */
+	int gpio_retry_count = 0;
     unsigned int enable_gpio = nqx_dev->en_gpio;
     unsigned int firm_gpio = nqx_dev->firm_gpio;
     char *nci_get_fw_cmd = NULL;

@@ -114,7 +114,15 @@ static int oplus_nfc_probe(struct platform_device *pdev)
 		goto error_init;
 	}
 	project = get_project();
-	sprintf(prop_name, "chipset-%d", project);
+	//project name consists of 5-symbol
+	//project contains letters is big then 0x10000 == 65536
+	if (project > 0x10000)
+	{
+		sprintf(prop_name, "chipset-%X", project);
+	} else
+	{
+		sprintf(prop_name, "chipset-%d", project);
+	}
 	pr_err("%s, prop to be read = %s", __func__, prop_name);
 	np = dev->of_node;
 
