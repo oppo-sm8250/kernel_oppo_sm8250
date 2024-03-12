@@ -20,8 +20,7 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <sound/tlv.h>
-#ifdef VENDOR_EDIT
-//Yongpei.Yao@MULTIMEDIA.AUDIODRIVER.FEATURE, 2020/06/26, use proc fs to replace debug fs
+#ifdef OPLUS_ARCH_EXTENDS
 #undef CONFIG_DEBUG_FS
 #endif /* OPLUS_ARCH_EXTENDS */
 #ifdef CONFIG_DEBUG_FS
@@ -31,8 +30,7 @@
 #endif
 
 #include "max98937.h"
-#ifdef VENDOR_EDIT
-/*Zhaoan.Xu@PSW.MM.AudioDriver.FTM, 2018/04/03, Add for get spk revsion for maxim98927*/
+#ifdef OPLUS_ARCH_EXTENDS
 #include <linux/version.h>
 #undef pr_info
 #define pr_info pr_err
@@ -68,8 +66,7 @@ static DEFINE_MUTEX(dsm_lock);
 static unsigned int i2c_states = 0;
 static int delay_array_msec[] = {10, 20, 30, 40, 50};
 
-#ifdef VENDOR_EDIT
-//Juqiang.Geng@MULTIMEDIA.AUDIODRIVER.FEATURE, 2020/05/16, Add for speaker mute
+#ifdef OPLUS_FEATURE_SPEAKER_MUTE
 static int speaker_mute_control = 0;
 static int pa_state_mark = 0;
 #endif /* OPLUS_FEATURE_SPEAKER_MUTE */
@@ -104,7 +101,12 @@ int max98927_reg_common_map[][2] = {
 	{MAX98927_Measurement_DSP_Config, 0xF7},
 	{MAX98927_PCM_Tx_Enables_B, 0x00},
 	{MAX98927_PCM_Rx_Enables_B, 0x00},
+	#ifndef OPLUS_ARCH_EXTENDS
+	//Chunyu.xie add for changing 98927's IV order
 	{MAX98927_PCM_Tx_Channel_Sources_B, 0x00},
+	#else/*OPLUS_ARCH_EXTENDS*/
+	{MAX98927_PCM_Tx_Channel_Sources_B, 0x20},
+	#endif/*OPLUS_ARCH_EXTENDS*/
 	{MAX98927_PCM_Tx_HiZ_Control_B, 0xFF},
 	{MAX98927_Measurement_enables, 0x00},
 	{MAX98927_PDM_Rx_Enable,  0x00},
@@ -593,8 +595,6 @@ struct param_info {
 };
 
 #ifndef OPLUS_ARCH_EXTENDS
-/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
- * add for applying calibration range and result to APP */
 
 //MULTIPLE = 3.33,  rdc/(1<<27) * MULTIPLE = [min, max] ohm
 //
@@ -677,7 +677,7 @@ static int maxdsm_open(struct inode *inode, struct file *filep)
 #define ADAPTIVE_FC (16)
 #define ADAPTIVE_DC_RES (18)
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 static char const *ftm_spk_rev_text[] = {"NG", "OK"};
 static const struct soc_enum ftm_spk_rev_enum = SOC_ENUM_SINGLE_EXT(2, ftm_spk_rev_text);
 static int ftm_spk_rev_get(struct snd_kcontrol *kcontrol,
@@ -881,8 +881,6 @@ static int max989xx_calib_save (uint32_t calib_value, int ch)
 }
 
 #ifndef OPLUS_ARCH_EXTENDS
-/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
- * add for applying calibration range and result to APP */
 static inline bool rdc_check_valid(uint32_t rdc, int ch)
 {
 	int rdc_min, rdc_max;
@@ -965,8 +963,6 @@ static ssize_t max989xx_dbg_calibrate_read(struct file *file,
 		impedance_l = *payload;
 		impedance_r = *(payload+1);
 		#ifndef OPLUS_ARCH_EXTENDS
-		/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-		 * add for applying calibration range and result to APP */
 		if (!rdc_check_valid(impedance_l, MAX98927L)) {
 		#else
 		if (!rdc_check_valid(max98927, impedance_l, MAX98927L)) {
@@ -989,8 +985,6 @@ static ssize_t max989xx_dbg_calibrate_read(struct file *file,
 
 		if (max98927->mono_stereo == 3) {
 			#ifndef OPLUS_ARCH_EXTENDS
-			/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-			 * add for applying calibration range and result to APP */
 			if (!rdc_check_valid(impedance_r, MAX98927R)) {
 			#else
 			if (!rdc_check_valid(max98927, impedance_r, MAX98927R)) {
@@ -1030,8 +1024,6 @@ static ssize_t max989xx_dbg_calibrate_read(struct file *file,
 
 	pr_info("%s: calibrate [impedance_l]=%d \n", __func__, impedance_l);
 	#ifndef OPLUS_ARCH_EXTENDS
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
 	n = snprintf(str, PAGE_SIZE, "%d\n", impedance_l);
 	#else
 	n = snprintf(str, PAGE_SIZE, "left=%d",
@@ -1041,8 +1033,6 @@ static ssize_t max989xx_dbg_calibrate_read(struct file *file,
 	if (max98927->mono_stereo == 3) {
 		pr_info("%s: calibrate [impedance_r]=%d \n", __func__, impedance_r);
 		#ifndef OPLUS_ARCH_EXTENDS
-		/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-		 * add for applying calibration range and result to APP */
 		n += snprintf(str+n, PAGE_SIZE, "%d\n", impedance_r);
 		#else
 		n += snprintf(str+n, PAGE_SIZE-n, ", right=%d\n",
@@ -1050,9 +1040,7 @@ static ssize_t max989xx_dbg_calibrate_read(struct file *file,
 		#endif /* OPLUS_ARCH_EXTENDS */
 	}
 
-	#ifdef VENDOR_EDIT
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
+	#ifdef OPLUS_ARCH_EXTENDS
 	pr_info("%s: read str = %s \n", __func__, str);
 	#endif /* OPLUS_ARCH_EXTENDS */
 	ret = simple_read_from_buffer(user_buf, count, ppos, str, n);
@@ -1085,8 +1073,6 @@ static ssize_t max989xx_dbg_impedance_read(struct file *file,
 	afe_dsm_get_calib((uint8_t *)payload);
 	impedance_l = *payload;
 	#ifndef OPLUS_ARCH_EXTENDS
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
 	if (!rdc_check_valid(impedance_l, MAX98927L)) {
 	#else
 	if (!rdc_check_valid(max98927, impedance_l, MAX98927L)) {
@@ -1099,8 +1085,6 @@ static ssize_t max989xx_dbg_impedance_read(struct file *file,
 	if (max98927->mono_stereo == 3) {
 		impedance_r = *(payload + 1);
 		#ifndef OPLUS_ARCH_EXTENDS
-		/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-		 * add for applying calibration range and result to APP */
 		if (!rdc_check_valid(impedance_r, MAX98927R)) {
 		#else
 		if (!rdc_check_valid(max98927, impedance_r, MAX98927R)) {
@@ -1120,8 +1104,6 @@ static ssize_t max989xx_dbg_impedance_read(struct file *file,
 
 	pr_info("%s: [impedance_l] = %d \n", __func__, impedance_l);
 	#ifndef OPLUS_ARCH_EXTENDS
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
 	ret = snprintf(str, PAGE_SIZE, "%d\n", impedance_l);
 	#else
 	ret = snprintf(str, PAGE_SIZE, "left=%d",
@@ -1130,8 +1112,6 @@ static ssize_t max989xx_dbg_impedance_read(struct file *file,
 	if (max98927->mono_stereo == 3) {
 		pr_info("%s: [impedance_r] = %d \n", __func__, impedance_r);
 		#ifndef OPLUS_ARCH_EXTENDS
-		/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-		 * add for applying calibration range and result to APP */
 		ret += snprintf(str+ret, PAGE_SIZE, "%d\n", impedance_r);
 		#else
 		ret += snprintf(str+ret, PAGE_SIZE-ret, ", right=%d\n",
@@ -1139,9 +1119,7 @@ static ssize_t max989xx_dbg_impedance_read(struct file *file,
 		#endif /* OPLUS_ARCH_EXTENDS */
 	}
 
-	#ifdef VENDOR_EDIT
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
+	#ifdef OPLUS_ARCH_EXTENDS
 	pr_info("%s: read str = %s \n", __func__, str);
 	#endif /* OPLUS_ARCH_EXTENDS */
 	ret = simple_read_from_buffer(user_buf, count, ppos, str, ret);
@@ -1179,8 +1157,6 @@ static ssize_t max989xx_dbg_f0_read(struct file *file,
 
 	pr_info("%s: [f0L] = %d \n", __func__, f0_l);
 	#ifndef OPLUS_ARCH_EXTENDS
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
 	ret = snprintf(str, PAGE_SIZE, "%d\n", f0_l);
 	#else
 	ret = snprintf(str, PAGE_SIZE, "left=%d", f0_l);
@@ -1189,17 +1165,13 @@ static ssize_t max989xx_dbg_f0_read(struct file *file,
 	if (max98927->mono_stereo == 3) {
 		pr_info("%s: [f0R] = %d \n", __func__, f0_r);
 		#ifndef OPLUS_ARCH_EXTENDS
-		/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-		 * add for applying calibration range and result to APP */
 		ret += snprintf(str+ret, PAGE_SIZE, "%d\n", f0_r);
 		#else
 		ret += snprintf(str+ret, PAGE_SIZE-ret, ", right=%d\n", f0_r);
 		#endif /* OPLUS_ARCH_EXTENDS */
 	}
 
-	#ifdef VENDOR_EDIT
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
+	#ifdef OPLUS_ARCH_EXTENDS
 	pr_info("%s: read str = %s \n", __func__, str);
 	#endif /* OPLUS_ARCH_EXTENDS */
 	ret = simple_read_from_buffer(user_buf, count, ppos, str, ret);
@@ -1238,8 +1210,6 @@ static ssize_t max989xx_dbg_temperature_read(struct file *file,
 	}
 
 	#ifndef OPLUS_ARCH_EXTENDS
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
 	ret = snprintf(str, PAGE_SIZE, "%d\n", coiltempl);
 	#else
 	ret = snprintf(str, PAGE_SIZE, "left=%d",
@@ -1248,8 +1218,6 @@ static ssize_t max989xx_dbg_temperature_read(struct file *file,
  	if (max98927->mono_stereo == 3) {
 		pr_info("%s: [coiltempR] = %d \n", __func__, coiltempr);
 		#ifndef OPLUS_ARCH_EXTENDS
-		/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-		 * add for applying calibration range and result to APP */
 		ret += snprintf(str+ret, PAGE_SIZE, "%d\n", coiltempr);
 		#else
 		ret += snprintf(str+ret, PAGE_SIZE-ret, ", right=%d\n",
@@ -1257,9 +1225,7 @@ static ssize_t max989xx_dbg_temperature_read(struct file *file,
 		#endif /* OPLUS_ARCH_EXTENDS */
 	}
 
-	#ifdef VENDOR_EDIT
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
+	#ifdef OPLUS_ARCH_EXTENDS
 	pr_info("%s: read str = %s \n", __func__, str);
 	#endif /* OPLUS_ARCH_EXTENDS */
 	ret = simple_read_from_buffer(user_buf, count, ppos, str, ret);
@@ -1299,9 +1265,7 @@ static ssize_t max989xx_dbg_status_read(struct file *file,
 	return simple_read_from_buffer(user_buf, count, ppos, kbuf, n+1);
 }
 
-#ifdef VENDOR_EDIT
-/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
- * add for applying calibration range and result to APP */
+#ifdef OPLUS_ARCH_EXTENDS
 static ssize_t max989xx_dbg_range_read(struct file *file,
 						char __user *user_buf, size_t count,
 						loff_t *ppos)
@@ -1336,9 +1300,7 @@ static ssize_t max989xx_dbg_range_read(struct file *file,
 		max98927->range_mohms[MAX98927R][RANGE_MAX]);
 	}
 
-	#ifdef VENDOR_EDIT
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
+	#ifdef OPLUS_ARCH_EXTENDS
 	pr_info("%s: read str = %s \n", __func__, str);
 	#endif /* OPLUS_ARCH_EXTENDS */
 	ret = simple_read_from_buffer(user_buf, count, ppos, str, n);
@@ -1348,7 +1310,6 @@ exit:
 	return ret;
 }
 
-/*Wei.Hua@MULTIMEDIA.AUDIODRIVER.SMARTPA, 2020/07/03, Add to get latest calibration*/
 static ssize_t max989xx_dbg_calibration_read(struct file *file,
 						char __user *user_buf, size_t count,
 						loff_t *ppos)
@@ -1414,15 +1375,12 @@ static const struct file_operations max989xx_dbg_status_fops = {
 	.read = max989xx_dbg_status_read,
 };
 
-#ifdef VENDOR_EDIT
-/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
- * add for applying calibration range and result to APP */
+#ifdef OPLUS_ARCH_EXTENDS
 static const struct file_operations max989xx_dbg_range_fops = {
 	.open = simple_open,
 	.read = max989xx_dbg_range_read,
 	.llseek = default_llseek,
 };
-/*Wei.Hua@MULTIMEDIA.AUDIODRIVER.SMARTPA, 2020/07/03, Add to get latest calibration*/
 static const struct file_operations max989xx_dbg_calibartion_fops = {
 	.open = simple_open,
 	.read = max989xx_dbg_calibration_read,
@@ -1447,12 +1405,9 @@ static void max989xx_debug_init(struct max989xx_priv *max98927, struct i2c_clien
 		i2c, &max989xx_dbg_temperature_fops);
 	debugfs_create_file("status", S_IRUGO, max98927->dbg_dir,
 						i2c, &max989xx_dbg_status_fops);
-	#ifdef VENDOR_EDIT
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
+	#ifdef OPLUS_ARCH_EXTENDS
 	debugfs_create_file("range", S_IRUGO|S_IWUGO, max98927->dbg_dir,
 		i2c, &max989xx_dbg_range_fops);
-	/*Wei.Hua@MULTIMEDIA.AUDIODRIVER.SMARTPA, 2020/07/03, Add to get latest calibration*/
 	debugfs_create_file("calibration", S_IRUGO|S_IWUGO, max98927->dbg_dir,
 		i2c, &max989xx_dbg_calibartion_fops);
 	#endif /* OPLUS_ARCH_EXTENDS */
@@ -1468,12 +1423,9 @@ static void max989xx_debug_init(struct max989xx_priv *max98927, struct i2c_clien
 		&max989xx_dbg_temperature_fops, i2c);
 	proc_create_data("status", S_IRUGO, max98927->dbg_dir,
 						&max989xx_dbg_status_fops, i2c);
-	#ifdef VENDOR_EDIT
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
+	#ifdef OPLUS_ARCH_EXTENDS
 	proc_create_data("range", S_IRUGO|S_IWUGO, max98927->dbg_dir,
 		&max989xx_dbg_range_fops, i2c);
-	/*Wei.Hua@MULTIMEDIA.AUDIODRIVER.SMARTPA, 2020/07/03, Add to get latest calibration*/
 	proc_create_data("calibration", S_IRUGO|S_IWUGO, max98927->dbg_dir,
 		&max989xx_dbg_calibartion_fops, i2c);
 	#endif /* OPLUS_ARCH_EXTENDS */
@@ -1491,8 +1443,6 @@ static void max989xx_debug_remove(struct max989xx_priv *max98927)
     }
 }
 
-/*zhao.Pan@PSW.MM.AudioDriver.SmartPA.1963539, 2019/04/18,
- * update or write register retry 5 times if return error */
 #define MAX98927_MAX_RETRY_TIMES   6
 #define MAX98927_DELAY_MS          5
 
@@ -1933,8 +1883,7 @@ static int max98927_stream_mute(struct snd_soc_dai *codec_dai, int mute, int str
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		if (mute) {
-			#ifdef VENDOR_EDIT
-			//Juqiang.Geng@MULTIMEDIA.AUDIODRIVER.FEATURE, 2020/05/16, Add for speaker mute
+			#ifdef OPLUS_FEATURE_SPEAKER_MUTE
 			pa_state_mark = 1;
 			#endif /* OPLUS_FEATURE_SPEAKER_MUTE */
 			if (max98927_can_use_dsm(max98927)){
@@ -1956,8 +1905,7 @@ static int max98927_stream_mute(struct snd_soc_dai *codec_dai, int mute, int str
 		} else {
 
 			unsigned int pa0_reg4, pa0_reg5, pa0_reg6, amp_reg;
-			#ifdef VENDOR_EDIT
-			//Juqiang.Geng@MULTIMEDIA.AUDIODRIVER.FEATURE, 2020/05/16, Add for speaker mute
+			#ifdef OPLUS_FEATURE_SPEAKER_MUTE
 			pa_state_mark = 0;
 			pr_info("%s: dsm_enable=%d\n", __func__, max98927->dsm_enable);
 			if (max98927->dsm_enable == 1) {
@@ -2022,8 +1970,6 @@ static int max98927_stream_mute(struct snd_soc_dai *codec_dai, int mute, int str
 			}
 			if (max98927->mono_stereo == 0x0 || (max98927->mono_stereo & 0x1)) {
 				#ifndef OPLUS_ARCH_EXTENDS
-				/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-				 * add for applying calibration range and result to APP */
 				if (!rdc_check_valid(max98927->ref_RDC[MAX98927L], MAX98927L) && max98927->ref_RDC[MAX98927L] != SPK_MUTE_VALUE){
 				#else
 				if (!rdc_check_valid(max98927, max98927->ref_RDC[MAX98927L], MAX98927L) &&
@@ -2031,8 +1977,6 @@ static int max98927_stream_mute(struct snd_soc_dai *codec_dai, int mute, int str
 				#endif /* OPLUS_ARCH_EXTENDS */
 					rc = max989xx_calib_get(&impedance, MAX98927L);
 					#ifndef OPLUS_ARCH_EXTENDS
-					/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-					 * add for applying calibration range and result to APP */
 					if (rdc_check_valid(impedance, MAX98927L) || impedance == SPK_MUTE_VALUE) {
 					#else
 					if (rdc_check_valid(max98927, impedance, MAX98927L) || impedance == SPK_MUTE_VALUE) {
@@ -2044,8 +1988,6 @@ static int max98927_stream_mute(struct snd_soc_dai *codec_dai, int mute, int str
 			}
 			if (max98927->mono_stereo & 0x2) {
 				#ifndef OPLUS_ARCH_EXTENDS
-				/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-				 * add for applying calibration range and result to APP */
 				if (!rdc_check_valid(max98927->ref_RDC[MAX98927R], MAX98927R) && max98927->ref_RDC[MAX98927R] != SPK_MUTE_VALUE){
 				#else
 				if (!rdc_check_valid(max98927, max98927->ref_RDC[MAX98927R], MAX98927R) &&
@@ -2054,8 +1996,6 @@ static int max98927_stream_mute(struct snd_soc_dai *codec_dai, int mute, int str
 					impedance = 0;
 					rc = max989xx_calib_get(&impedance, MAX98927R);
 					#ifndef OPLUS_ARCH_EXTENDS
-					/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-					 * add for applying calibration range and result to APP */
 					if (rdc_check_valid(impedance, MAX98927R) || impedance == SPK_MUTE_VALUE) {
 					#else
 					if (rdc_check_valid(max98927, impedance, MAX98927R) || impedance == SPK_MUTE_VALUE) {
@@ -3212,8 +3152,7 @@ static int max98927_adsp_mode_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-#ifdef VENDOR_EDIT
-//Juqiang.Geng@MULTIMEDIA.AUDIODRIVER.FEATURE, 2020/05/16, Add for speaker mute
+#ifdef OPLUS_FEATURE_SPEAKER_MUTE
 static int max98927_spk_mute_ctrl_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
@@ -3463,8 +3402,7 @@ static const struct snd_kcontrol_new max98927_snd_controls[] = {
   	SOC_ENUM_EXT("Adsp Working Mode", max98927_enum[6],
 			max98927_adsp_mode_get, max98927_adsp_mode_put),
 
-	#ifdef VENDOR_EDIT
-	//Juqiang.Geng@MULTIMEDIA.AUDIODRIVER.FEATURE, 2020/05/16, Add for speaker mute
+	#ifdef OPLUS_FEATURE_SPEAKER_MUTE
 	SOC_ENUM_EXT("Speaker_Mute_Switch", spk_mute_ctrl_enum,
 			max98927_spk_mute_ctrl_get, max98927_spk_mute_ctrl_put),
 	#endif /* OPLUS_FEATURE_SPEAKER_MUTE */
@@ -3512,8 +3450,7 @@ static int max98927_probe(struct snd_soc_component *component)
 
 	snd_soc_dapm_sync(dapm);
 
-	#ifdef VENDOR_EDIT
-	/*Zhaoan.Xu@PSW.MM.AudioDriver.FTM, 2018/04/03, Add for get spk revsion for maxim98927*/
+	#ifdef OPLUS_ARCH_EXTENDS
 	snd_soc_add_component_controls(component,
 	    ftm_spk_rev_controls, ARRAY_SIZE(ftm_spk_rev_controls));
 	#endif /* OPLUS_ARCH_EXTENDS */
@@ -3650,9 +3587,7 @@ static int max98927_parse_dt(struct max989xx_priv *max98927,
 		max98927->safe_gain = value;
 	}
 
-	#ifdef VENDOR_EDIT
-	/*zhao.Pan@PSW.MM.AudioDriver.SmartPA, 2019/07/31,
-	 * add for applying calibration range and result to APP */
+	#ifdef OPLUS_ARCH_EXTENDS
 	value = of_property_count_u32_elems(dNode, "range_mohms");
 	if ((value == RANGE_COUNT) &&
 	    !of_property_read_u32_array(dNode, "range_mohms", max98927->range_mohms[id], value)) {
@@ -3771,10 +3706,7 @@ static int max98927_i2c_probe(struct i2c_client *i2c,
 		}
 	}
 
-	#ifdef VENDOR_EDIT
-	/*Le.Li@PSW.MM.AudioDriver.SmartPA, 2018/11/07,
-	 *Add for max989xx dvdd.
-	 */
+	#ifdef OPLUS_ARCH_EXTENDS
 	max98927->max989xx_vdd = regulator_get(&i2c->dev, "max989xx_vdd");
 	if (IS_ERR(max98927->max989xx_vdd)) {
 		pr_err("regulator max989xx_vdd get failed\n ");

@@ -561,7 +561,12 @@ static struct dev_config mi2s_tx_cfg[] = {
 
 static struct tdm_dev_config pri_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 	{ /* PRI TDM */
+		#ifndef OPLUS_ARCH_EXTENDS
+		/*Add for 4 solts tdm_0 audio bringup*/
 		{ {0,   4, 0xFFFF} }, /* RX_0 */
+		#else
+		{ {0,   4, 8, 12, 0xFFFF} }, /* RX_0 */
+		#endif /*OPLUS_ARCH_EXTENDS*/
 		{ {8,  12, 0xFFFF} }, /* RX_1 */
 		{ {16, 20, 0xFFFF} }, /* RX_2 */
 		{ {24, 28, 0xFFFF} }, /* RX_3 */
@@ -5444,6 +5449,17 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 		}
 
 		#ifdef VENDOR_EDIT
+		if ((!mi2s_intf_conf[index].msm_is_mi2s_master)
+				#ifndef OPLUS_FEATURE_PLATFORM_LITO
+				&& (index == PRIM_MI2S)) {
+				#else
+				&& (index == SEC_MI2S)) {
+				#endif/*OPLUS_FEATURE_PLATFORM_LITO*/
+			ret = snd_soc_dai_set_fmt(rtd->codec_dai, fmt | SND_SOC_DAIFMT_I2S);
+			if (ret < 0) {
+				pr_warn("%s: set codec fmt fail, ret=%d \n", __func__, ret);
+			}
+		}
 		if (mi2s_intf_conf[index].msm_is_ext_mclk) {
 			pr_debug("%s: Enabling mclk, clk_freq_in_hz = %u\n",
 				__func__, mi2s_mclk[index].clk_freq_in_hz);
@@ -5892,11 +5908,13 @@ static int msm_int_audrx_init(struct snd_soc_pcm_runtime *rtd)
 						WSA_MACRO_SPKR_MODE_1);
 				wsa_macro_set_spkr_gain_offset(component,
 						WSA_MACRO_GAIN_OFFSET_M1P5_DB);
+			#ifndef VENDOR_EDIT
 			} else if (aux_comp->name != NULL && (
 				!strcmp(aux_comp->name, WSA8815_NAME_1) ||
 		    		!strcmp(aux_comp->name, WSA8815_NAME_2))) {
 				wsa_macro_set_spkr_mode(component,
 						WSA_MACRO_SPKR_MODE_DEFAULT);
+			#endif
 			}
 		}
 	}
@@ -7998,6 +8016,15 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		rc = of_property_read_u32(dev->of_node, "qcom,tdm-audio-intf",
 				&val);
 		if (!rc && val) {
+			#ifdef OPLUS_ARCH_EXTENDS
+			/* Add for oplus extend aduio which use tdm */
+			extend_i2s_be_dailinks_func = symbol_request(extend_codec_i2s_be_dailinks);
+			if (extend_i2s_be_dailinks_func) {
+				extend_i2s_be_dailinks_func(msm_tdm_be_dai_links, ARRAY_SIZE(msm_tdm_be_dai_links));
+			}
+			dev_dbg(dev, "%s: msm_tdm_be_dai_links enter val = %d\n",__func__,val);
+			#endif /* OPLUS_ARCH_EXTENDS */
+
 			memcpy(msm_kona_dai_links + total_links,
 				msm_tdm_be_dai_links,
 				sizeof(msm_tdm_be_dai_links));

@@ -2700,11 +2700,6 @@ static int swrm_probe(struct platform_device *pdev)
 		} else {
 			swrm->master.num_dev = swrm->num_dev;
 		}
-#ifdef VENDOR_EDIT
-		else {
-			swrm->master.num_dev = swrm->num_dev;
- 		}
-#endif /* OPLUS_BUG_STABILITY */
 	}
 
 	/* Parse soundwire port mapping */
@@ -2880,10 +2875,6 @@ static int swrm_probe(struct platform_device *pdev)
 	 * controller will be up now
 	 */
 	swr_master_add_boarddevices(&swrm->master);
-#ifdef VENDOR_EDIT
-	if (swrm_request_hw_vote(swrm, LPASS_AUDIO_CORE, true))
-		dev_err(&pdev->dev, "%s: Audio HW Vote is failed\n", __func__);
-#endif /* OPLUS_BUG_STABILITY */
 	mutex_lock(&swrm->mlock);
 	swrm_clk_request(swrm, true);
 	swrm_hw_ver = swr_master_read(swrm, SWRM_COMP_HW_VERSION);
@@ -3035,11 +3026,12 @@ static int swrm_runtime_resume(struct device *dev)
 	int ret = 0;
 	bool swrm_clk_req_err = false;
 	bool hw_core_err = false;
-#ifndef VENDOR_EDIT
 	bool aud_core_err = false;
-#endif /* OPLUS_BUG_STABILITY */
 	struct swr_master *mstr = &swrm->master;
 	struct swr_device *swr_dev;
+	#ifdef OPLUS_BUG_STABILITY
+	u32 temp = 0;
+	#endif /* OPLUS_BUG_STABILITY */
 
 	dev_dbg(dev, "%s: pm_runtime: resume, state:%d\n",
 		__func__, swrm->state);
@@ -3055,9 +3047,7 @@ static int swrm_runtime_resume(struct device *dev)
 	if (swrm_request_hw_vote(swrm, LPASS_AUDIO_CORE, true)) {
 		dev_err(dev, "%s:lpass audio hw enable failed\n",
 			__func__);
-#ifndef VENDOR_EDIT
 		aud_core_err = true;
-#endif
 	}
 
 	if ((swrm->state == SWR_MSTR_DOWN) ||
@@ -3125,6 +3115,13 @@ static int swrm_runtime_resume(struct device *dev)
 				mutex_lock(&swrm->reslock);
 			}
 		} else {
+			#ifdef OPLUS_BUG_STABILITY
+			if (swrm->swrm_hctl_reg) {
+				temp = ioread32(swrm->swrm_hctl_reg);
+				temp &= 0xFFFFFFFD;
+				iowrite32(temp, swrm->swrm_hctl_reg);
+			}
+			#endif /* OPLUS_BUG_STABILITY */
 			/*wake up from clock stop*/
 			swr_master_write(swrm, SWRM_MCP_BUS_CTRL_ADDR, 0x2);
 			/* clear and enable bus clash interrupt */
@@ -3143,10 +3140,8 @@ static int swrm_runtime_resume(struct device *dev)
 		swrm->state = SWR_MSTR_UP;
 	}
 exit:
-#ifndef VENDOR_EDIT
 	if (!aud_core_err)
 		swrm_request_hw_vote(swrm, LPASS_AUDIO_CORE, false);
-#endif /* OPLUS_BUG_STABILITY */
 	if (!hw_core_err)
 		swrm_request_hw_vote(swrm, LPASS_HW_CORE, false);
 	if (swrm_clk_req_err || aud_core_err  || hw_core_err)
@@ -3170,9 +3165,7 @@ static int swrm_runtime_suspend(struct device *dev)
 	struct swr_mstr_ctrl *swrm = platform_get_drvdata(pdev);
 	int ret = 0;
 	bool hw_core_err = false;
-#ifndef VENDOR_EDIT
 	bool aud_core_err = false;
-#endif /* OPLUS_BUG_STABILITY */
 	struct swr_master *mstr = &swrm->master;
 	struct swr_device *swr_dev;
 	int current_state = 0;
@@ -3195,13 +3188,11 @@ static int swrm_runtime_suspend(struct device *dev)
 			__func__);
 		hw_core_err = true;
 	}
-#ifndef VENDOR_EDIT
 	if (swrm_request_hw_vote(swrm, LPASS_AUDIO_CORE, true)) {
 		dev_err(dev, "%s:lpass audio hw enable failed\n",
 			__func__);
 		aud_core_err = true;
 	}
-#endif /* OPLUS_BUG_STABILITY */
 	if ((current_state == SWR_MSTR_UP) ||
 	    (current_state == SWR_MSTR_SSR)) {
 
@@ -3294,19 +3285,12 @@ static int swrm_runtime_suspend(struct device *dev)
 		}
 
 	}
-#ifdef VENDOR_EDIT
-	if (swrm_request_hw_vote(swrm, LPASS_AUDIO_CORE, false))
-		dev_err(dev, "%s:lpass audio hw enable failed\n",
-			__func__);
-#endif /* OPLUS_BUG_STABILITY */
 	/* Retain  SSR state until resume */
 	if (current_state != SWR_MSTR_SSR)
 		swrm->state = SWR_MSTR_DOWN;
 exit:
-#ifndef VENDOR_EDIT
 	if (!aud_core_err)
 		swrm_request_hw_vote(swrm, LPASS_AUDIO_CORE, false);
-#endif /* OPLUS_BUG_STABILITY */
 	if (!hw_core_err)
 		swrm_request_hw_vote(swrm, LPASS_HW_CORE, false);
 	mutex_unlock(&swrm->reslock);
@@ -3558,7 +3542,6 @@ int swrm_wcd_notify(struct platform_device *pdev, u32 id, void *data)
 			usleep_range(50000, 50100);
 			swrm->state = SWR_MSTR_SSR;
 		}
-
 		mutex_lock(&swrm->devlock);
 		swrm->dev_up = true;
 		mutex_unlock(&swrm->devlock);

@@ -5552,6 +5552,13 @@ static int get_ec_ref_port_id(int value, int *index)
 		*index = 40;
 		port_id = AFE_PORT_ID_QUINARY_TDM_TX;
 		break;
+	#ifdef OPLUS_ARCH_EXTENDS
+	//add tdm pri aec port
+	case 41:
+		*index = 41;
+		port_id = AFE_PORT_ID_PRIMARY_TDM_RX;
+		break;
+	#endif
 	default:
 		*index = 0; /* NONE */
 		pr_err("%s: Invalid value %d\n", __func__, value);
@@ -5610,6 +5617,9 @@ static const char *const ec_ref_rx[] = { "None", "SLIM_RX", "I2S_RX",
 	"SLIM_7_RX", "RX_CDC_DMA_RX_0", "RX_CDC_DMA_RX_1", "RX_CDC_DMA_RX_2",
 	"RX_CDC_DMA_RX_3", "TX_CDC_DMA_TX_0", "TERT_TDM_RX_2", "SEC_TDM_TX_0",
 	"DISPLAY_PORT1", "SEN_MI2S_RX", "SENARY_MI2S_TX", "QUIN_TDM_TX_0",
+#ifdef OPLUS_ARCH_EXTENDS
+	"PRI_TDM_RX_0",
+#endif
 };
 
 static const struct soc_enum msm_route_ec_ref_rx_enum[] = {
@@ -23863,6 +23873,11 @@ static const char * const mi2s_rx_vi_fb_tx_mux_text[] = {
 static const char * const tert_mi2s_rx_vi_fb_tx_mux_text[] = {
 	"ZERO", "TERT_MI2S_TX"
 };
+
+/*Add for pri tdm_0 feedback*/
+static const char * const pri_tdm_rx_vi_fb_tx_mux_text[] = {
+	"ZERO", "PRI_TDM_TX_0"
+};
 #endif
 
 static const char * const int4_mi2s_rx_vi_fb_tx_mono_mux_text[] = {
@@ -23908,7 +23923,21 @@ static const struct snd_kcontrol_new tert_mi2s_rx_vi_fb_mux =
 	SOC_DAPM_ENUM_EXT("TERT_MI2S_RX_VI_FB_MUX",
 	tert_mi2s_rx_vi_fb_mux_enum, spkr_prot_get_vi_lch_port,
 	spkr_prot_put_vi_lch_port);
-#endif
+
+/*modified for pri tdm_0 feedback*/
+static const int const pri_tdm_rx_vi_fb_tx_value[] = {
+	MSM_BACKEND_DAI_MAX, MSM_BACKEND_DAI_PRI_TDM_TX_0
+};
+static const struct soc_enum pri_tdm_rx_vi_fb_mux_enum =
+	SOC_VALUE_ENUM_DOUBLE(0, MSM_BACKEND_DAI_PRI_TDM_RX_0, 0, 0,
+	ARRAY_SIZE(pri_tdm_rx_vi_fb_tx_mux_text),
+	pri_tdm_rx_vi_fb_tx_mux_text, pri_tdm_rx_vi_fb_tx_value);
+static const struct snd_kcontrol_new pri_tdm_rx_vi_fb_mux =
+	SOC_DAPM_ENUM_EXT("PRI_TDM_RX_VI_FB_MUX",
+	pri_tdm_rx_vi_fb_mux_enum, spkr_prot_get_vi_lch_port,
+	spkr_prot_put_vi_lch_port);
+
+#endif/*OPLUS_ARCH_EXTENDS*/
 
 static const int int4_mi2s_rx_vi_fb_tx_mono_ch_value[] = {
 	MSM_BACKEND_DAI_MAX, MSM_BACKEND_DAI_INT5_MI2S_TX
@@ -25456,6 +25485,14 @@ static const struct snd_soc_dapm_widget msm_qdsp6_widgets_tdm[] = {
 	/* incall */
 	/* In- call recording */
 	/* Switch Definitions */
+	#ifdef OPLUS_ARCH_EXTENDS
+	/*Add for Switch Definitions pri tdm_0 loopback*/
+	SND_SOC_DAPM_SWITCH("PRI_TDM_RX_DL_HL", SND_SOC_NOPM, 0, 0,
+				&pri_tdm_rx_0_switch_mixer_controls),
+	SND_SOC_DAPM_MUX("PRI_TDM_RX_VI_FB_MUX", SND_SOC_NOPM, 0, 0,
+			&pri_tdm_rx_vi_fb_mux),
+	#endif/*OPLUS_ARCH_EXTENDS*/
+
 	/* Mixer definitions */
 	SND_SOC_DAPM_MIXER("PRI_TDM_RX_0 Audio Mixer", SND_SOC_NOPM, 0, 0,
 				pri_tdm_rx_0_mixer_controls,
@@ -26174,6 +26211,9 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"MultiMedia10 Mixer", "SLIM_1_TX", "SLIMBUS_1_TX"},
 	{"MultiMedia16 Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
 	{"MultiMedia16 Mixer", "SLIM_1_TX", "SLIMBUS_1_TX"},
+#ifdef OPLUS_ARCH_EXTENDS
+	{"MultiMedia16 Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
+#endif
 	{"MultiMedia5 Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
 	{"MultiMedia5 Mixer", "SLIM_8_TX", "SLIMBUS_8_TX"},
 	{"MultiMedia5 Mixer", "SLIM_9_TX", "SLIMBUS_9_TX"},
@@ -27430,6 +27470,15 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"PRI_TDM_RX_0 Audio Mixer", "MultiMedia24", "MM_DL24"},
 	{"PRI_TDM_RX_0 Audio Mixer", "MultiMedia25", "MM_DL25"},
 	{"PRI_TDM_RX_0", NULL, "PRI_TDM_RX_0 Audio Mixer"},
+#ifdef OPLUS_ARCH_EXTENDS
+	/*Add for pri_0 loopback*/
+	{"PRI_TDM_RX_0 Port Mixer", "TX_CDC_DMA_TX_3", "TX_CDC_DMA_TX_3"},
+	{"PRI_TDM_RX_0 Port Mixer", "TX_CDC_DMA_TX_4", "TX_CDC_DMA_TX_4"},
+	{"PRI_TDM_RX_DL_HL", "Switch", "PRI_TDM_RX_0_DL_HL"},
+	{"PRI_TDM_RX_0", NULL, "PRI_TDM_RX_DL_HL"},
+	{"PRI_TDM_RX_VI_FB_MUX", "PRI_TDM_TX_0", "PRI_TDM_TX_0"},
+	{"PRI_TDM_RX_0", NULL, "PRI_TDM_RX_VI_FB_MUX"},
+#endif /*OPLUS_ARCH_EXTENDS*/
 
 	{"PRI_TDM_RX_1 Audio Mixer", "MultiMedia1", "MM_DL1"},
 	{"PRI_TDM_RX_1 Audio Mixer", "MultiMedia2", "MM_DL2"},
@@ -29288,6 +29337,13 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"AUDIO_REF_EC_UL1 MUX", "SEC_TDM_TX_0", "SEC_TDM_TX_0"},
 	{"AUDIO_REF_EC_UL1 MUX", "QUIN_TDM_TX_0", "QUIN_TDM_TX_0"},
 
+#ifdef OPLUS_ARCH_EXTENDS
+	{"AUDIO_REF_EC_UL1 MUX", "TERT_MI2S_RX", "TERT_MI2S_RX"},
+	{"AUDIO_REF_EC_UL1 MUX", "PRI_MI2S_RX", "PRI_MI2S_RX"},
+	/*Add for pri tdm_0 4ch aec loopback*/
+	{"AUDIO_REF_EC_UL1 MUX", "PRI_TDM_RX_0", "PRI_TDM_RX_0"},
+#endif /*OPLUS_ARCH_EXTENDS*/
+
 	{"AUDIO_REF_EC_UL10 MUX", "QUAT_TDM_TX_1", "QUAT_TDM_TX_1"},
 	{"AUDIO_REF_EC_UL10 MUX", "QUAT_TDM_RX_0", "QUAT_TDM_RX_0"},
 	{"AUDIO_REF_EC_UL10 MUX", "QUAT_TDM_RX_1", "QUAT_TDM_RX_1"},
@@ -29295,6 +29351,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"AUDIO_REF_EC_UL10 MUX", "TERT_TDM_TX_0", "TERT_TDM_TX_0"},
 	{"AUDIO_REF_EC_UL10 MUX", "TERT_TDM_RX_2", "TERT_TDM_RX_2"},
 	{"AUDIO_REF_EC_UL10 MUX", "SEC_TDM_TX_0", "SEC_TDM_TX_0"},
+#ifdef OPLUS_ARCH_EXTENDS
+	/* add routing control for AUDIO_REF_EC_UL10 MUX with TERT_MI2S_RX */
+	{"AUDIO_REF_EC_UL10 MUX", "TERT_MI2S_RX", "TERT_MI2S_RX"},
+#endif /* OPLUS_ARCH_EXTENDS */
 
 	{"LSM1 Mixer", "QUIN_TDM_TX_0", "QUIN_TDM_TX_0"},
 	{"LSM1 Mixer", "TERT_TDM_TX_0", "TERT_TDM_TX_0"},
@@ -29510,6 +29570,9 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	{"SEC_MI2S_RX Audio Mixer", "MultiMedia3", "MM_DL3"},
 	{"SEC_MI2S_RX Audio Mixer", "MultiMedia4", "MM_DL4"},
 	{"SEC_MI2S_RX Audio Mixer", "MultiMedia5", "MM_DL5"},
+	#ifdef OPLUS_ARCH_EXTENDS
+	{"SEC_MI2S_RX Audio Mixer", "MultiMedia6", "MM_DL6"},
+	#endif /* OPLUS_ARCH_EXTENDS */
 	{"SEC_MI2S_RX Audio Mixer", "MultiMedia7", "MM_DL7"},
 	{"SEC_MI2S_RX Audio Mixer", "MultiMedia8", "MM_DL8"},
 	{"SEC_MI2S_RX Audio Mixer", "MultiMedia10", "MM_DL10"},
@@ -29941,6 +30004,9 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	/* connect to INT4_MI2S_DL_HL since same pcm_id */
 	{"WSA_CDC_DMA_RX_0 Port Mixer", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"RX_CDC_DMA_RX_0 Port Mixer", "TERT_MI2S_TX", "TERT_MI2S_TX"},
+#ifdef OPLUS_FEATURE_AUDIO_FTM
+	{"RX_CDC_DMA_RX_0 Port Mixer", "TX_CDC_DMA_TX_4", "TX_CDC_DMA_TX_4"},
+#endif /* OPLUS_FEATURE_AUDIO_FTM */
 	{"RX_CDC_DMA_RX_1 Port Mixer", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 
 	{"SLIMBUS_0_RX Port Mixer", "MI2S_TX", "MI2S_TX"},
@@ -30141,6 +30207,7 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	{"INT4_MI2S_RX_VI_FB_STEREO_CH_MUX", "INT5_MI2S_TX", "INT5_MI2S_TX"},
 	{"PRI_MI2S_RX", NULL, "PRI_MI2S_RX_VI_FB_MUX"},
 #ifdef VENDOR_EDIT
+	{"TERT_MI2S_RX_VI_FB_MUX", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"TERT_MI2S_RX", NULL, "TERT_MI2S_RX_VI_FB_MUX"},
 #endif /*OPLUS_ARCH_EXTENDS*/
 	{"INT4_MI2S_RX", NULL, "INT4_MI2S_RX_VI_FB_MONO_CH_MUX"},

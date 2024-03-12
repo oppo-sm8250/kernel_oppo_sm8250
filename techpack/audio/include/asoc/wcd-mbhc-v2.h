@@ -136,7 +136,11 @@ do {                                                    \
 #define HS_DETECT_PLUG_TIME_MS (5 * 1000)
 #endif /* OPLUS_ARCH_EXTENDS */
 #define SPECIAL_HS_DETECT_TIME_MS (2 * 1000)
+#ifndef OPLUS_ARCH_EXTENDS
 #define MBHC_BUTTON_PRESS_THRESHOLD_MIN 250
+#else
+#define MBHC_BUTTON_PRESS_THRESHOLD_MIN 1000
+#endif
 #define GND_MIC_SWAP_THRESHOLD 4
 #define GND_MIC_USBC_SWAP_THRESHOLD 2
 #define WCD_FAKE_REMOVAL_MIN_PERIOD_MS 100
@@ -596,6 +600,12 @@ struct wcd_mbhc {
 	struct snd_soc_jack button_jack;
 	struct mutex codec_resource_lock;
 
+	#ifdef OPLUS_ARCH_EXTENDS
+	bool use_usbc_detect;
+	bool usbc_analog_status;
+	struct delayed_work mbhc_usbc_detect_dwork;
+	#endif /* OPLUS_ARCH_EXTENDS */
+
 	/* Holds codec specific interrupt mapping */
 	const struct wcd_mbhc_intr *intr_ids;
 
@@ -624,6 +634,10 @@ struct wcd_mbhc {
 #ifdef VENDOR_EDIT
 	bool need_cross_conn;
 	struct delayed_work hp_detect_work;
+	bool irq_trigger_enable;
+	struct delayed_work mech_irq_trigger_dwork;
+	bool headset_bias_alwayon;
+	bool enable_hp_impedance_detect;
 #endif /* OPLUS_ARCH_EXTENDS */
 };
 
