@@ -82,6 +82,28 @@
 #define USB_HSPHY_1P8_VOL_MIN			1704000 /* uV */
 #define USB_HSPHY_1P8_VOL_MAX			1800000 /* uV */
 #define USB_HSPHY_1P8_HPM_LOAD			19000	/* uA */
+#ifdef OPLUS_FEATURE_CHG_BASIC
+
+#define QUSB2PHY_PORT_TUNE1 0x6c    // PARAMETER_OVERRIDE_X0
+#define QUSB2PHY_PORT_TUNE2 0x70    // PARAMETER_OVERRIDE_X1
+#define QUSB2PHY_PORT_TUNE3 0x74    // PARAMETER_OVERRIDE_X2
+#define QUSB2PHY_PORT_TUNE4 0x78    // PARAMETER_OVERRIDE_X3
+
+unsigned int dev_phy_tune1 = 0;
+module_param(dev_phy_tune1, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(dev_phy_tune1, "QUSB PHY v2 TUNE1");
+unsigned int dev_phy_tune2 = 0;
+module_param(dev_phy_tune2, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(dev_phy_tune2, "QUSB PHY v2 TUNE2");
+
+unsigned int dev_phy_tune3 = 0;
+module_param(dev_phy_tune3, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(dev_phy_tune3, "QUSB PHY v2 TUNE1");
+unsigned int dev_phy_tune4 = 0;
+module_param(dev_phy_tune4, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(dev_phy_tune4, "QUSB PHY v2 TUNE2");
+
+#endif
 
 struct msm_hsphy {
 	struct usb_phy		phy;
@@ -347,6 +369,35 @@ static void hsusb_phy_write_seq(void __iomem *base, u32 *seq, int cnt,
 	}
 }
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+static void hsusb_phy_read_seq(void __iomem *base, u32 *seq, int cnt,
+		unsigned long delay)
+{
+	///int i;
+	u32 tmp = 0;
+
+	pr_debug(" hsusb_phy_read_seq Seq count:%d\n", cnt);
+
+	tmp = readl_relaxed(base + QUSB2PHY_PORT_TUNE1);
+	pr_err("11 value: 0x%02x addr: 0x%02x\n", tmp, QUSB2PHY_PORT_TUNE1);
+	if (delay)
+		usleep_range(delay, (delay + 2000));
+
+	tmp = readl_relaxed(base + QUSB2PHY_PORT_TUNE2);
+	pr_err("22 value: 0x%02x addr: 0x%02x\n", tmp, QUSB2PHY_PORT_TUNE2);
+	if (delay)
+		usleep_range(delay, (delay + 2000));
+
+	tmp = readl_relaxed(base + QUSB2PHY_PORT_TUNE3);
+	pr_err("33 value: 0x%02x addr: 0x%02x\n", tmp, QUSB2PHY_PORT_TUNE3);
+	if (delay)
+		usleep_range(delay, (delay + 2000));
+
+	tmp = readl_relaxed(base + QUSB2PHY_PORT_TUNE4);
+	pr_err("44 value: 0x%02x addr: 0x%02x\n", tmp, QUSB2PHY_PORT_TUNE4);
+}
+#endif
+
 static int msm_hsphy_init(struct usb_phy *uphy)
 {
 	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
@@ -461,6 +512,25 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 		dev_dbg(uphy->dev, "rcal_mask:%08x reg:%pK code:%08x\n",
 				phy->rcal_mask, phy->phy_rcal_reg, rcal_code);
 	}
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	/*add for dynamic change tune settings*/
+	/* If phy_tune1 modparam set, override tune1 value */
+	if (dev_phy_tune1) {
+		writel_relaxed(dev_phy_tune1, phy->base + QUSB2PHY_PORT_TUNE1);
+	}
+	/* If phy_tune2 modparam set, override tune2 value */
+	if (dev_phy_tune2) {
+		writel_relaxed(dev_phy_tune2, phy->base + QUSB2PHY_PORT_TUNE2);
+	}
+	/* If phy_tune3 modparam set, override tune3 value */
+	if (dev_phy_tune3) {
+		writel_relaxed(dev_phy_tune3, phy->base + QUSB2PHY_PORT_TUNE3);
+	}
+	/* If phy_tune4 modparam set, override tune4 value */
+	if (dev_phy_tune4) {
+		writel_relaxed(dev_phy_tune4, phy->base + QUSB2PHY_PORT_TUNE4);
+	}
+#endif /* OPLUS_FEATURE_CHG_BASIC */
 
 	msm_usb_write_readback(phy->base, USB2_PHY_USB_PHY_HS_PHY_CTRL_COMMON2,
 				VREGBYPASS, VREGBYPASS);
@@ -481,6 +551,10 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 	msm_usb_write_readback(phy->base, USB2_PHY_USB_PHY_CFG0,
 				UTMI_PHY_CMN_CTRL_OVERRIDE_EN, 0);
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	hsusb_phy_read_seq(phy->base, phy->param_override_seq,
+				phy->param_override_seq_cnt, 0);
+#endif
 	return 0;
 }
 
