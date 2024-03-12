@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
+
 #ifndef __AW8697_CONFIG_H__
 #define __AW8697_CONFIG_H__
 
