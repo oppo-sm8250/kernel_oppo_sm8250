@@ -777,10 +777,36 @@ static int adc_read_raw(struct iio_dev *indio_dev,
 	struct adc_channel_prop *prop;
 	u16 adc_code_volt, adc_code_cur;
 	int ret;
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	s64 voltage = 0, adc_vdd_ref_mv = 1875;
+#endif
 
 	prop = &adc->chan_props[chan->address];
 
 	switch (mask) {
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	case IIO_CHAN_INFO_OFFSET:
+		ret = adc_do_conversion(adc, prop, chan,
+				&adc_code_volt, &adc_code_cur);
+		if (ret)
+			break;
+		if (*val2 < 0) {
+			voltage = (s64) adc_code_volt * adc_vdd_ref_mv * 1000;
+			voltage = div64_s64(voltage, adc->data->full_scale_code_volt);
+			voltage += *val2;
+			voltage = voltage * adc->data->full_scale_code_volt;
+			adc_code_volt = (u16)div64_s64(voltage, (adc_vdd_ref_mv * 1000));
+		}
+		if ((chan->type == IIO_VOLTAGE) || (chan->type == IIO_TEMP))
+			ret = qcom_vadc_hw_scale(prop->scale_fn_type,
+				&adc_prescale_ratios[prop->prescale],
+				adc->data, prop->lut_index,
+				adc_code_volt, val);
+		if (ret)
+			break;
+
+		return IIO_VAL_INT;
+#endif
 	case IIO_CHAN_INFO_PROCESSED:
 		ret = adc_do_conversion(adc, prop, chan,
 				&adc_code_volt, &adc_code_cur);
@@ -915,14 +941,8 @@ static const struct adc_channels adc_chans_pmic5[ADC_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 	[ADC_AMUX_THM2_PU2]	= ADC_CHAN_TEMP("amux_thm2_pu2", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
-#ifdef CONFIG_OPLUS_SM7250R_CHARGER  //OPLUS_FEATURE_CHG_BASIC
-/*Wujie@BSP.CHG.MISC, modify for the hw difference of adc 2020/09/27*/
-	[ADC_AMUX_THM3_PU2]	= ADC_CHAN_TEMP("amux_thm3_pu2", 1,
-					SCALE_HW_CALIB_DEFAULT)
-#else
 	[ADC_AMUX_THM3_PU2]	= ADC_CHAN_TEMP("amux_thm3_pu2", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
-#endif
 #ifdef VENDOR_EDIT
 /* Hang.Zhao@PSW.BSP.CHG.Basic,2019/11/24, Modify for usbtemp_adc */
 	[ADC_AMUX_THM4_PU2]	= ADC_CHAN_VOLT("amux_thm4_pu2", 1,
@@ -958,6 +978,11 @@ static const struct adc_channels adc_chans_pmic5[ADC_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 #ifdef VENDOR_EDIT
 	[ADC_GPIO3] = ADC_CHAN_VOLT("gpio7_v", 1,
+                    SCALE_HW_CALIB_DEFAULT)
+
+	[ADC_GPIO3_DIV3] = ADC_CHAN_VOLT("gpio7_div3", 1,
+                    SCALE_HW_CALIB_DEFAULT)
+	[ADC_GPIO3] = ADC_CHAN_VOLT("gpio7_v", 1,
 			SCALE_HW_CALIB_DEFAULT)
 	[ADC_GPIO4_PU2] = ADC_CHAN_VOLT("gpio8_v", 1,
 			SCALE_HW_CALIB_DEFAULT)
@@ -974,8 +999,11 @@ static const struct adc_channels adc_chans_pmic5[ADC_MAX_CHANNEL] = {
 /*xing.xiong@BSP.Kernel.Driver, 2019/09/10, Add for adc read for aboard */
 	[ADC_GPIO1] 	= ADC_CHAN_VOLT("board_id_vdata", 1,
 						SCALE_HW_CALIB_DEFAULT)
+	[ADC_INT_EXT_ISENSE] = ADC_CHAN_VOLT("ext_isense", 1,
+			SCALE_HW_CALIB_CUR)
 #endif
 };
+
 
 static const struct adc_channels adc7_chans_pmic[ADC_MAX_CHANNEL] = {
 	[ADC7_REF_GND]		= ADC_CHAN_VOLT("ref_gnd", 0,
