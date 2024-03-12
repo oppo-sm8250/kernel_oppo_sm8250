@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2020, Oplus. All rights reserved.
+ */
+
 #include <linux/kfifo.h>
 #include <asm/arch_timer.h>
 #include "fw_download_interface.h"
@@ -89,7 +94,7 @@ int ois_read_gyro_data_thread(void *arg)
 		if (ois_ctrls[CAM_OIS_MASTER]->cam_ois_state >= CAM_OIS_CONFIG) {
 			for (i = 0; i < arry_size; i++) {
 				addr = addr_ary[i] ;
-				result = RamRead16A_oneplus(ois_ctrls[CAM_OIS_MASTER], addr , &value);
+				result = RamRead16A_oplus(ois_ctrls[CAM_OIS_MASTER], addr , &value);
 				if (result < 0) {
 					CAM_ERR(CAM_OIS, "read addr = 0x%x, value = 0x%x fail", addr, value);
 				} else {
@@ -144,13 +149,13 @@ static ssize_t ois_write(struct file *p_file,
 	}
 	if (ois_ctrls[CAM_OIS_MASTER] && addr != 0) {
 		if (value == 0xFFFF){
-			RamRead32A_oneplus(ois_ctrls[CAM_OIS_MASTER], addr , &read_data);
+			RamRead32A_oplus(ois_ctrls[CAM_OIS_MASTER], addr , &read_data);
 			CAM_ERR(CAM_OIS, "read ois data addr = 0x%x, value = 0x%x ", addr, read_data);
 		}else if (addr == 0xFFFF){
 			g_enable_ois_read_gyro_data = value;
 			CAM_ERR(CAM_OIS, "set thead status  addr = 0x%x, value = 0x%x ", addr, value);
 		} else {
-			result = RamWrite32A_oneplus(ois_ctrls[CAM_OIS_MASTER], addr, value);
+			result = RamWrite32A_oplus(ois_ctrls[CAM_OIS_MASTER], addr, value);
 		}
 		if (result < 0) {
 			CAM_ERR(CAM_OIS, "write addr = 0x%x, value = 0x%x fail", addr, value);
@@ -445,7 +450,7 @@ int RamRead32A(    uint32_t addr, uint32_t* data)
 	return rc;
 }
 
-int RamWrite32A_oneplus(struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t data)
+int RamWrite32A_oplus(struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t data)
 {
 	int32_t rc = 0;
 	int retry = 3;
@@ -481,7 +486,7 @@ int RamWrite32A_oneplus(struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t d
 	return rc;
 }
 
-int RamRead32A_oneplus(struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t* data)
+int RamRead32A_oplus(struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t* data)
 {
 	int32_t rc = 0;
 	int retry = 3;
@@ -504,7 +509,7 @@ int RamRead32A_oneplus(struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t* d
 }
 
 
-int RamRead16A_oneplus(struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t* data)
+int RamRead16A_oplus(struct cam_ois_ctrl_t *o_ctrl, uint32_t addr, uint32_t* data)
 {
 	int32_t rc = 0;
 	int retry = 3;
@@ -1105,7 +1110,7 @@ int OISPollThread128(void *arg)
 
 	CAM_INFO(CAM_OIS, "OISPollThread128 creat");
 
-	RamWrite32A_oneplus(o_ctrl,0xF110, 0x0);//Clear buffer to all "0" & enable buffer update function.
+	RamWrite32A_oplus(o_ctrl,0xF110, 0x0);//Clear buffer to all "0" & enable buffer update function.
 
 	while(1) {
 
@@ -1771,7 +1776,7 @@ bool IsOISReady(struct cam_ois_ctrl_t *o_ctrl)
 			return true;
 		} else {
 			do {
-				RamRead32A_oneplus(o_ctrl,0xF100, &temp);
+				RamRead32A_oplus(o_ctrl,0xF100, &temp);
 				CAM_ERR(CAM_OIS, "OIS %d 0xF100 = 0x%x", o_ctrl->ois_type, temp);
 				if (temp == 0) {
 					ois_state[o_ctrl->ois_type] = CAM_OIS_READY;

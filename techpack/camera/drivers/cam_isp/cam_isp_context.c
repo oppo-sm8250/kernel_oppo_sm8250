@@ -3032,6 +3032,15 @@ static int __cam_isp_ctx_flush_req_in_top_state(
 		}
 
 		spin_lock_bh(&ctx->lock);
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+		/*
+		 * As HW is stopped already No request will move from
+		 * one list to other good time to flush reqs. case:04818238
+		 */
+		CAM_DBG(CAM_ISP, "try to flush pending list");
+		rc = __cam_isp_ctx_flush_req(ctx, &ctx->pending_req_list,
+			flush_req);
+#endif
 		if (!list_empty(&ctx->wait_req_list))
 			rc = __cam_isp_ctx_flush_req(ctx, &ctx->wait_req_list,
 				flush_req);

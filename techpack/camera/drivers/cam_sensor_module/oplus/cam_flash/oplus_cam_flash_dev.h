@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, Oplus. All rights reserved.
  */
 
 #ifndef _OPLUS_CAM_FLASH_DEV_H_
@@ -30,7 +31,7 @@
 #include "cam_flash_core.h"
 #include "cam_context.h"
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 void oplus_cam_flash_proc_init(struct cam_flash_ctrl *flash_ctl, struct platform_device *pdev);
 /*Add by hongbo.dai@Camera 20180319 for flash*/
 int cam_flash_on(struct cam_flash_ctrl *flash_ctrl,

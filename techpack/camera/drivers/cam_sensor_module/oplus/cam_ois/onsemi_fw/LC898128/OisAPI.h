@@ -252,9 +252,7 @@ __OIS_CMD_HEADER__	UINT_8	MesRam( INT_32 , INT_32 , INT_32 , stMesRam* , stMesRa
 
 
  __OIS_FLSH_HEADER__	UINT_8	FlashUpdate128( DOWNLOAD_TBL_EXT *  );
-//#ifdef	TRNT
  __OIS_FLSH_HEADER__	UINT_8	LoadUareToPM( DOWNLOAD_TBL_EXT * , UINT_8 );
-//#endif
  __OIS_FLSH_HEADER__	UINT_8 Mat2ReWrite( void );
 
 #endif	// __OIS_MODULE_CALIBRATION__

@@ -1748,7 +1748,7 @@ int32_t cam_cci_core_cfg(struct v4l2_subdev *sd,
 #define MAX_WRITE_ARRAY_SIZE   300
 static struct cam_cci_ctrl cci_ctrl_interface;
 static struct cam_sensor_cci_client cci_ctrl_interface_info;
-static     struct cam_sensor_i2c_reg_array write_regarray[MAX_WRITE_ARRAY_SIZE];
+static struct cam_sensor_i2c_reg_array write_regarray[MAX_WRITE_ARRAY_SIZE];
 
 int32_t cam_cci_read_packet(struct cam_cci_ctrl *cci_ctrl,
 	uint32_t addr, uint8_t *data,uint32_t count)
@@ -1801,7 +1801,6 @@ static int32_t cam_cci_write_packet(
     return rc;
 }
 
-
 int32_t cam_cci_control_interface(void* control)
 {
     int32_t rc = 0,exp_byte;
@@ -1825,7 +1824,7 @@ int32_t cam_cci_control_interface(void* control)
         break;
     case CAMERA_CCI_RELEASE:
         mutex_lock(&cci_dev->init_mutex);
-        rc = cam_cci_release(sd);
+        rc = cam_cci_release(sd, MASTER_0);
         mutex_unlock(&cci_dev->init_mutex);
         CAM_INFO(CAM_CCI, "cci release cmd,rc=%d",rc);
         break;
@@ -1836,8 +1835,7 @@ int32_t cam_cci_control_interface(void* control)
                             pControl->addr,
                             pControl->data,
                             pControl->count);
-#ifdef VENDOR_EDIT
-        /*Added by Xiaoxue.Luo@Cam.Drv, 20191224 for CCI wait timeout issue, add qualcomm patch*/
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
         mutex_lock(&cci_dev->init_mutex);
         rc = cam_cci_read_bytes(sd, &cci_ctrl_interface);
         mutex_unlock(&cci_dev->init_mutex);
@@ -1863,8 +1861,7 @@ int32_t cam_cci_control_interface(void* control)
                             pControl->addr,
                             pControl->data,
                             pControl->count);
-#ifdef VENDOR_EDIT
-        /*Added by Xiaoxue.Luo@Cam.Drv, 20191224 for CCI wait timeout issue, add qualcomm patch*/
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
         mutex_lock(&cci_dev->init_mutex);
         rc = cam_cci_write(sd, &cci_ctrl_interface);
         mutex_unlock(&cci_dev->init_mutex);

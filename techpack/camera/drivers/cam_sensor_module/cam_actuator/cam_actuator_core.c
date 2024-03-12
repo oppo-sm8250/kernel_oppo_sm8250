@@ -970,7 +970,11 @@ int32_t cam_actuator_driver_cmd(struct cam_actuator_ctrl_t *a_ctrl,
 			(a_ctrl->io_master_info.master_type == CCI_MASTER)) {
 				CAM_WARN(CAM_ACTUATOR,
 					"CCI HW is in resetting mode:: Reapplying Init settings");
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+				usleep_range(5000, 5010);
+#else
 				usleep_range(1000, 1010);
+#endif
 				rc = cam_actuator_apply_settings(a_ctrl,
 					&a_ctrl->i2c_data.init_settings);
 			}

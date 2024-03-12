@@ -624,7 +624,11 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 			(o_ctrl->io_master_info.master_type == CCI_MASTER)) {
 			CAM_WARN(CAM_OIS,
 				"CCI HW is restting: Reapplying INIT settings");
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+			usleep_range(5000, 5010);
+#else
 			usleep_range(1000, 1010);
+#endif
 			rc = cam_ois_apply_settings(o_ctrl,
 				&o_ctrl->i2c_init_data);
 		}
@@ -634,7 +638,11 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 				rc);
 			goto pwr_dwn;
 		}
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+		if (o_ctrl->is_ois_calib && strstr(o_ctrl->ois_name, "lc898") == NULL) {
+#else
 		if (o_ctrl->is_ois_calib) {
+#endif
 			rc = cam_ois_apply_settings(o_ctrl,
 				&o_ctrl->i2c_calib_data);
 			if (rc) {

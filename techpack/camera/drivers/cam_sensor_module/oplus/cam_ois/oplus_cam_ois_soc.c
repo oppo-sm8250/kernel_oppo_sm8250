@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, Oplus. All rights reserved.
  */
 
 #include "cam_ois_dev.h"
@@ -9,8 +10,8 @@
 #include "cam_ois_core.h"
 #include "cam_debug_util.h"
 #include "oplus_cam_ois_soc.h"
-#ifndef VENDOR_EDIT
-#define VENDOR_EDIT
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
 #endif
 
 void cam_ois_driver_soc_init_oem(struct cam_ois_ctrl_t *o_ctrl,struct device_node *of_node)
@@ -18,7 +19,7 @@ void cam_ois_driver_soc_init_oem(struct cam_ois_ctrl_t *o_ctrl,struct device_nod
 	const char                     *p = NULL;
 	int                             ret = 0;
 	int                             id;
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	/*add by lixin@Camera 20200520, for OIS */
 	ret = of_property_read_u32(of_node, "ois_gyro,position", &id);
 	if (ret) {

@@ -202,7 +202,20 @@ static int32_t cam_sensor_driver_get_dt_data(struct cam_sensor_ctrl_t *s_ctrl)
 		CAM_DBG(CAM_SENSOR, "Invalid sensor position");
 		sensordata->pos_yaw = 360;
 	}
-
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	if (!of_property_read_bool(of_node, "laser-support")) {
+		CAM_DBG(CAM_SENSOR, "No laser-support defined");
+		s_ctrl->laser_support = false;
+	} else {
+		s_ctrl->laser_support = true;
+	}
+	if (!of_property_read_bool(of_node, "sem1815s-ois-support")) {
+		CAM_DBG(CAM_SENSOR, "No sem1815s-ois-support defined");
+		s_ctrl->sem1815s_ois_support = false;
+	} else {
+		s_ctrl->sem1815s_ois_support = true;
+	}
+#endif
 	return rc;
 
 FREE_SENSOR_DATA:

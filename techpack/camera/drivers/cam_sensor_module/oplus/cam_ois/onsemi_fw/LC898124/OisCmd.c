@@ -36,10 +36,10 @@
 //****************************************************
 //	LC898124 calibration parameters 
 //****************************************************
-#if (((SELECT_VENDOR&0x01) == 0x01) || ((SELECT_VENDOR&0x80) == 0x80))				// SEMCO or Oneplus
+#if (((SELECT_VENDOR&0x01) == 0x01) || ((SELECT_VENDOR&0x80) == 0x80))				// SEMCO or Oplus
 	#include 	"LC898124EP3_Calibration_SO2821.h"
 #endif
-#if (((SELECT_VENDOR&0x02) == 0x02) || ((SELECT_VENDOR&0x80) == 0x80))			// OFILM or Oneplus
+#if (((SELECT_VENDOR&0x02) == 0x02) || ((SELECT_VENDOR&0x80) == 0x80))			// OFILM or Oplus
  	#include 	"LC898124EP3_Calibration_M12337.h"
 #endif	
 //****************************************************
@@ -134,14 +134,12 @@ void	TneFin( ADJ_LOPGAN* ptr );
 #define		BIAS_HLMT		(0xBF000000 )
 #define		BIAS_LLMT		(0x20000000 )
 
-//#ifdef	ZERO_SERVO
 /************** posture check ************/
 #define		SENSITIVITY		4096						// LSB/g
 #define		PSENS_MARG		(SENSITIVITY / 4)			// 1/4g
 #define		POSTURETH_P		(SENSITIVITY - PSENS_MARG)	// LSB/g
 #define		POSTURETH_M		(-POSTURETH_P)				// LSB/g
 /************** posture check ************/
-//#endif	//ZERO_SERVO
 
 
 
@@ -440,13 +438,13 @@ UINT32	TneRun( void )
 	// Select parameter
 	if( GetInfomationAfterDownload( &Info ) != 0){
 		return( EXE_ERROR );
-#if (((SELECT_VENDOR&0x01) == 0x01) || ((SELECT_VENDOR&0x80) == 0x80))				// SEMCO or Oneplus
+#if (((SELECT_VENDOR&0x01) == 0x01) || ((SELECT_VENDOR&0x80) == 0x80))				// SEMCO or Oplus
 
 	}else if( Info.ActType == ACT_SO2821 ) {
 		HallPtr = 		(ADJ_HALL*)&SO2821_HallCalParameter;
 		LopgainPtr = (ADJ_LOPGAN* )&SO2821_LoopGainParameter;
 #endif
-#if (((SELECT_VENDOR&0x02) == 0x02) || ((SELECT_VENDOR&0x80) == 0x80))			// OFILM or Oneplus
+#if (((SELECT_VENDOR&0x02) == 0x02) || ((SELECT_VENDOR&0x80) == 0x80))			// OFILM or Oplus
 	}else if( Info.ActType == ACT_M12337_A1 ){
 		HallPtr = (ADJ_HALL*)&M12337_HallCalParameter;
 		LopgainPtr = (ADJ_LOPGAN* )&M12337_LoopGainParameter;
@@ -463,7 +461,6 @@ TRACE("Act:M12337\n") ;
 //			HallPtr = (ADJ_HALL*)&SO_HallCalParameter_F;
 //			UlFinSts = HallAdj( HallPtr );
 //		}
-//	}else{
 		if( ((UlFinSts & EXE_HXADJ) == EXE_HXADJ) || ((UlFinSts & EXE_HYADJ) == EXE_HYADJ) ) return ( UlFinSts );
 //	}
 
@@ -771,7 +768,6 @@ TRACE("	No = %04d (bias count up)\n", UcTmeOut ) ;
 			UcTofRst	= FAILURE ;
 //			if( UcTneAxs == X_DIR ) {
 //				RamRead32A( StCaliData_UiHallBias_X , &UlBiasVal ) ;
-//			}else if( UcTneAxs == Y_DIR ){
 //				RamRead32A( StCaliData_UiHallBias_Y , &UlBiasVal ) ;
 //			}
 //			if(UlBiasVal == 0x00000000){

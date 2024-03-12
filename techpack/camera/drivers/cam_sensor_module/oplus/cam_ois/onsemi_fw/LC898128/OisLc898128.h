@@ -221,7 +221,6 @@
 #define		PanTilt_DMA						0x0338
 #define			PanTilt_DMA_ScTpdSts			0x000C + PanTilt_DMA
 
-//#ifdef	SEL_SHIFT_COR
 #define			GyroRAM_Z_GYRO_OFFSET		0x0378 
 
 #define			GYRO_ZRAM_GZ_ADIDAT			0x039C
@@ -242,7 +241,6 @@
 #define		AcclRAM_Z						0x04A8
 #define			ACCLRAM_Z_AC_ADIDAT			0x0000 + AcclRAM_Z
 #define			ACCLRAM_Z_AC_OFFSET			0x0004 + AcclRAM_Z
-//#endif	//SEL_SHIFT_COR
 
 #define		OpticalOffset_X					(0x558)
 #define		OpticalOffset_Y					(0x55C)

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, Oplus. All rights reserved.
  */
 
 #include <linux/module.h>
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 /*Add by Zhengrong.Zhang@Camera 20160630 for flash*/
 #include <linux/proc_fs.h>
 #include <linux/time.h>
@@ -16,13 +17,13 @@ struct cam_flash_ctrl *front_flash_ctrl = NULL;
 #include "cam_flash_soc.h"
 #include "cam_flash_core.h"
 #include "cam_common_util.h"
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 /*Add by hongbo.dai@Camera 20180319 for flash*/
 #include "cam_res_mgr_api.h"
 #endif
 #include "oplus_cam_flash_dev.h"
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 /*add by hongbo.dai@camera 20180319, suitable proc dev for flash as same as SDM660*/
 volatile static int flash_mode;
 volatile static int pre_flash_mode;
@@ -61,7 +62,7 @@ static ssize_t flash_on_off(struct cam_flash_ctrl *flash_ctrl)
 		case 1:
 			flash_data.led_current_ma[0] = 110;
 			flash_data.led_current_ma[1] = 110;
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 			/*Add by Fangyan @ Camera.Drv 2020/08/18 for different flash current mode*/
 			if (vendor_flash_ctrl->flash_current != 0)
 			{

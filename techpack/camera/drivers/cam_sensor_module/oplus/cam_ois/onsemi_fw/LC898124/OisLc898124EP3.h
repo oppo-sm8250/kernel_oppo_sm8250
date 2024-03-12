@@ -332,7 +332,6 @@
 #define			GYRO_RAM_GYRO_Switch			(0x0004 + GZFILIN)					// 0x035C
 #define			GYRO_RAM_GYRO_AF_Switch			(0x0001 + GYRO_RAM_GYRO_Switch)		// 0x035D
 
-//#ifdef	ZERO_SERVO
 #define		ZeroServoRAM_X					0x03A8
 #define 		ZeroServoRAM_X_OFFSET			(0x0000 + ZeroServoRAM_X)			// 0x03A8
 #define 		ZeroServoRAM_X_IN				(0x0004 + ZeroServoRAM_X_OFFSET)	// 0x03AC
@@ -354,7 +353,6 @@
 #define 		ZeroServoRAM_Z_LPFOUT			(0x0004 + ZeroServoRAM_Z_LPFIN)		// 0x03E4
 #define 		ZeroServoRAM_Z_ANGOUT			(0x0004 + ZeroServoRAM_Z_LPFOUT)	// 0x03E8
 #define 		ZeroServoRAM_Z_OUT				(0x0004 + ZeroServoRAM_Z_ANGOUT)	// 0x03EC
-//#endif	//ZERO_SERVO
 
 #define		StMeasureFunc					0x0400	//0x02B0
 #define			StMeasFunc_SiSampleNum			(0x0000 + StMeasureFunc		)			// 0x0400

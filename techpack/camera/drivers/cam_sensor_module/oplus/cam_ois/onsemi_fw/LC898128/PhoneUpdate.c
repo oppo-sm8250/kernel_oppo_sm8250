@@ -19,7 +19,7 @@
 
 #include	"FromCode_01_02_01_00.h"
 #include	"FromCode_01_02_02_01.h"
-//OPPO ois firmware
+//OPLUS ois firmware
 #include	"FromCode_01_01_01_02.h"
 
 /* Burst Length for updating to PMEM */

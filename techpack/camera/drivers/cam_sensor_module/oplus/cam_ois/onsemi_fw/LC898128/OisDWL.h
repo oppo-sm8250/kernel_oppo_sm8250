@@ -19,7 +19,5 @@
 #include "Ois.h"
 
  __OIS_FLDL_HEADER__	UINT_8	FlashUpload128( UINT_8 ModuleVendor, UINT_8 ActVer, UINT_8 MasterSlave, UINT_8 FWType);
-//#ifdef	TRNT
  __OIS_FLDL_HEADER__	UINT_8	LoadUserAreaToPM( void  );
-//#endif
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, Oplus. All rights reserved.
  */
 
 #include "cam_actuator_dev.h"
@@ -9,7 +10,7 @@
 #include "cam_actuator_core.h"
 #include "cam_trace.h"
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 /*add by hongbo.dai@camera 20191111, for control actuator power*/
 static int32_t cam_actuator_power(struct cam_actuator_ctrl_t *a_ctrl, int enable)
 {

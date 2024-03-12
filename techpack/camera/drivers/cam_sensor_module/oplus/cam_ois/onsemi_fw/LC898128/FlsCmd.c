@@ -1046,10 +1046,8 @@ TRACE( "[ %d ] = %08x\n", i, UlMAT0[i] );
 		UlMAT0[HL_XMAXMIN]			= (UINT_32)(((UINT_32)StAdjPar.StHalAdj.UsHlxMxa<<16) | (UINT_32)StAdjPar.StHalAdj.UsHlxMna);
 		UlMAT0[HL_YMAXMIN]			= (UINT_32)(((UINT_32)StAdjPar.StHalAdj.UsHlyMxa<<16) | (UINT_32)StAdjPar.StHalAdj.UsHlyMna);
 ////		UlMAT0[G_OFFSET_XY]			= (UINT_32)(((UINT_32)StAdjPar.StGvcOff.UsGyoVal<<16) | (UINT_32)StAdjPar.StGvcOff.UsGxoVal);
-//#ifdef	SEL_SHIFT_COR
 ////		UlMAT0[G_OFFSET_Z_AX]		= (UINT_32)(((UINT_32)(StAclVal.StAccel.SlOffsetX )<<16) | (UINT_32)(StAdjPar.StGvcOff.UsGzoVal ));
 ////		UlMAT0[A_OFFSET_YZ]			= (UINT_32)(((UINT_32)(StAclVal.StAccel.SlOffsetZ )<<16) | (UINT_32)(StAclVal.StAccel.SlOffsetY ));
-//#endif
 //		UlMAT0[LENS_OFFSET_BK]		= (UINT_32)(((UINT_32)(StAdjPar.StHalAdj.UsAdyOff )<<16) | (UINT_32)(StAdjPar.StHalAdj.UsAdxOff ));
 	}else{
 		UlMAT0[CALIBRATION_STATUS] |= ( HALL_CALB_FLG | 0x000000FF | GYRO_GAIN_FLG );
@@ -1061,10 +1059,8 @@ TRACE( "[ %d ] = %08x\n", i, UlMAT0[i] );
 		UlMAT0[HL_XMAXMIN]			= 0xFFFFFFFF;
 		UlMAT0[HL_YMAXMIN]			= 0xFFFFFFFF;
 //		UlMAT0[G_OFFSET_XY]			= 0xFFFFFFFF;
-//#ifdef	SEL_SHIFT_COR
 //		UlMAT0[G_OFFSET_Z_AX]		= 0xFFFFFFFF;
 //		UlMAT0[A_OFFSET_YZ]			= 0xFFFFFFFF;
-//#endif
 //		UlMAT0[LENS_OFFSET_BK]		= 0xFFFFFFFF;
 	}
 	/* calcurate check sum ******************************************/
@@ -1777,7 +1773,6 @@ TRACE( "[RVAL]:[BVal]=[%04x]:[%04x]\n",UlCkVal, UlCkVal_Bk );
 }	
 	
 
-//#ifdef	TRNT
 //********************************************************************************
 // Function Name 	: LoadUareToPM
 // Retun Value		: NON
@@ -1955,4 +1950,3 @@ UINT_8	WrUareaToFlash( void )
 TRACE("[E-CNT: %d] [W-CNT: %d]\n",UlCntE,UlCntW);
 	return( 0 );
 }
-//#endif

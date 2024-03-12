@@ -530,7 +530,6 @@ TRACE("	No = %04d (bias count up)\n", UcTmeOut ) ;
 			UcTofRst	= FAILURE ;
 //			if( UcTneAxs == X_DIR ) {
 //				RamRead32A( StCaliData_UiHallBias_X , &UlBiasVal ) ;
-//			}else if( UcTneAxs == Y_DIR ){
 //				RamRead32A( StCaliData_UiHallBias_Y , &UlBiasVal ) ;
 //			}
 //			if(UlBiasVal == 0x00000000){
@@ -1346,7 +1345,6 @@ TRACE("POS14(X,Y,Z) st = \t%08xh\t%08xh\t%08xh\t%08xh \n", (unsigned int)StPosOf
 				SlDiff[1] = SlMeasureRetValueY - (INT_32)0;
 //				if(ucposture == 0x10){
 					SlDiff[2] = SlMeasureRetValueZ - (INT_32)(ACCL_SENS << 16);
-//				}else{
 //					SlDiff[2] = SlMeasureRetValueZ - (INT_32)(-ACCL_SENS << 16);
 //				}
 				StPosOff.StPos.Pos[4][0] = SlDiff[0];
@@ -2870,7 +2868,6 @@ UINT_32	MeasGain ( UINT_16	UcDirSel, UINT_16	UsMeasFreq , UINT_32 UlMesAmp )
 	
 //#if !LPF_ENA
 	WitTim( 8000 / UsMeasFreq ) ;
-//#endif
 	MeasureWait() ;						// Wait complete of measurement
 	
 	RamWrite32A( SinWaveC_Regsiter	,	0x00000000 ) ;								// Sine Wave Stop

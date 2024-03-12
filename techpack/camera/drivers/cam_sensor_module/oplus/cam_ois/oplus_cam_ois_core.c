@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, Oplus. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -17,15 +18,14 @@
 #include "oplus_cam_ois_core.h"
 #include "onsemi_fw/fw_download_interface.h"
 
-#ifndef VENDOR_EDIT
-#define VENDOR_EDIT
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
 #endif
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 
 /*add by hongbo.dai@Camera 20181215, for OIS bu63169*/
 #define MODE_NOCONTINUE 1
 #define MODE_CONTINUE 0
-/*hongbo.dai@Camera.Drv, 2018/12/26, modify for [oppo ois]*/
 #define MAX_LENGTH 160
 #define CAMX_HALL_MAX_NUMBER 100
 
@@ -106,11 +106,11 @@ int cam_ois_apply_settings_oem(struct cam_ois_ctrl_t *o_ctrl,
 	struct i2c_settings_list *i2c_list)
 {
 	int rc = 0;
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 	/*add by hongbo.dai@camera 20181219, for OIS*/
 	int mode = MODE_CONTINUE;
 #endif
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
         /*add by hongbo.dai@camera 20181219, for bu63139 OIS*/
         if (strstr(o_ctrl->ois_name, "bu63169")) {
             mode = MODE_NOCONTINUE;
@@ -273,7 +273,7 @@ release_firmware:
 }
 
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 /*add by hongbo.dai@camera 20190220, for get OIS hall data for EIS*/
 #define OIS_HALL_DATA_SIZE   52
 int cam_ois_bu63169_getmultiHall(
@@ -386,7 +386,7 @@ int32_t cam_lc898128_write_data(struct cam_ois_ctrl_t * o_ctrl,void * arg)
 
 void set_ois_thread(struct cam_control *ioctl_ctrl)
 {
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define OIS_SET_THREAD_STATUS_MASK              0x1000
 #define OIS_SET_MIAN_GET_HALL_DATA_THREAD_MASK  0x01
 #define OIS_SET_TELE_GET_HALL_DATA_THREAD_MASK  0x02
@@ -429,7 +429,7 @@ int oplus_cam_ois_apply_settings(struct cam_ois_ctrl_t *o_ctrl,
 	list_for_each_entry(i2c_list,
 		&(i2c_set->list_head), list) {
 		if (i2c_list->op_code ==  CAM_SENSOR_I2C_WRITE_RANDOM) {
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 			/*add by hongbo.dai@camera 20181219, for OIS*/
 			rc = cam_ois_apply_settings_oem(o_ctrl,i2c_list);
 #else
@@ -505,7 +505,7 @@ int oplus_cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl)
 				return rc;
 			}
 		}
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 		if (strstr(o_ctrl->ois_name, "lc898") != NULL) {
 			if (o_ctrl->is_ois_calib) {
 				rc = oplus_cam_ois_apply_settings(o_ctrl,
@@ -518,7 +518,6 @@ int oplus_cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl)
 			Initcheck128(o_ctrl);
 		}
 #endif
-		/*Added by hongbo.dai@Cam.Drv, 20181215, for check ois status*/
 		if (strstr(o_ctrl->ois_name, "bu63169")) {
 			uint32_t sum_check = 0;
 			rc = camera_io_dev_read(&(o_ctrl->io_master_info), 0x84F7, &sum_check,
@@ -554,7 +553,7 @@ int oplus_cam_ois_driver_cmd(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 	int                              rc = 0;
 	struct cam_control              *cmd = (struct cam_control *)arg;
 	switch (cmd->op_code) {
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 case CAM_GET_OIS_EIS_HALL: {
         int get_hall_version;
         get_hall_version = cmd->reserved ;

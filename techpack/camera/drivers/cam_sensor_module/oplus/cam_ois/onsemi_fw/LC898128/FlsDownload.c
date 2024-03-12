@@ -17,7 +17,7 @@
  #include	"FromCode_01_02_01_02.h"
 // 19811 Tele
 #include	"FromCode_01_02_02_01.h"
-//OPPO ois firmware
+//OPLUS ois firmware
 #include	"FromCode_01_01_01_02.h"
 
 #include	"OisDWL.h"
@@ -25,9 +25,7 @@
 //****************************************************
 //	CUSTOMER NECESSARY CREATING FUNCTION LIST
 //****************************************************
-//#ifdef	TRNT
 extern 	INT_32 RamRead32A( UINT_16, void * );
-//#endif
 
 //********************************************************************************
 // Function Name 	: FlashUpload128
@@ -80,7 +78,6 @@ UINT_8 FlashUpload128( UINT_8 ModuleVendor, UINT_8 ActVer, UINT_8 MasterSlave, U
 	return 0xF0 ;
 }
 
-//#ifdef	TRNT
 UINT_8 LoadUserAreaToPM( void )
 {
 	DOWNLOAD_TBL_EXT* ptr ;
@@ -109,7 +106,6 @@ TRACE(" VENDER = %02x , ACT = %02x \n", ModuleVendor , ActVer );
 	return 0xF0 ;
 }
 
-//#endif
 
 
 

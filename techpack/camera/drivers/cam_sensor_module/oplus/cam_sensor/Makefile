@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2020, Oplus. All rights reserved.
 
 ccflags-y += -I$(srctree)/techpack/camera/include/uapi
 ccflags-y += -I$(srctree)/techpack/camera/drivers/cam_core
@@ -12,3 +13,4 @@ ccflags-y += -I$(srctree)/techpack/camera/drivers/cam_utils
 ccflags-y += -I$(srctree)/techpack/camera/drivers/cam_sensor_module/cam_sensor
 
 obj-$(CONFIG_SPECTRA_CAMERA) += oplus_cam_sensor_core.o
+obj-$(CONFIG_SPECTRA_CAMERA) += oplus_cam_sensor_dev.o
