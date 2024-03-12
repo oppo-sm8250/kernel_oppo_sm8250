@@ -2,6 +2,7 @@
  * Universal Flash Storage tw Write
  *
  * Copyright (C) 2017-2018 Samsung Electronics Co., Ltd.
+ * Copyright (C) 2020 Oplus. All rights reserved.
  *
  * Authors:
  *	Yongmyung Lee <ymhungry.lee@samsung.com>
@@ -46,56 +47,36 @@
 
 #include "../../../block/blk.h"
 
-#define UFSTW_VER					0x0101
-#define UFSTW_DD_VER					0x0110
+#define UFSTW_VER_1_0_1     0x0101
+#define UFSTW_VER_1_1_0     0x0110
 
-#define UFSTW_FLUSH_CHECK_PERIOD_MS			1000
-#define UFSTW_FLUSH_WORKER_TH_MIN			3
-#define UFSTW_FLUSH_WORKER_TH_MAX			8
-#define UFSTW_LIFETIME_SECT					16777216 /* 8GB */
+#define UFSTW_DD_VER					0x010300
+#define UFSTW_DD_VER_POST				"_RC03"
+
+#define UFSTW_LIFETIME_SECT					2097152 /* 1GB */
 #define UFSTW_MAX_LIFETIME_VALUE			0x0B
-#define MASK_UFSTW_LIFETIME_NOT_GUARANTEE	0x80000000
+#define MASK_UFSTW_LIFETIME_NOT_GUARANTEE_1_0_1		 0x80000000
+#define MASK_UFSTW_LIFETIME_NOT_GUARANTEE_1_1_0		0x80
+#define UFS_FEATURE_SUPPORT_TW_BIT			0x100
 
-/*
- * UFSTW DEBUG
- */
-#define TW_DEBUG(ufsf, msg, args...)			\
-	do { if (ufsf->tw_debug)			\
-		printk(KERN_ERR "%s:%d " msg "\n",	\
-		       __func__, __LINE__, ##args);	\
-	} while (0)
+#define TW_LU_SHARED					-1
 
 enum UFSTW_STATE {
 	TW_NEED_INIT = 0,
 	TW_PRESENT = 1,
-	TW_FAILED = -2,
 	TW_RESET = -3,
+	TW_FAILED = -4
 };
 
 enum {
-	TW_MODE_DISABLED,
-	TW_MODE_MANUAL,
-	TW_MODE_FS,
-	TW_MODE_NUM
-};
-
-enum {
-	TW_EE_MODE_DISABLE,
-	TW_EE_MODE_AUTO,
-	TW_EE_MODE_NUM
-};
-
-enum {
-	TW_FLAG_ENABLE_NONE = 0,
-	TW_FLAG_ENABLE_CLEAR = 1,
-	TW_FLAG_ENABLE_SET = 2,
+	TW_BUF_TYPE_LU = 0,
+	TW_BUF_TYPE_SHARED,
 };
 
 struct ufstw_dev_info {
-	bool tw_device;
-
 	/* from Device Descriptor */
 	u16 tw_ver;
+	u32 tw_shared_buf_alloc_units;
 	u8 tw_buf_no_reduct;
 	u8 tw_buf_type;
 
@@ -108,32 +89,18 @@ struct ufstw_lu {
 
 	int lun;
 
-	/* Flags */
-	bool tw_flush_enable;
-	bool tw_flush_during_hibern_enter;
-	struct mutex flush_lock;
+	bool tw_enable;
+	bool flush_enable;
+	bool flush_during_hibern_enter;
 
-	/* lifetiem estimated */
-	unsigned int tw_lifetime_est;
+	unsigned int flush_status;
+	unsigned int available_buffer_size;
+	unsigned int curr_buffer_size;
+
+	unsigned int lifetime_est;
 	spinlock_t lifetime_lock;
 	u32 stat_write_sec;
 	struct work_struct tw_lifetime_work;
-
-	/* Attributes */
-	unsigned int tw_flush_status;
-	unsigned int tw_available_buffer_size;
-
-	/* mode manual/fs */
-	atomic_t tw_mode;
-	bool tw_enable;
-	atomic_t active_cnt;
-	struct mutex mode_lock;
-
-	/* Worker */
-	struct delayed_work tw_flush_work;
-	unsigned long next_q;
-	unsigned int flush_th_max;
-	unsigned int flush_th_min;
 
 	/* for sysfs */
 	struct kobject kobj;
@@ -152,17 +119,16 @@ struct ufstw_sysfs_entry {
 
 struct ufshcd_lrb;
 
-void ufstw_get_dev_info(struct ufstw_dev_info *tw_dev_info, u8 *desc_buf);
-void ufstw_get_geo_info(struct ufstw_dev_info *tw_dev_info, u8 *geo_buf);
-int ufstw_get_lu_info(struct ufsf_feature *ufsf, int lun, u8 *lu_buf);
-void ufstw_init(struct ufsf_feature *ufsf);
+int ufstw_get_state(struct ufsf_feature *ufsf);
+void ufstw_set_state(struct ufsf_feature *ufsf, int state);
+void ufstw_get_dev_info(struct ufsf_feature *ufsf, u8 *desc_buf);
+void ufstw_get_geo_info(struct ufsf_feature *ufsf, u8 *geo_buf);
+void ufstw_alloc_lu(struct ufsf_feature *ufsf, int lun, u8 *lu_buf);
+
 void ufstw_prep_fn(struct ufsf_feature *ufsf, struct ufshcd_lrb *lrbp);
-void ufstw_init_work_fn(struct work_struct *work);
-void ufstw_ee_handler(struct ufsf_feature *ufsf);
-void ufstw_error_handler(struct ufsf_feature *ufsf);
-void ufstw_reset_work_fn(struct work_struct *work);
-void ufstw_suspend(struct ufsf_feature *ufsf);
-void ufstw_resume(struct ufsf_feature *ufsf);
-void ufstw_release(struct kref *kref);
+void ufstw_init(struct ufsf_feature *ufsf);
+void ufstw_remove(struct ufsf_feature *ufsf);
+void ufstw_reset_host(struct ufsf_feature *ufsf);
+void ufstw_reset(struct ufsf_feature *ufsf, bool resume);
 void ufstw_enable_tw(struct ufsf_feature *ufsf, bool enable);
 #endif /* End of Header */
