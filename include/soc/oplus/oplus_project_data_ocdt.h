@@ -114,6 +114,9 @@ enum OPLUS_ENG_VERSION {
     ALL_NET_CT_TEST         = 0x09,
     ALL_NET_CT_FIELD        = 0x0A,
     HIGH_TEMP_AGING         = 0x0B,
+	FACTORY					= 0x0C,
+	CE                      = 0x0D,
+	PTCRB                   = 0x0E
 };
 
 typedef  struct
@@ -132,7 +135,7 @@ typedef  struct
 
 typedef  struct
 {
-	unsigned int	  OppoBootMode;
+	unsigned int	  OplusBootMode;
 	unsigned int	  RF;
 	unsigned int	  PCB;
 	unsigned char	  PmicOcp[MAX_OCP];

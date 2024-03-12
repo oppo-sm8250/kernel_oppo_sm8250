@@ -27,7 +27,7 @@ typedef enum
 	DDR_TYPE_LPDDR5 = 8, /**< Low power DDR5. */
 	DDR_TYPE_LPDDR5X = 9, /**< Low power DDR5x. */
 	DDR_TYPE_UNUSED = 0x7FFFFFFF /**< For compatibility with deviceprogrammer(features not using DDR). */
-} DDR_TYPE;
+} DDR_TYPE __maybe_unused;
 
 struct manufacture_info {
 	char name[INFO_LEN];
