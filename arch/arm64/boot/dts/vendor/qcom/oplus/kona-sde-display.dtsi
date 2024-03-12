@@ -1,22 +1,7 @@
 #include "dsi-panel-oplus19065-samsung-1440-3168-dsc-cmd.dtsi"
-#include "pxlw-iris5-cfg-oplus19065_samsung_1440_3168_cmd.dtsi"
+#include "pxlw/pxlw-iris5-cfg-oplus19065_samsung_1440_3168_cmd.dtsi"
 
 &soc {
-	dsi_iris_pwr_supply: dsi_iris_pwr_supply {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		qcom,panel-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "px_v18r";
-			qcom,supply-min-voltage = <1800000>;
-			qcom,supply-max-voltage = <1800000>;
-			qcom,supply-enable-load = <62000>;
-			qcom,supply-disable-load = <80>;
-			qcom,supply-post-on-sleep = <0>;
-		};
-	};
-
 	dsi_panel_pwr_supply {
 		/delete-node/ qcom,panel-supply-entry@3;
 
@@ -93,18 +78,12 @@
 			"shadow_cphybyte_clk1", "shadow_cphypixel_clk1",
 			"pw_bb_clk2";
 
-	pinctrl-0 = <&sde_dsi_active &panel_vout_active &sde_te_active &iris_reset_active &iris_wakeup_active &iris_ready_status_active>;
-	pinctrl-1 = <&sde_dsi_suspend &panel_vout_suspend &sde_te_suspend &iris_wakeup_suspend &iris_reset_suspend &iris_ready_status_suspend>;
-
-	px_v18r-supply = <&pm8150_l7>;
 	vout-supply = <&L2C>;
 
 	qcom,dsi-default-panel = <&dsi_oplus19065_samsung_1440_3168_dsc_cmd>;
-	pxlw,iris-lightup-config = <&mdss_iris_cfg_oplus19065_samsung_1440_3168_dsc_cmd>;
 };
 
 &sde_dsi1 {
-	px_v18r-supply = <&pm8150_l7>;
 	vout-supply = <&L2C>;
 };
 
@@ -112,3 +91,9 @@
 	panel = <&dsi_oplus19065_samsung_1440_3168_dsc_cmd>;
 };
 
+&mdss_mdp {
+	connectors = <&sde_dp &sde_wb &sde_dsi &sde_rscc>;
+};
+
+//#include "pxlw/pxlw-iris5.dtsi"
+//#include "pxlw/dsi-panel-pxlw.dtsi"

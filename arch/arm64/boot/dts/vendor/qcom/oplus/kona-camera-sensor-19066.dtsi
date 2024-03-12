@@ -267,6 +267,7 @@
 	qcom,cam-sensor0 {
 		cell-index = <0>;
 		compatible = "qcom,cam-sensor";
+		laser-support;
 		csiphy-sd-index = <3>;
 		sensor-position-roll = <90>;
 		sensor-position-pitch = <0>;
@@ -504,6 +505,7 @@
 	qcom,cam-sensor3 {
 		cell-index = <3>;
 		compatible = "qcom,cam-sensor";
+		sem1815s-ois-support;
 		csiphy-sd-index = <0>;
 		eeprom-src = <&eeprom_tele>;
 		actuator-src = <&actuator_rear_aux1>;

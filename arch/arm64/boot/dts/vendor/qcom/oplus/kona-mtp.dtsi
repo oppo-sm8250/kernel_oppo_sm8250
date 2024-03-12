@@ -93,6 +93,10 @@
 
 	oplus_secure_common {
 		compatible = "oplus,secure_common";
+		oplus,sec_reg_num = <0x7805E8>;
+		oplus,sec_en_anti_reg = <0x7801F4>;
+		oplus,sec_override1_reg = <0x7860C0>;
+		oplus,override1_en_value = <0x1>;
 	};
 
 	/*enum sensor_id { OPLUS_ACCEL,OPLUS_GYRO,OPLUS_MAG,OPLUS_LIGHT,OPLUS_PROXIMITY,OPLUS_SAR,OPLUS_CT,OPLUS_BAROMETER,SENSORS_NUM};*/
@@ -153,7 +157,7 @@
 		bsensor@0 {
 			sensor-name = <0x1>;//LPS22HH
 			sensor-index = <0>;
-			sensor-type = <0x7>;//OPLUS_BAROMETER
+			sensor-type = <0x8>;//OPLUS_BAROMETER
 		};
 		/* enum {SX9324 = 0x01} */
 		ssensor@0 {
@@ -163,11 +167,13 @@
 		};
 		/* enum {tcs3408 = 0x01 tcs3408_rear = 0x02} */
 		cctsensor@0 {
+			decoupled-driver = <0>;
 			sensor-name = <0x1>; //tcs3408
 			sensor-index = <0>;
 			sensor-type = <6>; //OPLUS_CT
 		};
 		cctsensor@1 {
+			decoupled-driver = <0>;
 			sensor-name = <0x2>; //tcs3408_rear
 			sensor-index = <1>;
 			sensor-type = <6>; //OPLUS_CT
@@ -175,12 +181,12 @@
 		};
 		/*virtual sensor
 		enum sensor_algo_id {
-			OPLUS_PICKUP_DETECT,
-			OPLUS_LUX_AOD,
-			OPLUS_TP_GESTURE,
-			OPLUS_FP_DISPLAY,
-			OPLUS_FREE_FALL,
-			OPLUS_CAMERA_PROTECT,
+			PICKUP_DETECT,
+			LUX_AOD,
+			TP_GESTURE,
+			FP_DISPLAY,
+			FREE_FALL,
+			CAMERA_PROTECT,
 			SENSOR_ALGO_NUM
 		}*/
 		pickup_detect {
@@ -291,7 +297,7 @@
 				tp_type = <8>; // TP-SAMSUNG = 8;
 				platform_support_project = <19066 19067 19362>;
 				platform_support_project_dir = <19065 19065 19065>;
-				platform_support_project_commandline = "mdss_dsi_oplus19065_samsung_1440_3168_dsc_cmd","default_commandline","default_commandline" ;
+				platform_support_project_commandline = "19065_samsung_1440_3168_dsc_cmd","default_commandline","default_commandline" ;
 
 		touchpanel,elimination-range = <20 200 200>;
 		prevention,no_handle_para = <0 0 0>;
@@ -315,6 +321,7 @@
 		kalman_value = <2000 500 256 1024 0x10001>;
 
 		/* SW Support Feature Control */
+		health_monitor_v2_support;
 		//ear_sense_support;
 		black_gesture_support;
 		//fw_edge_limit_support;
@@ -566,10 +573,11 @@
 		qcom,vooc-high-temp = <430>;
 		qcom,vooc-low-soc = <1>;
 		qcom,vooc-high-soc = <90>;
-		qcom,vooc-fw-type = <0x24>;//6A
+		qcom,vooc-fw-type = <0x27>;//6A
 
+		qcom,support_fake_vooc_check = <0>;
 		qcom,vooc_multistep_adjust_current_support;
-		qcom,vooc_multistep_initial_batt_temp = <310>;
+		qcom,vooc_multistep_initial_batt_temp = <1000>;
 		qcom,vooc_strategy_normal_current = <0x06>;
 		qcom,vooc-normal-to-little-cool-current = <0x05>;
 		qcom,vooc_batt_over_high_temp = <440>;
@@ -636,7 +644,7 @@
 	qcom,hvdcp-disable;
 	qcom,float-option = <1>;
 	qcom,oplus-pps-usbpd-detection = <&pm8150b_pdphy>;
-
+	qcom,usbtemp_batttemp_gap = <12>;
 	//for oplus chg framework:
 	qcom,input_current_charger_ma = <2000>;
 	qcom,pd_input_current_charger_ma = <2000>;
@@ -751,6 +759,7 @@
 	qcom,vooc_project = <3>;
 	qcom,vbatt_num = <2>;
 	qcom,ffc_support;
+	qcom,dual_ffc;
 	recharge_after_full;
 
 	qcom,normal_vterm_hw_inc = <18>;
@@ -787,6 +796,7 @@
 	qcom,default_little_cool_vfloat_sw_limit = <4385>;
 	qcom,default_temp_little_cool_vfloat_mv = <4435>;
 	qcom,default_little_cool_vfloat_over_sw_limit = <4445>;
+	qcom,smart_charge_version = <0>;
 
 	//for control:
 	qcom,check_batt_full_by_sw;
@@ -796,6 +806,8 @@
 	qcom,chg_ctrl_by_camera;
 	qcom,sw_vfloat_over_protect_enable;
 	qcom,lpd-disable;
+
+	qcom,skip_usbtemp_cool_down;
 
 	//for PD9V or QC9V
 	qcom,vbatt_pdqc_to_5v_thr = <4180>;

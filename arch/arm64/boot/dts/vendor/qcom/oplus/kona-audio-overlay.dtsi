@@ -100,6 +100,7 @@
 	qcom,msm-mbhc-hs-mic-min-threshold-mv = <75>;
 	oplus,mbhc-check-cross-conn = <0>;
 	qcom,msm-mbhc-usbc-audio-supported = <1>;
+	oplus,mbhc-headset-bias-alwayon = <1>;
 	qcom,wsa-max-devs = <0>;
 };
 
