@@ -1,19 +1,7 @@
-/************************************************************************************
-** File:  oplus_chargepump.c
-** OPLUS_FEATURE_CHG_BASIC
-** Copyright (C), 2008-2012, OPLUS Mobile Comm Corp., Ltd
-** 
-** Description: 
-**      
-** 
-** Version: 1.0
-** Date created: 21:03:46,09/04/2019
-** Author: Lin Shangbo
-** 
-** --------------------------- Revision History: ------------------------------------------------------------
-* <version>       <date>        <author>              			<desc>
-* Revision 1.0    2019-04-09    Lin Shangbo    		Created for new charger
-************************************************************************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #include <linux/interrupt.h>
 #include <linux/i2c.h>
@@ -66,7 +54,6 @@ extern void mt_power_off(void);
 #include "../oplus_gauge.h"
 #include "../oplus_charger.h"
 #include "oplus_chargepump.h"
-#include "../wireless_ic/oplus_p922x.h"
 
 struct chip_chargepump *chargepump_ic = NULL;
 
@@ -78,6 +65,7 @@ static int __chargepump_read_reg(int reg, int *returnData)
 {
 	int ret = 0;
 	struct chip_chargepump *chip = chargepump_ic;
+	int retry = 3;
 
 	if(chip == NULL) {
 		chg_err("chargepump_ic is NULL!\n");
@@ -85,6 +73,19 @@ static int __chargepump_read_reg(int reg, int *returnData)
 	}
 	
 	ret = i2c_smbus_read_byte_data(chip->client, (unsigned char)reg);
+
+	if (ret < 0) {
+		while(retry > 0) {
+			usleep_range(5000, 5000);
+			ret = i2c_smbus_read_byte_data(chip->client, (unsigned char)reg);
+			if (ret < 0) {
+				retry--;
+			} else {
+				break;
+			}
+		}
+	}
+
 	if (ret < 0) {
 		chg_err("i2c read fail: can't read from %02x: %d\n", reg, ret);
 		return ret;
@@ -109,6 +110,7 @@ static int __chargepump_write_reg(int reg, int val)
 {
 	int ret = 0;
 	struct chip_chargepump *chip = chargepump_ic;
+	int retry = 3;
 
 	if(chip == NULL) {
 		chg_err("chargepump_ic is NULL!\n");
@@ -116,6 +118,19 @@ static int __chargepump_write_reg(int reg, int val)
 	}
 
 	ret = i2c_smbus_write_byte_data(chip->client, reg, val);
+
+	if (ret < 0) {
+		while(retry > 0) {
+			usleep_range(5000, 5000);
+			ret = i2c_smbus_write_byte_data(chip->client, reg, val);
+			if (ret < 0) {
+				retry--;
+			} else {
+				break;
+			}
+		}
+	}
+
 	if (ret < 0) {
 		chg_err("i2c write fail: can't write %02x to %02x: %d\n",
 			val, reg, ret);
@@ -146,7 +161,7 @@ static int chargepump_config_interface(int RegNum, int val, int MASK)
 
 	__chargepump_read_reg(RegNum, &chargepump_reg);
 
-	chg_debug(" Check Reg[%x]=0x%x\n", RegNum, chargepump_reg);
+	chg_err(" Check Reg[%x]=0x%x\n", RegNum, chargepump_reg);
 
 	mutex_unlock(&chargepump_i2c_access);
 
@@ -240,7 +255,7 @@ int chargepump_set_for_EPP(void)
 		return -1;
 	}
 
-	chg_debug("<~WPC~> chargepump_set_for_EPP!\n");
+	chg_err("<~WPC~> chargepump_set_for_EPP!\n");
 
 #ifdef OP20A
 	ret = chargepump_config_interface(0x08, 0xFF, 0xFF);
@@ -380,7 +395,7 @@ int chargepump_enable_voltage_diff_detect(void)
 		return -1;
 	}
 
-	chg_debug("<~WPC~> chargepump_enable_voltage_diff_detect!\n");
+	chg_err("<~WPC~> chargepump_enable_voltage_diff_detect!\n");
 	
 	ret = chargepump_config_interface(0x03, 0x50, 0xFF);
 	if (ret) {
@@ -516,7 +531,7 @@ void chargepump_set_chargepump_en_val(struct chip_chargepump *chip, int value)
 				chip->chargepump_en_default);
 	}
 
-	chg_debug("<~WPC~> set value:%d, gpio_val:%d\n", 
+	chg_err("<~WPC~> set value:%d, gpio_val:%d\n", 
 		value, gpio_get_value(chip->chargepump_en_gpio));
 }
 
@@ -525,7 +540,7 @@ int chargepump_get_chargepump_en_val(void)
 	struct chip_chargepump *chip = chargepump_ic;
 
 	if (!chip) {
-		printk(KERN_ERR "[OPLUS_CHG][%s]: chargepump_ic not ready!\n", __func__);
+		/*printk(KERN_ERR "[OPLUS_CHG][%s]: chargepump_ic not ready!\n", __func__);*/
 		return -1;
 	}
 
@@ -550,7 +565,7 @@ int chargepump_dwp_enable(void)
 #ifdef OP20A
 	int ret;
 		
-	chg_debug("<~WPC~> chargepump_dwp_enable!\n");
+	chg_err("<~WPC~> chargepump_dwp_enable!\n");
 		
 	ret = chargepump_config_interface(0x00, 0xCA, 0xFF);
 	if (ret) {
@@ -583,7 +598,7 @@ int chargepump_enable(void)
 {
 	int ret = 0;
 
-	chg_debug("<~WPC~> chargepump_enable!\n");
+	chg_err("<~WPC~> chargepump_enable!\n");
 	
 	if (chargepump_ic != NULL) {	
 		chargepump_set_chargepump_en_val(chargepump_ic, 1);
@@ -597,9 +612,9 @@ int chargepump_enable(void)
 
 int chargepump_disable(void)
 {
-	int ret;
+	int ret = 0;
 
-	chg_debug("<~WPC~> chargepump_disable!\n");
+	chg_err("<~WPC~> chargepump_disable!\n");
 	
 	if (chargepump_ic != NULL) {
 		chargepump_set_for_otg(0);
@@ -617,7 +632,7 @@ void chargepump_print_log(void)
 	int reg_value = 0;
 
 	if (!chargepump_ic) {
-		chg_err("<~WPC~> chargepump_ic is NULL!\n");
+		/*chg_err("<~WPC~> chargepump_ic is NULL!\n");*/
 		return;
 	}
 
@@ -626,13 +641,13 @@ void chargepump_print_log(void)
 
 #ifdef OP20A
 	chargepump_read_reg(0x04, &reg_value);
-	chg_debug(" <~WPC~> chargepump 0x04: 0x%02X\n", reg_value);	
+	chg_err(" <~WPC~> chargepump 0x04: 0x%02X\n", reg_value);	
 #else
 	chargepump_read_reg(0x08, &reg_value);
-	chg_debug(" <~WPC~> chargepump 0x08: 0x%02X\n", reg_value);	
+	chg_err(" <~WPC~> chargepump 0x08: 0x%02X\n", reg_value);	
 
 	chargepump_read_reg(0x09, &reg_value);
-	chg_debug(" <~WPC~> chargepump 0x09: 0x%02X\n", reg_value);	
+	chg_err(" <~WPC~> chargepump 0x09: 0x%02X\n", reg_value);	
 #endif
 
 }
@@ -676,7 +691,7 @@ static int chargepump_en_gpio_init(struct chip_chargepump *chip)
 	gpio_direction_output(chip->chargepump_en_gpio, 0);	
 	pinctrl_select_state(chip->pinctrl, chip->chargepump_en_default);
 
-	chg_debug("<~WPC~> chargepump_en_gpio: %d \n", gpio_get_value(chip->chargepump_en_gpio));
+	chg_err("<~WPC~> chargepump_en_gpio: %d \n", gpio_get_value(chip->chargepump_en_gpio));
 
 	return 0;
 }
@@ -702,8 +717,9 @@ static int chargepump_gpio_init(struct chip_chargepump *chip)
 		rc = chargepump_en_gpio_init(chip);
 		pr_err("chip->chargepump_en_gpio =%d\n",chip->chargepump_en_gpio);
 	}
+	
 
-	chg_debug(" chargepump_gpio_init FINISH\n");
+	chg_err(" chargepump_gpio_init FINISH\n");
 
 	return rc;
 }
@@ -934,8 +950,29 @@ static struct i2c_driver chargepump_i2c_driver = {
 	.id_table	= chargepump_id,
 };
 
-
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 module_i2c_driver(chargepump_i2c_driver);
+#else
+int chargepump_driver_init(void)
+{
+	int ret = 0;
+
+	chg_debug(" start\n");
+
+	if (i2c_add_driver(&chargepump_i2c_driver) != 0) {
+		chg_err(" failed to register chargepump i2c driver.\n");
+	} else {
+		chg_debug( " Success to register chargepump i2c driver.\n");
+	}
+
+	return ret;
+}
+
+void chargepump_driver_exit(void)
+{
+	i2c_del_driver(&chargepump_i2c_driver);
+}
+#endif /*LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)*/
 MODULE_DESCRIPTION("Driver for chgpump chip");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("i2c:chargepump-charger");

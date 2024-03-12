@@ -1,20 +1,7 @@
-/************************************************************************************
-** File:  \\192.168.144.3\Linux_Share\12015\ics2\development\mediatek\custom\oplus77_12015\kernel\battery\battery
-** OPLUS_FEATURE_CHG_BASIC
-** Copyright (C), 2008-2012, OPLUS Mobile Comm Corp., Ltd
-**
-** Description:
-**      for dc-dc sn111008 charg
-**
-** Version: 1.0
-** Date created: 21:03:46,05/04/2012
-** Author: Fanhong.Kong@ProDrv.CHG
-**
-** --------------------------- Revision History: ------------------------------------------------------------
-* <version>       <date>        <author>                                <desc>
-* Revision 1.0    2015-06-22    Fanhong.Kong@ProDrv.CHG                 Created for new architecture
-* Revision 2.0    2018-3-31     YIchun.Chen@BSP.CHG                     ADD for log
-************************************************************************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #ifdef CONFIG_OPLUS_CHARGER_MTK
 #include <linux/interrupt.h>
@@ -65,11 +52,26 @@
 #include "oplus_vooc_fw.h"
 
 int g_hw_version = 0;
+int mcu_ctrl_cp_status = -1;
+struct oplus_vooc_chip *pps_chip;
 void oplus_vooc_data_irq_init(struct oplus_vooc_chip *chip);
 
 void init_hw_version(void)
 {
 }
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+/* only for GKI compile */
+bool __attribute__((weak)) qpnp_is_charger_reboot(void)
+{
+	return false;
+}
+
+bool __attribute__((weak)) qpnp_is_power_off_charging(void)
+{
+	return false;
+}
+#endif
 
 extern	int oplus_vooc_mcu_hwid_check(struct oplus_vooc_chip *chip);
 extern int oplus_vooc_asic_hwid_check(struct oplus_vooc_chip *chip);
@@ -196,12 +198,30 @@ static int opchg_bq27541_gpio_pinctrl_init(struct oplus_vooc_chip *chip)
 		chg_err(": %d Failed to get the state 3 pinctrl handle\n", __LINE__);
 		return -EINVAL;
 	}
+
+	chip->vooc_gpio.gpio_mcu_ctrl_cp_active =
+		pinctrl_lookup_state(chip->vooc_gpio.pinctrl, "mcu_ctrl_active");
+	if (IS_ERR_OR_NULL(chip->vooc_gpio.gpio_mcu_ctrl_cp_active)) {
+		chg_err(": %d Failed to get the gpio_mcu_ctrl_cp_active pinctrl handle\n", __LINE__);
+		return -EINVAL;
+	} else {
+		pinctrl_select_state(chip->vooc_gpio.pinctrl,chip->vooc_gpio.gpio_mcu_ctrl_cp_active); /* PULL_down */
+	}
+
+	chip->vooc_gpio.gpio_mcu_ctrl_cp_sleep =
+		pinctrl_lookup_state(chip->vooc_gpio.pinctrl, "mcu_ctrl_sleep");
+	if (IS_ERR_OR_NULL(chip->vooc_gpio.gpio_mcu_ctrl_cp_sleep)) {
+		chg_err(": %d Failed to get the gpio_mcu_ctrl_cp_sleep pinctrl handle\n", __LINE__);
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
 void oplus_vooc_fw_type_dt(struct oplus_vooc_chip *chip)
 {
 	struct device_node *node = chip->dev->of_node;
+	int loop;
 	int rc;
 
 	if (!node) {
@@ -209,21 +229,67 @@ void oplus_vooc_fw_type_dt(struct oplus_vooc_chip *chip)
 		return ;
 	}
 
+	chip->vooc_current_lvl_cnt = of_property_count_elems_of_size(node,
+				"qcom,vooc_current_lvl", sizeof(*chip->vooc_current_lvl));
+	if (chip->vooc_current_lvl_cnt > 0) {
+		chg_err("vooc_current_lvl_cnt[%d]\n", chip->vooc_current_lvl_cnt);
+		chip->vooc_current_lvl = devm_kcalloc(chip->dev, chip->vooc_current_lvl_cnt,
+			sizeof(*chip->vooc_current_lvl), GFP_KERNEL);
+		if (!chip->vooc_current_lvl){
+			chg_err("devm_kcalloc vooc_current_lvl error\n");
+			return;
+		}
+		rc = of_property_read_u32_array(node,
+			"qcom,vooc_current_lvl", chip->vooc_current_lvl, chip->vooc_current_lvl_cnt);
+		if (rc) {
+			chg_err("qcom,cp_ffc_current_lvl error\n");
+			return;
+		}
+
+		for(loop = 0; loop < chip->vooc_current_lvl_cnt; loop++) {
+			chg_err("vooc_current_lvl[%d]\n", chip->vooc_current_lvl[loop]);
+		}
+	}
 	chip->batt_type_4400mv = of_property_read_bool(node, "qcom,oplus_batt_4400mv");
 	chip->support_vooc_by_normal_charger_path = of_property_read_bool(node,
 		"qcom,support_vooc_by_normal_charger_path");
 
+#ifdef OPLUS_CUSTOM_OP_DEF
+	chip->hiz_gnd_cable = of_property_read_bool(node, "qcom,supported_hiz_gnd_cable");
+#endif
 	rc = of_property_read_u32(node, "qcom,vooc-fw-type", &chip->vooc_fw_type);
 	if (rc) {
 		chip->vooc_fw_type = VOOC_FW_TYPE_INVALID;
 	}
 
+	rc = of_property_read_u32(node, "qcom,vooc-dis-temp-soc", &chip->vooc_dis_temp_soc);
+	if (rc) {
+		chip->vooc_dis_temp_soc = 0;
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc-dis-id-verify", &chip->vooc_dis_id_verify);
+	if (rc) {
+		chip->vooc_dis_id_verify = 0;
+	}
 	chg_debug("oplus_vooc_fw_type_dt batt_type_4400 is %d,vooc_fw_type = 0x%x\n",
 		chip->batt_type_4400mv, chip->vooc_fw_type);
+	chip->support_single_batt_svooc = of_property_read_bool(node, "qcom,support-single-batt-svooc");
+	chg_debug("oplus_vooc_fw_type_dt support_single_batt_svooc is %d\n", chip->support_single_batt_svooc);
+
+	chip->vooc_is_platform_gauge = of_property_read_bool(node, "qcom,vooc_is_platform_gauge");
+	chg_debug("oplus_vooc_fw_type_dt vooc_is_platform_gauge is %d\n", chip->vooc_is_platform_gauge);
 
 	chip->vooc_fw_update_newmethod = of_property_read_bool(node,
 		"qcom,vooc_fw_update_newmethod");
 	chg_debug(" vooc_fw_upate:%d\n", chip->vooc_fw_update_newmethod);
+
+	rc = of_property_read_u32(node, "qcom,vooc-version",
+		&chip->vooc_version);
+	if (rc) {
+		chip->vooc_version = VOOC_VERSION_DEFAULT;
+	} else {
+		chg_debug("qcom,vooc-version is %d\n", chip->vooc_version);
+	}
 
 	rc = of_property_read_u32(node, "qcom,vooc-low-temp",
 		&chip->vooc_low_temp);
@@ -233,6 +299,8 @@ void oplus_vooc_fw_type_dt(struct oplus_vooc_chip *chip)
 		chg_debug("qcom,vooc-low-temp is %d\n", chip->vooc_low_temp);
 	}
 
+	chip->vooc_batt_over_low_temp = chip->vooc_low_temp - 5;
+
 	rc = of_property_read_u32(node, "qcom,vooc-little-cool-temp",
 			&chip->vooc_little_cool_temp);
 	if (rc) {
@@ -240,6 +308,7 @@ void oplus_vooc_fw_type_dt(struct oplus_vooc_chip *chip)
 	} else {
 		chg_debug("qcom,vooc-little-cool-temp is %d\n", chip->vooc_little_cool_temp);
 	}
+	chip->vooc_little_cool_temp_default = chip->vooc_little_cool_temp;
 
 	rc = of_property_read_u32(node, "qcom,vooc-cool-temp",
 			&chip->vooc_cool_temp);
@@ -248,24 +317,34 @@ void oplus_vooc_fw_type_dt(struct oplus_vooc_chip *chip)
 	} else {
 		chg_debug("qcom,vooc-cool-temp is %d\n", chip->vooc_cool_temp);
 	}
+	chip->vooc_cool_temp_default = chip->vooc_cool_temp;
 
-	rc = of_property_read_u32(node, "qcom,vooc-little-cool-to-normal-temp",
-			&chip->vooc_little_cool_to_normal_temp);
+	rc = of_property_read_u32(node, "qcom,vooc-little-cold-temp",
+			&chip->vooc_little_cold_temp);
 	if (rc) {
-		chip->vooc_little_cool_to_normal_temp = 180;
+		chip->vooc_little_cold_temp = 50;
 	} else {
-		chg_debug("qcom,vooc-little-cool-to-normal-temp is %d\n", chip->vooc_little_cool_to_normal_temp);
+		chg_debug("qcom,vooc-little-cold-temp is %d\n", chip->vooc_little_cold_temp);
 	}
+	chip->vooc_little_cold_temp_default = chip->vooc_little_cold_temp;
 
-	
-	rc = of_property_read_u32(node, "qcom,vooc-normal-to-little-cool-current",
-			&chip->vooc_normal_to_little_cool_current);
+	rc = of_property_read_u32(node, "qcom,vooc-normal-low-temp",
+			&chip->vooc_normal_low_temp);
 	if (rc) {
-		chip->vooc_normal_to_little_cool_current = 6;
+		chip->vooc_normal_low_temp = 250;
 	} else {
-		chg_debug("qcom,vooc-normal-to-little-cool-current is %d\n", chip->vooc_normal_to_little_cool_current);
+		chg_debug("qcom,vooc-normal-low-temp is %d\n", chip->vooc_normal_low_temp);
 	}
-	
+	chip->vooc_normal_low_temp_default = chip->vooc_normal_low_temp;
+
+	rc = of_property_read_u32(node, "qcom,vooc-normal-high-temp",
+			&chip->vooc_normal_high_temp);
+	if (rc) {
+		chip->vooc_normal_high_temp = -EINVAL;
+	} else {
+		chg_debug("qcom,vooc-normal-high-temp is %d\n", chip->vooc_normal_high_temp);
+	}
+	chip->vooc_normal_high_temp_default = chip->vooc_normal_high_temp;
 
 	rc = of_property_read_u32(node, "qcom,vooc-high-temp", &chip->vooc_high_temp);
 	if (rc) {
@@ -287,10 +366,108 @@ void oplus_vooc_fw_type_dt(struct oplus_vooc_chip *chip)
 	} else {
 		chg_debug("qcom,vooc-high-soc is %d\n", chip->vooc_high_soc);
 	}
+
+	rc = of_property_read_u32(node, "qcom,vooc-warm-allow-vol", &chip->vooc_warm_allow_vol);
+	if (rc) {
+		chip->vooc_warm_allow_vol = -EINVAL;
+	} else {
+		chg_debug("qcom,vooc-wam-allow-vol is %d\n", chip->vooc_warm_allow_vol);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc-warm-allow-soc", &chip->vooc_warm_allow_soc);
+	if (rc) {
+		chip->vooc_warm_allow_soc = -EINVAL;
+	} else {
+		chg_debug("qcom,vooc-wam-allow-soc is %d\n", chip->vooc_warm_allow_soc);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc-high-soc", &chip->vooc_high_soc);
+	if (rc) {
+		chip->vooc_high_soc = 85;
+	} else {
+		chg_debug("qcom,vooc-high-soc is %d\n", chip->vooc_high_soc);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc_cool_bat_volt", &chip->vooc_cool_bat_volt);
+	if (rc) {
+		chip->vooc_cool_bat_volt = -1000;
+	} else {
+		chg_debug("qcom,vooc_cool_bat_volt is %d\n", chip->vooc_cool_bat_volt);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc_little_cool_bat_volt", &chip->vooc_little_cool_bat_volt);
+	if (rc) {
+		chip->vooc_little_cool_bat_volt = -1000;
+	} else {
+		chg_debug("qcom,vooc_little_cool_bat_volt is %d\n", chip->vooc_little_cool_bat_volt);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc_normal_bat_volt", &chip->vooc_normal_bat_volt);
+	if (rc) {
+		chip->vooc_normal_bat_volt = -1000;
+	} else {
+		chg_debug("qcom,vooc_normal_bat_volt is %d\n", chip->vooc_normal_bat_volt);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc_warm_bat_volt", &chip->vooc_warm_bat_volt);
+	if (rc) {
+		chip->vooc_warm_bat_volt = -1000;
+	} else {
+		chg_debug("qcom,vooc_warm_bat_volt is %d\n", chip->vooc_warm_bat_volt);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc_cool_bat_suspend_volt", &chip->vooc_cool_bat_suspend_volt);
+	if (rc) {
+		chip->vooc_cool_bat_suspend_volt = -1000;
+	} else {
+		chg_debug("qcom,vooc_cool_bat_suspend_volt is %d\n", chip->vooc_cool_bat_suspend_volt);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc_little_cool_bat_suspend_volt", &chip->vooc_little_cool_bat_suspend_volt);
+	if (rc) {
+		chip->vooc_little_cool_bat_suspend_volt = -1000;
+	} else {
+		chg_debug("qcom,vooc_little_cool_bat_suspend_volt is %d\n", chip->vooc_little_cool_bat_suspend_volt);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc_normal_bat_suspend_volt", &chip->vooc_normal_bat_suspend_volt);
+	if (rc) {
+		chip->vooc_normal_bat_suspend_volt = -1000;
+	} else {
+		chg_debug("qcom,vooc_normal_bat_suspend_volt is %d\n", chip->vooc_normal_bat_suspend_volt);
+	}
+
+	rc = of_property_read_u32(node, "qcom,vooc_warm_bat_suspend_volt", &chip->vooc_warm_bat_suspend_volt);
+	if (rc) {
+		chip->vooc_warm_bat_suspend_volt = -1000;
+	} else {
+		chg_debug("qcom,vooc_warm_bat_suspend_volt is %d\n", chip->vooc_warm_bat_suspend_volt);
+	}
+
 	chip->vooc_multistep_adjust_current_support = of_property_read_bool(node,
 		"qcom,vooc_multistep_adjust_current_support");
 	chg_debug("qcom,vooc_multistep_adjust_current_supportis %d\n",
 		chip->vooc_multistep_adjust_current_support);
+
+	rc = of_property_read_u32(node, "qcom,vooc_reply_mcu_bits",
+		&chip->vooc_reply_mcu_bits);
+	if (rc) {
+		chip->vooc_reply_mcu_bits = 4;
+	} else {
+		chg_debug("qcom,vooc_reply_mcu_bits is %d\n",
+			chip->vooc_reply_mcu_bits);
+	}
+
+	rc = of_property_read_u32(node, "qcom,support_fake_vooc_check",
+				&chip->support_fake_vooc_check);
+	if(rc) {
+		chip->support_fake_vooc_check = 1;
+	} else {
+		chg_debug("is not support fake vooc check\n");
+		chip->support_fake_vooc_check = 0;
+	}
+
+	chip->vooc_low_temp_smart_charge = of_property_read_bool(node, "qcom,vooc_low_temp_smart_charge");
 
 	rc = of_property_read_u32(node, "qcom,vooc_multistep_initial_batt_temp",
 		&chip->vooc_multistep_initial_batt_temp);
@@ -517,15 +694,6 @@ void oplus_vooc_fw_type_dt(struct oplus_vooc_chip *chip)
 			chip->vooc_batt_over_high_temp);
 	}
 
-	rc = of_property_read_u32(node, "qcom,vooc_batt_over_low_temp",
-		&chip->vooc_batt_over_low_temp);
-	if (rc) {
-		chip->vooc_batt_over_low_temp = -EINVAL;
-	} else {
-		chg_debug("qcom,vooc_batt_over_low_temp is %d\n",
-			chip->vooc_batt_over_low_temp);
-	}
-
 	rc = of_property_read_u32(node, "qcom,vooc_over_high_or_low_current",
 		&chip->vooc_over_high_or_low_current);
 	if (rc) {
@@ -534,6 +702,41 @@ void oplus_vooc_fw_type_dt(struct oplus_vooc_chip *chip)
 		chg_debug("qcom,vooc_over_high_or_low_current is %d\n",
 			chip->vooc_over_high_or_low_current);
 	}
+
+	rc = of_property_read_u32(node, "qcom,vooc_break_frequence",
+		&chip->vooc_break_frequence);
+	if (!rc) {
+		chg_debug("qcom,vooc_break_frequence is %d\n",
+			chip->vooc_break_frequence);
+	}
+
+	chip->parse_fw_from_dt = of_property_read_bool(node, "qcom,parse_fw_from_dt");
+	chg_debug("qcom,parse_fw_from_dt is %d\n", chip->parse_fw_from_dt);
+
+	chip->abnormal_adapter_current_cnt = of_property_count_elems_of_size(node,
+				"qcom,abnormal_adapter_current", sizeof(*chip->abnormal_adapter_current));
+	if (chip->abnormal_adapter_current_cnt > 0) {
+		chg_err("abnormal_adapter_current_cnt[%d]\n", chip->abnormal_adapter_current_cnt);
+		chip->abnormal_adapter_current = devm_kcalloc(chip->dev, chip->abnormal_adapter_current_cnt,
+			sizeof(*chip->abnormal_adapter_current), GFP_KERNEL);
+		if (!chip->abnormal_adapter_current) {
+			chg_err("devm_kcalloc abnormal_adapter_current error\n");
+			return;
+		}
+		rc = of_property_read_u32_array(node,
+			"qcom,abnormal_adapter_current", chip->abnormal_adapter_current, chip->abnormal_adapter_current_cnt);
+		if (rc) {
+			chg_err("qcom,abnormal_adapter_current error\n");
+			return;
+		}
+
+		for(loop = 0; loop < chip->abnormal_adapter_current_cnt; loop++) {
+			chg_err("abnormal_adapter_current[%d]\n", chip->abnormal_adapter_current[loop]);
+		}
+	}
+
+	chip->vooc_switch_reset = of_property_read_bool(node, "qcom,vooc_switch_reset");
+	chg_debug("qcom,vooc_switch_reset is %d\n", chip->vooc_switch_reset);
 }
 
 /*This is only for P60 P(17197 P)*/
@@ -544,6 +747,7 @@ extern int main_hwid5_val;
 int oplus_vooc_asic_hwid_check(struct oplus_vooc_chip *chip)
 {
 	int rc;
+	int hw_id_temp;
 	static int asic_hwid_type = OPLUS_VOOC_MCU_HWID_UNKNOW;
 	struct device_node *node = NULL;
 
@@ -576,7 +780,7 @@ int oplus_vooc_asic_hwid_check(struct oplus_vooc_chip *chip)
 				return OPLUS_VOOC_ASIC_HWID_NON_EXIST;
 			}
 		}
-		chg_debug("chip->vooc_gpio.vooc_asic_id_gpio =%d\n",
+		chg_err("chip->vooc_gpio.vooc_asic_id_gpio =%d\n",
 			chip->vooc_gpio.vooc_asic_id_gpio);
 	}
 
@@ -622,7 +826,14 @@ int oplus_vooc_asic_hwid_check(struct oplus_vooc_chip *chip)
 	if(gpio_get_value(chip->vooc_gpio.vooc_asic_id_gpio) == 1) {
 		chg_debug("it is  rt5125\n");
 		asic_hwid_type = OPLUS_VOOC_ASIC_HWID_RT5125;
-		return OPLUS_VOOC_ASIC_HWID_RT5125;
+
+		rc = of_property_read_u32(node, "qcom,vooc_hw_id_no_pull_val", &hw_id_temp);
+		if (!rc) {
+			chg_debug("the id is %d specified by dts.", hw_id_temp);
+			asic_hwid_type = hw_id_temp;
+		}
+
+		return asic_hwid_type;
 	}
 
 	chg_debug("it is  op10\n");
@@ -668,7 +879,7 @@ int oplus_vooc_mcu_hwid_check(struct oplus_vooc_chip *chip)
 					chip->vooc_gpio.vooc_mcu_id_gpio);
 			}
 		}
-		chg_debug("chip->vooc_gpio.vooc_mcu_id_gpio =%d\n",
+		chg_err("chip->vooc_gpio.vooc_mcu_id_gpio =%d\n",
 			chip->vooc_gpio.vooc_mcu_id_gpio);
 	}
 
@@ -723,7 +934,7 @@ int oplus_vooc_gpio_dt_init(struct oplus_vooc_chip *chip)
 					chip->vooc_gpio.switch1_gpio);
 			}
 		}
-		chg_debug("chip->vooc_gpio.switch1_gpio =%d\n",
+		chg_err("chip->vooc_gpio.switch1_gpio =%d\n",
 			chip->vooc_gpio.switch1_gpio);
 	}
 
@@ -764,7 +975,7 @@ int oplus_vooc_gpio_dt_init(struct oplus_vooc_chip *chip)
 		chip->vooc_gpio.switch2_gpio = of_get_named_gpio(node,
 			"qcom,charging_switch2-gpio", 0);
 		if (chip->vooc_gpio.switch2_gpio < 0) {
-			chg_debug("chip->vooc_gpio.switch2_gpio not specified\n");
+			chg_err("chip->vooc_gpio.switch2_gpio not specified\n");
 		} else {
 			if (gpio_is_valid(chip->vooc_gpio.switch2_gpio)) {
 				rc = gpio_request(chip->vooc_gpio.switch2_gpio,
@@ -774,7 +985,7 @@ int oplus_vooc_gpio_dt_init(struct oplus_vooc_chip *chip)
 						chip->vooc_gpio.switch2_gpio);
 				}
 			}
-			chg_debug("chip->vooc_gpio.switch2_gpio =%d\n",
+			chg_err("chip->vooc_gpio.switch2_gpio =%d\n",
 				chip->vooc_gpio.switch2_gpio);
 		}
 	}
@@ -792,7 +1003,7 @@ int oplus_vooc_gpio_dt_init(struct oplus_vooc_chip *chip)
 					chip->vooc_gpio.reset_gpio);
 			}
 		}
-		chg_debug("chip->vooc_gpio.reset_gpio =%d\n",
+		chg_err("chip->vooc_gpio.reset_gpio =%d\n",
 			chip->vooc_gpio.reset_gpio);
 	}
 	/* Parsing gpio clock*/
@@ -807,7 +1018,7 @@ int oplus_vooc_gpio_dt_init(struct oplus_vooc_chip *chip)
 					chip->vooc_gpio.clock_gpio, rc);
 			}
 		}
-		chg_debug("chip->vooc_gpio.clock_gpio =%d\n", chip->vooc_gpio.clock_gpio);
+		chg_err("chip->vooc_gpio.clock_gpio =%d\n", chip->vooc_gpio.clock_gpio);
 	}
 	/* Parsing gpio data*/
 	chip->vooc_gpio.data_gpio = of_get_named_gpio(node, "qcom,charging_data-gpio", 0);
@@ -820,8 +1031,22 @@ int oplus_vooc_gpio_dt_init(struct oplus_vooc_chip *chip)
 				chg_err("unable to request gpio [%d]\n", chip->vooc_gpio.data_gpio);
 			}
 		}
-		chg_debug("chip->vooc_gpio.data_gpio =%d\n", chip->vooc_gpio.data_gpio);
+		chg_err("chip->vooc_gpio.data_gpio =%d\n", chip->vooc_gpio.data_gpio);
 	}
+
+	chip->vooc_gpio.mcu_ctrl_cp_gpio = of_get_named_gpio(node, "qcom,mcu_ctrl_cp-gpio", 0);
+	if (chip->vooc_gpio.mcu_ctrl_cp_gpio < 0) {
+		chg_err("chip->vooc_gpio.mcu_ctrl_cp_gpio not specified\n");
+	} else {
+		if (gpio_is_valid(chip->vooc_gpio.mcu_ctrl_cp_gpio)) {
+			rc = gpio_request(chip->vooc_gpio.mcu_ctrl_cp_gpio, "mcu-ctrl-cp-gpio");
+			if (rc) {
+				chg_err("unable to request gpio [%d]\n", chip->vooc_gpio.mcu_ctrl_cp_gpio);
+			}
+		}
+		chg_err("chip->vooc_gpio.mcu_ctrl_cp_gpio =%d\n", chip->vooc_gpio.mcu_ctrl_cp_gpio);
+	}
+
 	oplus_vooc_data_irq_init(chip);
 	rc = opchg_bq27541_gpio_pinctrl_init(chip);
 	chg_debug(" switch1_gpio = %d,switch2_gpio = %d, reset_gpio = %d,\
@@ -829,6 +1054,9 @@ int oplus_vooc_gpio_dt_init(struct oplus_vooc_chip *chip)
 			chip->vooc_gpio.switch1_gpio, chip->vooc_gpio.switch2_gpio,
 			chip->vooc_gpio.reset_gpio, chip->vooc_gpio.clock_gpio,
 			chip->vooc_gpio.data_gpio, chip->vooc_gpio.data_irq);
+
+	pps_chip = chip;
+
 	return rc;
 }
 
@@ -882,35 +1110,54 @@ void opchg_set_reset_sleep(struct oplus_vooc_chip *chip)
 		return;
 	}
 	mutex_lock(&chip->pinctrl_mutex);
-	gpio_direction_output(chip->vooc_gpio.reset_gpio, 1); /* out 1 */
+	gpio_direction_output(chip->vooc_gpio.switch1_gpio, 0);	/* in 0*/
+	gpio_direction_output(chip->vooc_gpio.reset_gpio, 0); /* out 0 */
+	usleep_range(10000, 10000);
 #ifdef CONFIG_OPLUS_CHARGER_MTK
 	pinctrl_select_state(chip->vooc_gpio.pinctrl, chip->vooc_gpio.gpio_reset_sleep); /* PULL_down */
 #else
 	pinctrl_select_state(chip->vooc_gpio.pinctrl, chip->vooc_gpio.gpio_reset_active); /* PULL_up */
 #endif
-	gpio_set_value(chip->vooc_gpio.reset_gpio, 0);
-	usleep_range(5000, 5000);
+	gpio_set_value(chip->vooc_gpio.reset_gpio, 1);
+	usleep_range(10000, 10000);
+	gpio_direction_output(chip->vooc_gpio.reset_gpio, 0); /* out 0 */
+	usleep_range(1000, 1000);
 	mutex_unlock(&chip->pinctrl_mutex);
 	chg_debug("%s\n", __func__);
 }
 
 void opchg_set_reset_active(struct oplus_vooc_chip *chip)
 {
-	int active_level = 0;
-	int sleep_level = 1;
-
 	if (chip->adapter_update_real == ADAPTER_FW_NEED_UPDATE
 			|| chip->btb_temp_over || chip->mcu_update_ing) {
 		chg_debug(" adapter_fw_need_update:%d,btb_temp_over:%d,mcu_update_ing:%d,return\n",
 			chip->adapter_update_real, chip->btb_temp_over, chip->mcu_update_ing);
 		return;
 	}
-	if (chip->vooc_gpio.switch1_ctr1_gpio > 0) {//rk826
+
+	opchg_set_reset_active_force(chip);
+}
+
+void opchg_set_reset_active_force(struct oplus_vooc_chip *chip)
+{
+	int active_level = 0;
+	int sleep_level = 1;
+	int mcu_hwid_type = OPLUS_VOOC_MCU_HWID_UNKNOW;
+
+	mcu_hwid_type = get_vooc_mcu_type(chip);
+	if (mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_RK826
+		|| mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_OP10
+		|| mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_RT5125) {
 		active_level = 1;
 		sleep_level = 0;
-		pr_info("opchg_set_reset_active revert mcu-en setting since asic used\n");
+	}
+	if (mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_RK826) {
+		if (oplus_is_rf_ftm_mode())
+			return;
 	}
 	mutex_lock(&chip->pinctrl_mutex);
+	if (!chip->vooc_switch_reset)
+		gpio_direction_output(chip->vooc_gpio.switch1_gpio, 0);	/* in 0*/
 	gpio_direction_output(chip->vooc_gpio.reset_gpio, active_level);		/* out 1 */
 
 #ifdef CONFIG_OPLUS_CHARGER_MTK
@@ -922,11 +1169,15 @@ void opchg_set_reset_active(struct oplus_vooc_chip *chip)
 #endif
 
 	gpio_set_value(chip->vooc_gpio.reset_gpio, active_level);
-	usleep_range(5000, 5000);
+        usleep_range(10000, 10000);
 	gpio_set_value(chip->vooc_gpio.reset_gpio, sleep_level);
 	usleep_range(10000, 10000);
 	gpio_set_value(chip->vooc_gpio.reset_gpio, active_level);
 	usleep_range(5000, 5000);
+	if (chip->dpdm_switch_mode == VOOC_CHARGER_MODE) {
+		if (!chip->vooc_switch_reset)
+			gpio_direction_output(chip->vooc_gpio.switch1_gpio, 1);	/* in 1*/
+	}
 	mutex_unlock(&chip->pinctrl_mutex);
 	chg_debug("%s\n", __func__);
 }
@@ -972,12 +1223,28 @@ static void delay_reset_mcu_work_func(struct work_struct *work)
 	struct oplus_vooc_chip *chip = container_of(dwork,
 		struct oplus_vooc_chip, delay_reset_mcu_work);
 	opchg_set_clock_sleep(chip);
-	opchg_set_reset_active(chip);
+	oplus_vooc_reset_mcu();
+}
+
+static void mcu_ctrl_cp_func(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct oplus_vooc_chip *chip = container_of(dwork,
+		struct oplus_vooc_chip, mcu_ctrl_cp_work);
+	int level;
+	level = gpio_get_value(chip->vooc_gpio.mcu_ctrl_cp_gpio);
+
+	if(level == 1){
+		printk("mcu_ctrl_cp_func level:%d\n",level);
+	}else {
+		printk("mcu_ctrl_cp_func level:%d\n",level);
+	}
 }
 
 void oplus_vooc_delay_reset_mcu_init(struct oplus_vooc_chip *chip)
 {
 	INIT_DELAYED_WORK(&chip->delay_reset_mcu_work, delay_reset_mcu_work_func);
+	INIT_DELAYED_WORK(&chip->mcu_ctrl_cp_work,mcu_ctrl_cp_func);
 }
 
 static void oplus_vooc_delay_reset_mcu(struct oplus_vooc_chip *chip)
@@ -986,15 +1253,25 @@ static void oplus_vooc_delay_reset_mcu(struct oplus_vooc_chip *chip)
 		round_jiffies_relative(msecs_to_jiffies(1500)));
 }
 
-static bool is_allow_fast_chg_real(struct oplus_vooc_chip *chip)
+#define VOOC_WARM_TEMP_RANGE_THD    20
+bool is_allow_fast_chg_real(struct oplus_vooc_chip *chip)
 {
 	int temp = 0;
 	int cap = 0;
 	int chg_type = 0;
+	int volt = 0;
+	int soc = 0;
+	int mcu_hwid_type = OPLUS_VOOC_MCU_HWID_UNKNOW;
 
 	temp = oplus_chg_get_chg_temperature();
 	cap = oplus_chg_get_ui_soc();
 	chg_type = oplus_chg_get_chg_type();
+	soc = oplus_chg_get_soc();
+	if (chip->vooc_is_platform_gauge) {
+		volt = oplus_chg_get_batt_volt();
+	} else {
+		volt = oplus_gauge_get_prev_batt_mvolts_2cell_min();
+	}
 
 	if (chg_type != POWER_SUPPLY_TYPE_USB_DCP) {
 		return false;
@@ -1002,9 +1279,64 @@ static bool is_allow_fast_chg_real(struct oplus_vooc_chip *chip)
 	if (temp < chip->vooc_low_temp) {
 		return false;
 	}
-	if (temp > chip->vooc_high_temp) {
+	if (temp >= chip->vooc_high_temp) {
 		return false;
 	}
+
+	if (chip->vooc_normal_high_temp != -EINVAL
+		&& (temp > chip->vooc_normal_high_temp)
+		&& ( !(soc < chip->vooc_warm_allow_soc
+		&& (oplus_chg_get_batt_volt() < chip->vooc_warm_allow_vol)))) {
+		return false;
+	}
+
+	mcu_hwid_type = get_vooc_mcu_type(chip);
+	chg_err("temp is %d, volt is %d, suspend_charger is %d, mcu_hwid_type is %d\n",
+		temp, volt, chip->suspend_charger, mcu_hwid_type);
+
+	if (mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_RK826
+		|| mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_OP10
+		|| mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_RT5125) {
+		if (!chip->suspend_charger) {
+			if (temp < oplus_chg_get_cool_bat_decidegc()) {
+				if (volt < chip->vooc_cool_bat_volt) {
+					return false;
+				}
+			} else if (temp < oplus_chg_get_little_cool_bat_decidegc()) {
+				if(volt < chip->vooc_little_cool_bat_volt) {
+					return false;
+				}
+			} else if (temp < oplus_chg_get_normal_bat_decidegc()) {
+				if(volt < chip->vooc_normal_bat_volt) {
+					return false;
+				}
+			} else if (temp < chip->vooc_high_temp) {
+				if (volt < chip->vooc_warm_bat_volt) {
+					return false;
+				}
+			}
+		} else {
+			chip->suspend_charger = false;
+			if (temp < oplus_chg_get_cool_bat_decidegc()) {
+				if (volt < chip->vooc_cool_bat_suspend_volt) {
+					return false;
+				}
+			} else if (temp < oplus_chg_get_little_cool_bat_decidegc()) {
+				if(volt < chip->vooc_little_cool_bat_suspend_volt) {
+					return false;
+				}
+			} else if (temp < oplus_chg_get_normal_bat_decidegc()) {
+				if(volt < chip->vooc_normal_bat_suspend_volt) {
+					return false;
+				}
+			} else if (temp < chip->vooc_high_temp) {
+				if (volt < chip->vooc_warm_bat_suspend_volt) {
+					return false;
+				}
+			}
+		}
+	}
+
 	if (cap < chip->vooc_low_soc) {
 		return false;
 	}
@@ -1016,8 +1348,20 @@ static bool is_allow_fast_chg_real(struct oplus_vooc_chip *chip)
 		return false;
 	}
 
+	if (oplus_vooc_get_fastchg_to_warm_full() == true
+		&& temp > chip->vooc_normal_high_temp - VOOC_WARM_TEMP_RANGE_THD) {
+		chg_debug(" oplus_vooc_get_fastchg_to_warm_full is true\n");
+		return false;
+	}
+
+	if (oplus_chg_check_disable_charger() == false) {
+		chg_debug("not enable charger, should return false\n");
+		return false;
+	}
+
 	if(chip->disable_real_fast_chg)
 		return false;
+
 	return true;
 }
 
@@ -1025,19 +1369,39 @@ static bool is_allow_fast_chg_dummy(struct oplus_vooc_chip *chip)
 {
 	int chg_type = 0;
 	bool allow_real = false;
+	int mcu_hwid_type = OPLUS_VOOC_MCU_HWID_UNKNOW;
 
 	chg_type = oplus_chg_get_chg_type();
 	if (chg_type != POWER_SUPPLY_TYPE_USB_DCP) {
+		chip->reset_adapter = false;
+		chg_err("chg_type unkown return false\n");
 		return false;
 	}
 	if (oplus_vooc_get_fastchg_to_normal() == true) {
+		chip->reset_adapter = false;
 		chg_debug(" fast_switch_to_noraml is true\n");
 		return false;
 	}
 	allow_real = is_allow_fast_chg_real(chip);
-	if (oplus_vooc_get_fastchg_dummy_started() == true && (!allow_real)) {
-		chg_debug(" dummy_started true, allow_real false\n");
+	if ((oplus_vooc_get_fastchg_dummy_started() == true || oplus_vooc_get_fastchg_to_warm() == true) && (!allow_real)) {
+		chip->reset_adapter = false;
+		chg_debug(" dummy_started or fastchg to warm true, allow_real false\n");
 		return false;
+	}
+
+	mcu_hwid_type = get_vooc_mcu_type(chip);
+	if (mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_RK826
+		|| mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_OP10
+		|| mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_RT5125) {
+		if ((oplus_vooc_get_fastchg_dummy_started() == true || oplus_vooc_get_fastchg_to_warm() == true)
+				&& allow_real && !chip->reset_adapter) {
+			chip->reset_adapter = true;
+			chip->suspend_charger = true;
+			oplus_chg_suspend_charger();
+			oplus_chg_set_charger_type_unknown();
+			chg_debug(" dummy_started or fastchg to warm true, allow_real true, reset adapter\n");
+			return false;
+		}
 	}
 	oplus_vooc_set_fastchg_allow(allow_real);
 	return true;
@@ -1058,21 +1422,49 @@ void switch_fast_chg(struct oplus_vooc_chip *chip)
 	}
 
 	if (is_allow_fast_chg_dummy(chip) == true) {
-		if (oplus_vooc_get_adapter_update_status() == ADAPTER_FW_UPDATE_FAIL) {
-			opchg_set_switch_mode(chip, VOOC_CHARGER_MODE);
-			oplus_vooc_delay_reset_mcu(chip);
-		} else {
-			if (oplus_vooc_get_fastchg_allow() == false
-					&& oplus_vooc_get_fastchg_to_warm() == true) {
-				chg_debug(" fastchg_allow false, to_warm true, don't switch to vooc mode\n");
-			} else {
+		if (!chip->vooc_switch_reset) {
+			if (oplus_vooc_get_adapter_update_status() == ADAPTER_FW_UPDATE_FAIL) {
+				oplus_vooc_delay_reset_mcu(chip);
 				opchg_set_switch_mode(chip, VOOC_CHARGER_MODE);
-				opchg_set_clock_sleep(chip);
-				opchg_set_reset_active(chip);
+			} else {
+				if (oplus_vooc_get_fastchg_allow() == false
+						&& oplus_vooc_get_fastchg_to_warm() == true) {
+					chg_err(" fastchg_allow false, to_warm true, don't switch to vooc mode\n");
+				} else {
+					opchg_set_clock_sleep(chip);
+					oplus_vooc_reset_mcu();
+					opchg_set_switch_mode(chip, VOOC_CHARGER_MODE);
+
+					if(opchg_get_mcu_update_state() == false
+						&& oplus_vooc_check_asic_fw_status() == 0){
+						chg_err("check fw fail, go to update fw!\n");
+						oplus_chg_set_chargerid_switch_val(0);
+						opchg_set_switch_mode(chip, NORMAL_CHARGER_MODE);
+						oplus_chg_clear_chargerid_info();
+						oplus_vooc_fw_update_work_plug_in();
+					}
+				}
+			}
+		} else {	/* first switch vooc mode and then reset mcu, like Mufusa and Simba */
+			if (oplus_vooc_get_adapter_update_status() == ADAPTER_FW_UPDATE_FAIL) {
+				opchg_set_switch_mode(chip, VOOC_CHARGER_MODE);
+				oplus_vooc_delay_reset_mcu(chip);
+			} else {
+				if (oplus_vooc_get_fastchg_allow() == false
+						&& oplus_vooc_get_fastchg_to_warm() == true) {
+					chg_err(" fastchg_allow false, to_warm true, don't switch to vooc mode\n");
+				} else {
+					opchg_set_switch_mode(chip, VOOC_CHARGER_MODE);
+					if(oplus_chg_get_chargerid_switch_val() == 0) {
+						oplus_chg_set_chargerid_switch_val(1);
+					}
+					opchg_set_clock_sleep(chip);
+					opchg_set_reset_active(chip);
+				}
 			}
 		}
 	}
-	chg_debug(" end, allow_fast_chg:%d\n", oplus_vooc_get_fastchg_allow());
+	chg_err(" end, allow_fast_chg:%d\n", oplus_vooc_get_fastchg_allow());
 }
 
 int oplus_vooc_get_ap_clk_gpio_val(struct oplus_vooc_chip *chip)
@@ -1109,19 +1501,45 @@ int opchg_read_ap_data(struct oplus_vooc_chip *chip)
 void opchg_reply_mcu_data(struct oplus_vooc_chip *chip, int ret_info, int device_type)
 {
 	int i = 0;
-	for (i = 0; i < 3; i++) {
-		if (i == 0) {		/*tell mcu1503 device_type*/
-			gpio_set_value(chip->vooc_gpio.data_gpio, ret_info >> 1);
-		} else if (i == 1) {
-			gpio_set_value(chip->vooc_gpio.data_gpio, ret_info & 0x1);
+	int reply_counts = 0;
+
+	if (chip->vooc_multistep_adjust_current_support == false) {
+		reply_counts = 3;
+	} else {
+		if (chip->vooc_reply_mcu_bits == 4) {
+			reply_counts = 4;
+		} else if (chip->vooc_reply_mcu_bits == 7) {
+			reply_counts = 7;
 		} else {
-			gpio_set_value(chip->vooc_gpio.data_gpio, device_type);
-			chg_debug("device_type = %d\n", device_type);
+			reply_counts = 3;
 		}
+	}
+	chg_err("reply_counts = %d,ret_info:%d\n", reply_counts, ret_info);
+	if (chip->w_soc_temp_to_mcu == false) {
+		for (i = 1; i < reply_counts; i++) {
+				gpio_set_value(chip->vooc_gpio.data_gpio, (ret_info >> (reply_counts - i - 1)) & 0x01);
+				chg_err("send_bit[%d] = %d\n", i, (ret_info >> (reply_counts - i - 1)) & 0x01);
+				opchg_set_clock_active(chip);
+				usleep_range(1000, 1000);
+				opchg_set_clock_sleep(chip);
+				usleep_range(19000, 19000);
+		}
+		gpio_set_value(chip->vooc_gpio.data_gpio, device_type);
+		chg_err("i=%d, device_type = %d\n", i, device_type);
 		opchg_set_clock_active(chip);
 		usleep_range(1000, 1000);
 		opchg_set_clock_sleep(chip);
 		usleep_range(19000, 19000);
+	} else {
+		chip->w_soc_temp_to_mcu = false;
+		for (i = 0; i < reply_counts; i++) {
+				gpio_set_value(chip->vooc_gpio.data_gpio, (ret_info >> (reply_counts - i - 1)) & 0x01);
+				chg_err("send_bit[%d] = %d\n", i, (ret_info >> (reply_counts - i - 1)) & 0x01);
+				opchg_set_clock_active(chip);
+				usleep_range(1000, 1000);
+				opchg_set_clock_sleep(chip);
+				usleep_range(19000, 19000);
+		}
 	}
 }
 
@@ -1133,16 +1551,16 @@ void opchg_reply_mcu_data_4bits
 	for (i = 0; i < 4; i++) {
 		if (i == 0) {					/*tell mcu1503 device_type*/
 			gpio_set_value(chip->vooc_gpio.data_gpio, ret_info >> 2);
-			chg_debug("first_send_bit = %d\n", ret_info >> 2);
+			chg_err("first_send_bit = %d\n", ret_info >> 2);
 		} else if (i == 1) {
 			gpio_set_value(chip->vooc_gpio.data_gpio, (ret_info >> 1) & 0x1);
-			chg_debug("second_send_bit = %d\n", (ret_info >> 1) & 0x1);
+			chg_err("second_send_bit = %d\n", (ret_info >> 1) & 0x1);
 		} else if (i == 2) {
 			gpio_set_value(chip->vooc_gpio.data_gpio, ret_info & 0x1);
-			chg_debug("third_send_bit = %d\n", ret_info & 0x1);
+			chg_err("third_send_bit = %d\n", ret_info & 0x1);
 		}else {
 			gpio_set_value(chip->vooc_gpio.data_gpio, device_type);
-			chg_debug("device_type = %d\n", device_type);
+			chg_err("device_type = %d\n", device_type);
 		}
 		opchg_set_clock_active(chip);
 		usleep_range(1000, 1000);
@@ -1171,10 +1589,6 @@ void opchg_set_vooc_chargerid_switch_val(struct oplus_vooc_chip *chip, int value
 	else
 		return;
 	/*
-	if (chip->mcu_update_ing) {
-		chg_err(" mcu_update_ing, don't switch chrgerid\n");
-		return;
-	}
 	if (chip->vooc_gpio.switch1_ctr1_gpio > 0) {//asic rk826/op10
 		if (level == 1) {
 			gpio_direction_output(chip->vooc_gpio.reset_gpio, 1);
@@ -1194,16 +1608,12 @@ void opchg_set_vooc_chargerid_switch_val(struct oplus_vooc_chip *chip, int value
 
 void opchg_set_switch_normal_charger(struct oplus_vooc_chip *chip)
 {
-	if (chip->mcu_update_ing) {
-		chg_debug(" mcu_update_ing, don't switch normal mode\n");
-		return;
-	}
 	if (chip->vooc_gpio.switch1_gpio > 0) {
 		gpio_direction_output(chip->vooc_gpio.switch1_gpio, 0);	/* in 0*/
 	}
 	if (chip->vooc_gpio.switch1_ctr1_gpio > 0) {//asic rk826
 		gpio_direction_output(chip->vooc_gpio.switch1_ctr1_gpio, 0);/* out 0*/
-		gpio_set_value(chip->vooc_gpio.reset_gpio, 0);
+		/*gpio_set_value(chip->vooc_gpio.reset_gpio, 0);*/
 	}
 }
 
@@ -1214,25 +1624,48 @@ void opchg_set_switch_earphone(struct oplus_vooc_chip *chip)
 
 void opchg_set_switch_mode(struct oplus_vooc_chip *chip, int mode)
 {
+	int retry = 10;
+	int mcu_hwid_type = OPLUS_VOOC_MCU_HWID_UNKNOW;
+
 	if (chip->adapter_update_real == ADAPTER_FW_NEED_UPDATE || chip->btb_temp_over) {
-		chg_debug("adapter_fw_need_update: %d, btb_temp_over: %d\n",
+		chg_err("adapter_fw_need_update: %d, btb_temp_over: %d\n",
 			chip->adapter_update_real, chip->btb_temp_over);
 		return;
 	}
 	if (mode == VOOC_CHARGER_MODE && chip->mcu_update_ing) {
-		chg_debug(" mcu_update_ing, don't switch to vooc mode\n");
+		chg_err(" mcu_update_ing, don't switch to vooc mode\n");
 		return;
 	}
+
+	mcu_hwid_type = get_vooc_mcu_type(chip);
+
 	switch (mode) {
 	case VOOC_CHARGER_MODE:	       /*11*/
-		opchg_set_switch_fast_charger(chip);
-		break;
+		if (mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_RK826
+			|| mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_OP10
+			|| mcu_hwid_type == OPLUS_VOOC_ASIC_HWID_RT5125) {
+			do {
+				if (gpio_get_value(chip->vooc_gpio.reset_gpio) == 1) {
+					opchg_set_switch_fast_charger(chip);
+					chg_err(" vooc mode, switch1_gpio:%d\n", gpio_get_value(chip->vooc_gpio.switch1_gpio));
+					break;
+				}
+				usleep_range(5000,5000);
+			} while((--retry > 0));
+			break;
+		} else {
+			opchg_set_switch_fast_charger(chip);
+			chg_err(" vooc mode, switch1_gpio:%d\n", gpio_get_value(chip->vooc_gpio.switch1_gpio));
+			break;
+		}
 	case HEADPHONE_MODE:		  /*10*/
 		opchg_set_switch_earphone(chip);
+		chg_err(" headphone mode, switch1_gpio:%d\n", gpio_get_value(chip->vooc_gpio.switch1_gpio));
 		break;
 	case NORMAL_CHARGER_MODE:	    /*01*/
 	default:
 		opchg_set_switch_normal_charger(chip);
+		chg_err(" normal mode, switch1_gpio:%d\n", gpio_get_value(chip->vooc_gpio.switch1_gpio));
 		break;
 	}
 	chip->dpdm_switch_mode = mode;
@@ -1246,12 +1679,17 @@ int oplus_vooc_get_switch_gpio_val(struct oplus_vooc_chip *chip)
 void reset_fastchg_after_usbout(struct oplus_vooc_chip *chip)
 {
 	if (oplus_vooc_get_fastchg_started() == false) {
-		chg_debug(" switch off fastchg\n");
-		opchg_set_switch_mode(chip, NORMAL_CHARGER_MODE);
+		chg_err(" switch off fastchg\n");
 		oplus_vooc_set_fastchg_type_unknow();
+		opchg_set_switch_mode(chip, NORMAL_CHARGER_MODE);
+		if (oplus_vooc_get_fastchg_dummy_started() == false) {
+			oplus_vooc_check_set_mcu_sleep();
+		}
+		vooc_reset_cp();
 	}
 	oplus_vooc_set_fastchg_to_normal_false();
 	oplus_vooc_set_fastchg_to_warm_false();
+	oplus_vooc_set_fastchg_to_warm_full_false();
 	oplus_vooc_set_fastchg_low_temp_full_false();
 	oplus_vooc_set_fastchg_dummy_started_false();
 }
@@ -1262,6 +1700,11 @@ static irqreturn_t irq_rx_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static irqreturn_t irq_mcu_ctrl_cp_handler(int irq, void *dev_id)
+{
+	oplus_vooc_bypass_work();
+	return IRQ_HANDLED;
+}
 void oplus_vooc_data_irq_init(struct oplus_vooc_chip *chip)
 {
 #ifdef CONFIG_OPLUS_CHARGER_MTK
@@ -1341,5 +1784,59 @@ void oplus_vooc_eint_unregister(struct oplus_vooc_chip *chip)
 #else
 	free_irq(chip->vooc_gpio.data_irq, chip);
 #endif
+}
+
+void oplus_pps_eint_register(struct oplus_vooc_chip *chip)
+{
+	int retval = 0;
+	int level = 0;
+	pinctrl_select_state(chip->vooc_gpio.pinctrl,chip->vooc_gpio.gpio_mcu_ctrl_cp_active);
+	retval = gpio_direction_input(chip->vooc_gpio.mcu_ctrl_cp_gpio);
+	level = gpio_get_value(chip->vooc_gpio.mcu_ctrl_cp_gpio);
+	printk("oplus_pps_eint_register retval:%d,level:%d\n",retval,level);
+
+	if(mcu_ctrl_cp_status != 0){
+		printk("oplus_pps_eint_register 222\n");
+	chip->vooc_gpio.mcu_ctrl_cp_irq = gpio_to_irq(chip->vooc_gpio.mcu_ctrl_cp_gpio);
+	retval = request_irq(chip->vooc_gpio.mcu_ctrl_cp_irq, irq_mcu_ctrl_cp_handler, IRQF_TRIGGER_FALLING
+			| IRQF_TRIGGER_RISING | IRQF_ONESHOT, "mcu_ctrl_cp", chip);
+	if (retval < 0) {
+		chg_err("request mcu_ctrl_cp irq failed.\n");
+	}
+	mcu_ctrl_cp_status = 0;
+	}
+}
+
+void oplus_pps_eint_unregister(struct oplus_vooc_chip *chip)
+{
+	int retval = 0;
+	int level = 0;
+	printk("oplus_pps_eint_unregister\n");
+	if(mcu_ctrl_cp_status != 1){
+		printk("oplus_pps_eint_unregister222 \n");
+		free_irq(chip->vooc_gpio.mcu_ctrl_cp_irq, chip);
+		mcu_ctrl_cp_status = 1;
+	}
+
+set_gpio_fail:
+	usleep_range(1000, 1000);
+
+	pinctrl_select_state(chip->vooc_gpio.pinctrl,chip->vooc_gpio.gpio_mcu_ctrl_cp_sleep);
+	retval = gpio_direction_output(chip->vooc_gpio.mcu_ctrl_cp_gpio, 1);
+	printk("oplus_pps_eint_unregister mcu_ctrl_cp_gpio = 0x%x retval:%d\n",chip->vooc_gpio.mcu_ctrl_cp_gpio,retval);
+
+	level = gpio_get_value(chip->vooc_gpio.mcu_ctrl_cp_gpio);
+	printk("oplus_pps_eint_unregister level:%d\n",level);
+	if (level != 1) {
+		goto set_gpio_fail;
+	}
+}
+
+int oplus_pps_get_gpio_value(struct oplus_vooc_chip *chip)
+{
+	int level = 0;
+
+	level = gpio_get_value(chip->vooc_gpio.mcu_ctrl_cp_gpio);
+	return level;
 }
 

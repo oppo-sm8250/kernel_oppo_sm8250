@@ -1,21 +1,10 @@
-/**********************************************************************************
-* Copyright (c)  2008-2015  Guangdong OPLUS Mobile Comm Corp., Ltd
-* OPLUS_FEATURE_CHG_BASIC
-* Description: Charger IC management module for charger system framework.
-*                          Manage all charger IC and define abstarct function flow.
-**
-** Version: 1.0
-** Date created: 21:03:46, 05/04/2012
-** Author: Fuchun.Liao@BSP.CHG.Basic
-**
-** --------------------------- Revision History: ------------------------------------------------------------
-* <version>           <date>                <author>                            <desc>
-* Revision 1.0     2015-06-22        Fuchun.Liao@BSP.CHG.Basic         Created for new architecture from R9
-* Revision 1.1     2018-04-12        Fanhong.Kong@BSP.CHG.Basic        divided for svooc from oplus_vooc.c 
-************************************************************************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only  */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
-#ifndef _OPLUS_ADAPTER_H_
-#define _OPLUS_ADAPTER_H_
+//#ifndef _OPLUS_ADAPTER_H_
+//#define _OPLUS_ADAPTER_H_
 
 #include <linux/workqueue.h>
 #include <linux/version.h>
@@ -58,4 +47,4 @@ bool oplus_vooc_check_chip_is_null(void);
 void oplus_adapter_init(struct oplus_adapter_chip *chip);
 bool oplus_adapter_check_chip_is_null(void);
 
-#endif /* _OPLUS_ADAPTER_H_ */
+//#endif /* _OPLUS_ADAPTER_H_ */

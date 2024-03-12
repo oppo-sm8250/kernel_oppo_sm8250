@@ -1,14 +1,7 @@
-/**********************************************************************************
-* Copyright (c)  2017-2019  Guangdong OPLUS Mobile Comm Corp., Ltd
-* OPLUS_FEATURE_CHG_BASIC
-* Description: For short circuit battery check
-* Version   : 1.0
-* Date      : 2018-05-24
-* Author    : tongfeng.Huang@PhoneSW.BSP		   	
-* ------------------------------ Revision History: --------------------------------
-* <version>       <date>        	<author>              		<desc>
-* Revision 1.0    2018-05-24  	tongfeng.Huang@PhoneSW.BSP    		Created for new short IC
-***********************************************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only  */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #ifndef _OPLUS_SHORT_IC_H_
 #define _OPLUS_SHORT_IC_H_

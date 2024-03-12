@@ -1,18 +1,9 @@
-/**********************************************************************************
-* Copyright (c)  2017-2019  Guangdong OPLUS Mobile Comm Corp., Ltd
-* OPLUS_FEATURE_CHG_BASIC
-* Description: For short circuit battery check
-* Version   : 1.0
-* Date      : 2017-10-01
-* Author    : SJC@PhoneSW.BSP		   	
-* ------------------------------ Revision History: --------------------------------
-* <version>       <date>        	<author>              		<desc>
-* Revision 1.0    2017-10-01  	SJC@PhoneSW.BSP    		Created for new architecture
-***********************************************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only  */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 #ifndef _OPLUS_BATTERY_H_
 #define _OPLUS_BATTERY_H_
-
-#include "oplus_charger.h"
 
 #define BAD_CONFIG_FILE		"/data/oplus/psw/bad_bat_config.ini"
 #define ERR_CODE_FILE		"/data/oplus/psw/bad_bat_err_code.ini"

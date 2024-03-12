@@ -1,19 +1,7 @@
-/************************************************************************************
-** File:  \\192.168.144.3\Linux_Share\12015\ics2\development\mediatek\custom\oplus77_12015\kernel\battery\battery
-** OPLUS_FEATURE_CHG_BASIC
-** Copyright (C), 2008-2012, OPLUS Mobile Comm Corp., Ltd
-** 
-** Description: 
-**      for dc-dc sn111008 charg
-** 
-** Version: 1.0
-** Date created: 21:03:46,05/04/2012
-** Author: Fanhong.Kong@ProDrv.CHG
-** 
-** --------------------------- Revision History: ------------------------------------------------------------
-* <version>       <date>        <author>              			<desc>
-* Revision 1.0    2015-06-22    Fanhong.Kong@ProDrv.CHG   		Created for new architecture
-************************************************************************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only  */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 
 #ifndef __OPLUS_MP2650_H__
@@ -24,8 +12,10 @@
 
 #include <linux/power_supply.h>
 #ifdef CONFIG_OPLUS_CHARGER_MTK
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0))
 #include <mt-plat/charging.h>
 #include <mt-plat/battery_meter.h>
+#endif
 #else /* CONFIG_OPLUS_CHARGER_MTK */
 
 #endif /* CONFIG_OPLUS_CHARGER_MTK */
@@ -158,6 +148,7 @@
 #define REG07_MP2650_OTG_CURRENT_LIMIT_STEP                    250    //default 3A
 #define REG07_MP2650_OTG_CURRENT_LIMIT_1A                      BIT(2)
 #define REG07_MP2650_OTG_CURRENT_LIMIT_1250MA			(BIT(2) | BIT(0))
+#define REG07_MP2650_OTG_CURRENT_LIMIT_1500MA			(BIT(2) | BIT(1))
 
 #define REG07_MP2650_PRECHARGE_THRESHOLD_MASK                  (BIT(5) | BIT(4))
 #define REG07_MP2650_PRECHARGE_THRESHOLD_6600MV                0
@@ -557,12 +548,28 @@
 #define REG2829_MP2650_DISCHARGE_CURRENT_OFFSET                0
 #define REG2829_MP2650_SDISCHARGE_CURRENT_STEP                 12.5    //12.5mA
 
+
+/* Address:36h */
+#define REG36_MP2650_ADDRESS                                 0x36
+
+#define REG36_MP2650_ASYNC_MODE_MASK                         BIT(6)
+#define REG36_MP2650_ASYNC_MODE_DISABLE                      BIT(6)
+#define REG36_MP2650_ASYNC_MODE_ENABLE                       0
+
+
+#define REG2D_MP2650_ADDRESS                                 0x2D
 #define REG2F_MP2650_ADDRESS                                 0x2F
+#define REG30_MP2650_ADDRESS                                 0x30
+#define REG30_MP2650_OPTION_MASK					(BIT(3))
 #define REG31_MP2650_ADDRESS                                 0x31
+#define REG33_MP2650_ADDRESS                                 0x33
+#define REG36_MP2650_ADDRESS                                 0x36
 #define REG37_MP2650_ADDRESS                                 0x37
 #define REG39_MP2650_ADDRESS                                 0x39
-
+#define REG3F_MP2650_ADDRESS                                 0x3F
 #define REG53_MP2650_ADDRESS                                 0x53
+#define REG3E_MP2650_ADDRESS                                 0x3E
+
 
 enum {
 	OVERTIME_AC = 0,
@@ -586,6 +593,7 @@ struct chip_mp2650 {
         struct pinctrl_state    *mps_otg_en_default;
 
         atomic_t                    charger_suspended;
+        bool                    probe_flag;
 };
 
 struct oplus_chg_operations *  oplus_get_chg_ops(void);
@@ -621,9 +629,31 @@ extern int mp2650_otg_wait_vbus_decline(void);
 extern void mp2650_dump_registers(void);
 extern int mp2650_set_voltage_slew_rate(int value);
 #ifdef CONFIG_OPLUS_CHARGER_MTK
+extern int battery_meter_get_charger_voltage(void);
+extern void oplus_mt_power_off(void);
+extern int oplus_battery_meter_get_battery_voltage(void);
+extern int mp2650_otg_ilim_set(int ilim);
+extern int mt_power_supply_type_check(void);
+extern int mt_get_chargerid_volt(void);
+extern void mt_set_chargerid_switch_val(int value);
+extern int mt_get_chargerid_switch_val(void);
+extern int get_rtc_spare_oplus_fg_value(void);
+extern int set_rtc_spare_oplus_fg_value(int soc);
+extern int oplus_chg_get_charger_subtype(void);
+extern int oplus_chg_set_pd_config(void);
+extern int oplus_chg_set_qc_config(void);
+extern int oplus_chg_enable_qc_detect(void);
+extern int oplus_chg_get_pd_type(void);
+extern int oplus_chg_set_pps_config(int vbus_mv, int ibus_ma);
+extern u32 oplus_chg_get_pps_status(void);
+extern int oplus_chg_pps_get_max_cur(int vbus_mv);
+extern bool oplus_mt_get_vbus_status(void);
+extern bool oplus_check_pdphy_ready(void);
+extern void oplus_set_typec_cc_open(void);
 #else /* CONFIG_OPLUS_CHARGER_MTK */
 extern int qpnp_get_battery_voltage(void);
 extern int opchg_get_charger_type(void) ;
+extern int opchg_get_real_charger_type(void);
 extern int smbchg_get_chargerid_switch_val(void);
 extern void smbchg_set_chargerid_switch_val(int value);
 extern int smbchg_get_chargerid_volt(void);
@@ -636,8 +666,12 @@ bool oplus_pmic_check_chip_is_null(void);
 extern int oplus_chg_get_charger_subtype(void);
 extern int oplus_chg_set_pd_config(void);
 extern int oplus_chg_set_qc_config(void);
-extern bool oplus_sm8150_get_pd_type(void);
+extern int oplus_sm8150_get_pd_type(void);
 extern int oplus_chg_enable_qc_detect(void);
+extern void oplus_get_usbtemp_volt(struct oplus_chg_chip *chip);
+extern void oplus_set_typec_sinkonly(void);
+extern bool oplus_usbtemp_condition(void);
+extern int oplus_set_bcc_curr_to_voocphy(int bcc_curr);
 extern int mp2650_otg_ilim_set(int ilim);
 extern int mp2650_get_vbus_voltage(void);
 extern void mp2650_wireless_set_mps_otg_en_val(int value);
@@ -648,10 +682,19 @@ extern int mp2650_set_mps_otg_current(void);
 extern int mp2650_input_current_limit_without_aicl(int current_ma);
 extern int mp2650_enable_buck_switch(void);
 extern int mp2650_disable_buck_switch(void);
+extern int mp2650_enable_async_mode(void);
+extern int mp2650_disable_async_mode(void);
 extern int mp2650_get_termchg_voltage(void);
 extern int mp2650_get_termchg_current(void);
 extern int mp2650_reset_charger(void);
 extern int mp2650_set_prechg_voltage_threshold(void);
 extern int mp2650_set_switching_frequency(void);
+extern int mp2650_set_prochot_psys_cfg(void);
 #endif/* CONFIG_OPLUS_CHARGER_MTK */
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+int mp2650_driver_init(void);
+void mp2650_driver_exit(void);
 #endif
+
+#endif /*__OPLUS_MP2650_H__*/

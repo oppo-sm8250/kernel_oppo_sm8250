@@ -1,24 +1,12 @@
-/************************************************************************************
-** File:  \\192.168.144.3\Linux_Share\12015\ics2\development\mediatek\custom\oplus77_12015\kernel\battery\battery
-** OPLUS_FEATURE_CHG_BASIC
-** Copyright (C), 2008-2012, OPLUS Mobile Comm Corp., Ltd
-**
-** Description:
-**          for dc-dc sn111008 charg
-**
-** Version: 1.0
-** Date created: 21:03:46, 05/04/2012
-** Author: Fanhong.Kong@ProDrv.CHG
-**
-** --------------------------- Revision History: ------------------------------------------------------------
-* <version>           <date>                <author>                           <desc>
-* Revision 1.0        2015-06-22        Fanhong.Kong@ProDrv.CHG          Created for new architecture
-************************************************************************************************************/
+/* SPDX-License-Identifier: GPL-2.0-only  */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #ifndef __OPLUS_BQ27541_H__
 #define __OPLUS_BQ27541_H__
 
-
+#include "../oplus_gauge.h"
 #define OPLUS_USE_FAST_CHARGER
 #define DRIVER_VERSION			"1.1.0"
 
@@ -49,7 +37,7 @@
 #define BQ27541_REG_TTECP		0x26
 #define BQ27541_REG_INTTEMP		0x28
 #define BQ27541_REG_CC			0x2a
-#define BQ27541_REG_SOH			0x28
+#define BQ27541_REG_SOH			0x2E
 #define BQ27541_REG_SOC			0x2c
 #define BQ27541_REG_NIC			0x2e
 #define BQ27541_REG_ICR			0x30
@@ -108,6 +96,19 @@
 #define BQ27411_REG_SOC				0x1c
 #define BQ27411_REG_INTTEMP			0x1e
 #define BQ27411_REG_SOH				0x20
+#define BQ27411_REG_FC			0x0e //add gauge reg print log start
+#define BQ27411_REG_QM			0x16
+#define BQ27411_REG_PD			0x1a
+#define BQ27411_REG_RCU			0x28
+#define BQ27411_REG_RCF			0x2a
+#define BQ27411_REG_FCU			0x2c
+#define BQ27411_REG_FCF			0x2e
+#define BQ27411_REG_SOU			0x30
+#define BQ27411_REG_DO0			0x66
+#define BQ27411_REG_DOE			0x68
+#define BQ27411_REG_TRM			0x6a
+#define BQ27411_REG_PC			0x6c
+#define BQ27411_REG_QS			0x6e //add gauge reg print log end 
 #define BQ27411_FLAG_DSC			BIT(0)
 #define BQ27411_FLAG_FC				BIT(9)
 #define BQ27411_CS_DLOGEN			BIT(15)
@@ -161,11 +162,13 @@
 #define DEVICE_TYPE_BQ27411			0x0421
 #define DEVICE_TYPE_BQ28Z610		0xFFA5
 #define DEVICE_TYPE_ZY0602			0x0602
+#define DEVICE_TYPE_ZY0603			0xA5FF
 
 #define DEVICE_BQ27541				0
 #define DEVICE_BQ27411				1
 #define DEVICE_BQ28Z610				2
 #define DEVICE_ZY0602				3
+#define DEVICE_ZY0603				4
 
 #define DEVICE_TYPE_FOR_VOOC_BQ27541		0
 #define DEVICE_TYPE_FOR_VOOC_BQ27411		1
@@ -182,7 +185,7 @@
 #define BQ27411_RESET_SUBCMD		0x0042
 #define SEAL_SUBCMD					0x0020
 
-#define BQ27411_CONFIG_MODE_POLLING_LIMIT	60
+#define BQ27411_CONFIG_MODE_POLLING_LIMIT	100
 #define BQ27411_CONFIG_MODE_BIT				BIT(4)
 #define BQ27411_BLOCK_DATA_CONTROL			0x61
 #define BQ27411_DATA_CLASS_ACCESS			0x003e
@@ -205,12 +208,13 @@
 /*----------------------- Bq27541 standard data commands-----------------------------------------*/
 #define BQ28Z610_REG_CNTL1					0x3e
 #define BQ28Z610_REG_CNTL2					0x60
-#define BQ28Z610_SEAL_POLLING_RETRY_LIMIT	10
+#define BQ28Z610_SEAL_POLLING_RETRY_LIMIT	100
 
 #define BQ28Z610_SEAL_STATUS				0x0054
 #define BQ28Z610_SEAL_SUBCMD				0x0030
 #define BQ28Z610_UNSEAL_SUBCMD1				0x0414
 #define BQ28Z610_UNSEAL_SUBCMD2				0x3672
+#define BQ28Z610_CNTL1_DA_CONFIG			0x46fd
 //#define BQ28Z610_SEAL_BIT		     (BIT(8) | BIT(9))
 #define BQ28Z610_SEAL_BIT				(BIT(0) | BIT(1))
 
@@ -262,6 +266,19 @@ struct cmd_address {
 	u8	reg_soc;
 	u8	reg_inttemp;
 	u8	reg_soh;
+	u8	reg_fc; //add gauge reg print log start
+	u8	reg_qm;
+	u8	reg_pd;
+	u8	reg_rcu;
+	u8	reg_rcf;
+	u8	reg_fcu;
+	u8	reg_fcf;
+	u8	reg_sou;
+	u8	reg_do0;
+	u8	reg_doe;
+	u8	reg_trm;
+	u8	reg_pc;
+	u8	reg_qs; //add gauge reg print log end
 	u16	flag_dsc;
 	u16	flag_fc;
 	u16	cs_dlogen;
@@ -355,6 +372,19 @@ struct chip_bq27541 {
 	int soh_pre;
 	int fcc_pre;
 	int rm_pre;
+	int fc_pre; //add gauge reg print log start
+	int qm_pre;
+	int pd_pre;
+	int rcu_pre;
+	int rcf_pre;
+	int fcu_pre;
+	int fcf_pre;
+	int sou_pre;
+	int do0_pre;
+	int doe_pre;
+	int trm_pre;
+	int pc_pre;
+	int qs_pre; //add gauge reg print log end
 	int device_type;
 	int device_type_for_vooc;
 	struct cmd_address cmd_addr;
@@ -365,6 +395,8 @@ struct chip_bq27541 {
 	int batt_cell_min_vol;
 	int max_vol_pre;
 	int min_vol_pre;
+	int pre_balancing_config;
+	int pre_balancing_count;
 	/*struct  delayed_work		hw_config;*/
 
 	int opchg_swtich1_gpio;
@@ -387,13 +419,26 @@ struct chip_bq27541 {
 
 	bool modify_soc_smooth;
 	bool modify_soc_calibration;
+
+	bool allow_reading;
+	bool wlchg_started;
+
+	bool battery_full_param;//only for wite battery full param in guage dirver probe on 7250 platform
+	int sha1_key_index;
 	bool batt_bq28z610;
+	bool batt_zy0603;
 	bool bq28z610_need_balancing;
 	int bq28z610_device_chem;
+	int gauge_num;
+	struct mutex chip_mutex;
 	struct bq27541_authenticate_data *authenticate_data;
 	struct file_operations *authenticate_ops;
+	struct oplus_gauge_chip	*oplus_gauge;
 };
 
 extern bool oplus_gauge_ic_chip_is_null(void);
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+int bq27541_driver_init(void);
+void bq27541_driver_exit(void);
+#endif
 #endif  /* __OPLUS_BQ27541_H__ */

@@ -1,20 +1,7 @@
-/************************************************************************************
-** File:  \\192.168.144.3\Linux_Share\12015\ics2\development\mediatek\custom\oplus77_12015\kernel\battery\battery
-** OPLUS_FEATURE_CHG_BASIC
-** Copyright (C), 2008-2012, OPLUS Mobile Comm Corp., Ltd
-**
-** Description:
-**          for dc-dc sn111008 charg
-**
-** Version: 1.0
-** Date created: 21:03:46, 05/04/2012
-** Author: Fanhong.Kong@ProDrv.CHG
-**
-** --------------------------- Revision History: ------------------------------------------------------------
-* <version>           <date>                <author>                                <desc>
-* Revision 1.0        2015-06-22        Fanhong.Kong@ProDrv.CHG            Created for new architecture
-* Revision 1.1        2016-05-09        wenbin.liu@SW.Bsp.Driver           Modify for code review
-************************************************************************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 
 #define VOOC_MCU_STM8S
 
@@ -426,7 +413,7 @@ update_fw:
 		/*rc = i2c_smbus_write_i2c_block_data(chip->client, 0x01, 2, &addr_buf[0]);*/
 		rc = oplus_vooc_i2c_write(chip->client, 0x01, 2, &addr_buf[0]);
 		if (rc < 0) {
-			chg_err(" stm8s_update_fw, i2c_write 0x01 error\n");
+			chg_err(" stm8s_update_fw, i2c_write 0x01 error [i=%d]\n", i);
 			goto update_fw_err;
 		}
 
@@ -540,6 +527,7 @@ static int stm8s_get_fw_verion_from_ic(struct oplus_vooc_chip *chip)
 static int stm8s_fw_check_then_recover(struct oplus_vooc_chip *chip)
 {
 	int update_result = 0;
+	int try_count = 5;
 	int ret = 0;
 
 	if (!chip->firmware_data) {
@@ -558,13 +546,26 @@ static int stm8s_fw_check_then_recover(struct oplus_vooc_chip *chip)
 		opchg_set_clock_active(chip);
 		chip->mcu_boot_by_gpio = true;
 		msleep(10);
-		opchg_set_reset_active(chip);
+		opchg_set_reset_active_force(chip);
 		chip->mcu_update_ing = true;
 		msleep(2500);
 		chip->mcu_boot_by_gpio = false;
 		opchg_set_clock_sleep(chip);
 		if (stm8s_fw_check_frontline(chip) == FW_CHECK_FAIL || stm8s_fw_check_lastline(chip) == FW_CHECK_FAIL) {
-			stm8s_fw_update(chip);
+			do {
+				update_result = stm8s_fw_update(chip);
+				if (!update_result)
+					break;
+				opchg_set_clock_active(chip);
+				chip->mcu_boot_by_gpio = true;
+				msleep(10);
+				chip->mcu_update_ing = false;
+				opchg_set_reset_active_force(chip);
+				chip->mcu_update_ing = true;
+				msleep(2500);
+				chip->mcu_boot_by_gpio = false;
+				opchg_set_clock_sleep(chip);
+			} while ((update_result) && (--try_count > 0));
 		} else {
 			chip->vooc_fw_check = true;
 			chg_debug("  fw check ok\n");
@@ -660,10 +661,17 @@ static ssize_t vooc_fw_check_read(struct file *filp,
 	return (len < count ? len : count);
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 static const struct file_operations vooc_fw_check_proc_fops = {
 	.read = vooc_fw_check_read,
 	.llseek = noop_llseek,
 };
+#else
+static const struct proc_ops vooc_fw_check_proc_fops = {
+	.proc_read = vooc_fw_check_read,
+	.proc_lseek = noop_llseek,
+};
+#endif
 
 static int init_proc_vooc_fw_check(void)
 {
@@ -713,8 +721,6 @@ static int stm8s_driver_probe(struct i2c_client *client,
 	chip->vooc_fw_check = false;
 	mutex_init(&chip->pinctrl_mutex);
 
-/* wenbin.liu@BSP.CHG.Vooc, 2016/10/20 
-**    Modify for vooc batt 4.40   */
 	oplus_vooc_fw_type_dt(chip);
 	if (chip->batt_type_4400mv) {
 		chip->firmware_data = Stm8s_firmware_data_4400mv;
@@ -802,6 +808,11 @@ static int stm8s_driver_probe(struct i2c_client *client,
 			chip->fw_data_count = sizeof(Stm8s_fw_data_4400_vooc_ffc_15c_18041);
 			chip->fw_data_version = Stm8s_fw_data_4400_vooc_ffc_15c_18041[chip->fw_data_count - 4];
 			break;
+		case VOOC_FW_TYPE_STM8S_4450_VOOC_FFC_5V6A_19365:
+			chip->firmware_data = Stm8s_fw_data_4450_VOOC_FFC_5V6A_19365;
+			chip->fw_data_count = sizeof(Stm8s_fw_data_4450_VOOC_FFC_5V6A_19365);
+			chip->fw_data_version = Stm8s_fw_data_4450_VOOC_FFC_5V6A_19365[chip->fw_data_count - 4];
+			break;
 		case VOOC_FW_TYPE_STM8S_4450_FFC_SHORT_RESET_WINDOW:
 			chip->firmware_data = Stm8s_fw_data_4450_ffc_ShortResetWindow;
 			chip->fw_data_count = sizeof(Stm8s_fw_data_4450_ffc_ShortResetWindow);
@@ -826,6 +837,21 @@ static int stm8s_driver_probe(struct i2c_client *client,
 			chip->firmware_data = Stm8s_fw_data_4400_svooc_6500MA;
 			chip->fw_data_count = sizeof(Stm8s_fw_data_4400_svooc_6500MA);
 			chip->fw_data_version = Stm8s_fw_data_4400_svooc_6500MA[chip->fw_data_count - 4];
+			break;
+		case VOOC_FW_TYPE_STM8S_4450_SVOOC_6500MA:
+			chip->firmware_data = Stm8s_fw_data_4450_svooc_6500MA;
+			chip->fw_data_count = sizeof(Stm8s_fw_data_4450_svooc_6500MA);
+			chip->fw_data_version = Stm8s_fw_data_4450_svooc_6500MA[chip->fw_data_count - 4];
+			break;
+		case VOOC_FW_TYPE_STM8S_4450_SVOOC_6500MA_FV4490:
+			chip->firmware_data = Stm8s_fw_data_4450_svooc_6500MA_fv4490;
+			chip->fw_data_count = sizeof(Stm8s_fw_data_4450_svooc_6500MA_fv4490);
+			chip->fw_data_version = Stm8s_fw_data_4450_svooc_6500MA_fv4490[chip->fw_data_count - 4];
+			break;
+		case VOOC_FW_TYPE_STM8S_4450_SVOOC_6500MA_disableI2C:
+			chip->firmware_data = Stm8s_fw_data_4450_svooc_6500MA_disableI2C;
+			chip->fw_data_count = sizeof(Stm8s_fw_data_4450_svooc_6500MA_disableI2C);
+			chip->fw_data_version = Stm8s_fw_data_4450_svooc_6500MA_disableI2C[chip->fw_data_count - 4];
 			break;
 		case VOOC_FW_TYPE_STM8S_4400_SVOOC_6500MA_8250:
 			chip->firmware_data = Stm8s_fw_data_4400_svooc_6500MA_8250;
@@ -894,7 +920,7 @@ static const struct i2c_device_id stm8s_id[] = {
 	{ "stm8s-fastcg", 0},
 	{},
 };
-MODULE_DEVICE_TABLE(i2c, pic16f_id);
+MODULE_DEVICE_TABLE(i2c, stm8s_id);
 
 struct i2c_driver stm8s_i2c_driver = {
 	.driver	= {
@@ -907,7 +933,11 @@ struct i2c_driver stm8s_i2c_driver = {
 	.id_table = stm8s_id,
 };
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 static int __init stm8s_subsys_init(void)
+#else
+int stm8s_subsys_init(void)
+#endif
 {
 	int ret = 0;
 	chg_debug(" init start\n");
@@ -926,7 +956,9 @@ static void  pic16f_exit(void)
 	i2c_del_driver(&pic16f_i2c_driver);
 }
 */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 subsys_initcall(stm8s_subsys_init);
+#endif
 MODULE_DESCRIPTION("Driver for oplus vooc stm8s fast mcu");
 MODULE_LICENSE("GPL v2");
 
