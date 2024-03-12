@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, Oplus. All rights reserved.
  */
 
 #include "cam_ois_dev.h"
@@ -10,11 +11,11 @@
 #include "cam_debug_util.h"
 #include <linux/dma-contiguous.h>
 
-#ifndef VENDOR_EDIT
-#define VENDOR_EDIT
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
 #endif
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 /*add by lixin@Camera 20200520, for OIS */
 #include "onsemi_fw/fw_download_interface.h"
 #endif

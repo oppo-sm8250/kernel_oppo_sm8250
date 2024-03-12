@@ -726,10 +726,16 @@ static int cam_sync_handle_deregister_user_payload(
 
 	list_for_each_entry_safe(user_payload_kernel, temp,
 				&row->user_payload_list, list) {
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
 		if (user_payload_kernel->payload_data[0] ==
 				userpayload_info.payload[0] &&
 				user_payload_kernel->payload_data[1] ==
 				userpayload_info.payload[1]) {
+#else
+		/* wangyongwu@Camera , 2020/1/12 , merge qcom patch to fix UpdateDependency crash, case:04229960 */
+		if (user_payload_kernel->payload_data[0] ==
+				userpayload_info.payload[0]) {
+#endif
 			list_del_init(&user_payload_kernel->list);
 			kfree(user_payload_kernel);
 		}

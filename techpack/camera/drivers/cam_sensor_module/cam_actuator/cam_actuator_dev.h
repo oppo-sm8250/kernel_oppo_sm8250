@@ -118,6 +118,7 @@ struct cam_actuator_ctrl_t {
 	uint32_t open_cnt;
 	#ifdef VENDOR_EDIT
 	int32_t actuator_power_enable;
+	bool need_check_actuator_data;
 	#endif
 };
 

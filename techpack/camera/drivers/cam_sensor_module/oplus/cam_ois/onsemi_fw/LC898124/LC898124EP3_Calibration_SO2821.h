@@ -20,19 +20,19 @@
  #define 	MARGIN			(0x0400		)	// Margin
  #define 	BIAS_RANGE_XY 	(0x6400		)	// 40%	SO2821
  #define	SINE_OFFSET		(0x00074528 )	/* Freq * 80000000h / 18.0288kHz   : 4Hz */
- #define	SINE_GAIN		(0x7FFFFFFF	)	/*Â“Ã¼Â—ÃSineÂ”gÂ‚ÄšÂÄ¹Â‘ÄºÂ“dÂ—Å¹*/
+ #define	SINE_GAIN		(0x7FFFFFFF	)	/*“ü—ÍSine”g‚ÌÅ‘å“d—¬*/
 #else	//HALLADJ_FULLCURRENT
  #define 	MARGIN			(0x1000		)	// VDD-Margin,GND-MARGIN
  #define 	BIAS_RANGE_XY	(0x8CCC		)	// 55%
  #define	SINE_OFFSET		(0x00074528 )	/* Freq * 80000000h / 18.0288kHz   : 4Hz */ 
- #define	SINE_GAIN		(0x4D780000	)	/*Â“Ã¼Â—ÃSineÂ”gÂ‚ÄšÂÄ¹Â‘ÄºÂ“dÂ—Å¹ 115mA (115mA*7fff/190mA)  190mA(min) */
+ #define	SINE_GAIN		(0x4D780000	)	/*“ü—ÍSine”g‚ÌÅ‘å“d—¬ 115mA (115mA*7fff/190mA)  190mA(min) */
  
  
 #if 0
  #define 	MARGIN_F		(0x0300		)	// Margin
  #define 	BIAS_RANGE_XY_F	(0xB332		)	// 70%
  #define	SINE_OFFSET_F	(0x00122CE4 )	/* Freq * 80000000h / 18.0288kHz   : 10Hz */
- #define	SINE_GAIN_F		(0x7FFFFFFF	)	/*Â“Ã¼Â—ÃSineÂ”gÂ‚ÄšÂÄ¹Â‘ÄºÂ“dÂ—Å¹*/
+ #define	SINE_GAIN_F		(0x7FFFFFFF	)	/*“ü—ÍSine”g‚ÌÅ‘å“d—¬*/
 #endif
  
  

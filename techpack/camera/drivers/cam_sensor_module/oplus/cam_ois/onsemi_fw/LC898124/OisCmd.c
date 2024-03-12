@@ -36,10 +36,10 @@
 //****************************************************
 //	LC898124 calibration parameters 
 //****************************************************
-#if (((SELECT_VENDOR&0x01) == 0x01) || ((SELECT_VENDOR&0x80) == 0x80))				// SEMCO or Oneplus
+#if (((SELECT_VENDOR&0x01) == 0x01) || ((SELECT_VENDOR&0x80) == 0x80))				// SEMCO or Oplus
 	#include 	"LC898124EP3_Calibration_SO2821.h"
 #endif
-#if (((SELECT_VENDOR&0x02) == 0x02) || ((SELECT_VENDOR&0x80) == 0x80))			// OFILM or Oneplus
+#if (((SELECT_VENDOR&0x02) == 0x02) || ((SELECT_VENDOR&0x80) == 0x80))			// OFILM or Oplus
  	#include 	"LC898124EP3_Calibration_M12337.h"
 #endif	
 //****************************************************
@@ -134,14 +134,12 @@ void	TneFin( ADJ_LOPGAN* ptr );
 #define		BIAS_HLMT		(0xBF000000 )
 #define		BIAS_LLMT		(0x20000000 )
 
-//#ifdef	ZERO_SERVO
 /************** posture check ************/
 #define		SENSITIVITY		4096						// LSB/g
 #define		PSENS_MARG		(SENSITIVITY / 4)			// 1/4g
 #define		POSTURETH_P		(SENSITIVITY - PSENS_MARG)	// LSB/g
 #define		POSTURETH_M		(-POSTURETH_P)				// LSB/g
 /************** posture check ************/
-//#endif	//ZERO_SERVO
 
 
 
@@ -200,7 +198,7 @@ UINT32	TneGvc( void )
 	INT32			SlMeasureAveValueA , SlMeasureAveValueB ;
 	
 	
-	//Âπ≥ÂùáÂÄ§Ê∏¨ÂÆö
+	//ïΩãœílë™íË
 	
 	MesFil124( THROUGH ) ;					// Set Measure Filter
 
@@ -227,7 +225,7 @@ TRACE("GY_AVEOFT = %08xh \n",(unsigned int)SlMeasureAveValueB) ;
 	
 	SlMeasureAveValueA = ( SlMeasureAveValueA >> 16 ) & 0x0000FFFF ;
 	SlMeasureAveValueB = ( SlMeasureAveValueB >> 16 ) & 0x0000FFFF ;
-	// EP1„Åß„ÅØÂèçËª¢Âá¶ÁêÜ„Åó„Å™„ÅÑ„ÄÇ
+	// EP1Ç≈ÇÕîΩì]èàóùÇµÇ»Ç¢ÅB
 //	SlMeasureAveValueA = 0x00010000 - SlMeasureAveValueA ;
 //	SlMeasureAveValueB = 0x00010000 - SlMeasureAveValueB ;
 	
@@ -440,13 +438,13 @@ UINT32	TneRun( void )
 	// Select parameter
 	if( GetInfomationAfterDownload( &Info ) != 0){
 		return( EXE_ERROR );
-#if (((SELECT_VENDOR&0x01) == 0x01) || ((SELECT_VENDOR&0x80) == 0x80))				// SEMCO or Oneplus
+#if (((SELECT_VENDOR&0x01) == 0x01) || ((SELECT_VENDOR&0x80) == 0x80))				// SEMCO or Oplus
 
 	}else if( Info.ActType == ACT_SO2821 ) {
 		HallPtr = 		(ADJ_HALL*)&SO2821_HallCalParameter;
 		LopgainPtr = (ADJ_LOPGAN* )&SO2821_LoopGainParameter;
 #endif
-#if (((SELECT_VENDOR&0x02) == 0x02) || ((SELECT_VENDOR&0x80) == 0x80))			// OFILM or Oneplus
+#if (((SELECT_VENDOR&0x02) == 0x02) || ((SELECT_VENDOR&0x80) == 0x80))			// OFILM or Oplus
 	}else if( Info.ActType == ACT_M12337_A1 ){
 		HallPtr = (ADJ_HALL*)&M12337_HallCalParameter;
 		LopgainPtr = (ADJ_LOPGAN* )&M12337_LoopGainParameter;
@@ -463,7 +461,6 @@ TRACE("Act:M12337\n") ;
 //			HallPtr = (ADJ_HALL*)&SO_HallCalParameter_F;
 //			UlFinSts = HallAdj( HallPtr );
 //		}
-//	}else{
 		if( ((UlFinSts & EXE_HXADJ) == EXE_HXADJ) || ((UlFinSts & EXE_HYADJ) == EXE_HYADJ) ) return ( UlFinSts );
 //	}
 
@@ -660,12 +657,12 @@ UINT32	TneCen( UINT8 UcTneAxs, ADJ_HALL* ptr, UINT8 UcSrvSwtich )
 	}
 	BeforeControl=0;	
 #if  ( (SELECT_VENDOR&0x02) == 0x02 )	//JAHWA
-	UcTofRst	= SUCCESS ;				/* Êö´ÂÆö„ÅßOK„Å´„Åô„Çã */
+	UcTofRst	= SUCCESS ;				/* ébíËÇ≈OKÇ…Ç∑ÇÈ */
 	while ( UlTneRst && (UINT32)UcTmeOut )
 	{
 		if ( UcTmeOut == 1 && (UcSrvSwtich != ON) ){
 TRACE("1st PtoP =%08x \n", ((UINT16)0xFFFF - (StTneVal.StDwdVal.UsHigVal + StTneVal.StDwdVal.UsLowVal)) ) ;	
-			// ÂàùÂõû„ÅÆPtp„ÅßÊó¢„Å´Target Range„Å´ÂÖ•„Å£„Å¶„ÅÑ„Çã„Å™„ÇâÁµÇ‰∫Ü„ÄÇ
+			// èââÒÇÃPtpÇ≈ä˘Ç…Target RangeÇ…ì¸Ç¡ÇƒÇ¢ÇÈÇ»ÇÁèIóπÅB
 			if((( (UINT16)0xFFFF - ( StTneVal.StDwdVal.UsHigVal + StTneVal.StDwdVal.UsLowVal )) < ptr->TargetMax )
 			&& (( (UINT16)0xFFFF - ( StTneVal.StDwdVal.UsHigVal + StTneVal.StDwdVal.UsLowVal )) > ptr->TargetMin ) ) {
 				UlTneRst	= (UINT32)SUCCESS ;
@@ -674,7 +671,7 @@ TRACE("1st PtoP =%08x \n", ((UINT16)0xFFFF - (StTneVal.StDwdVal.UsHigVal + StTne
 		}
 
 		if( UcTofRst == FAILURE ) {
-			UcTofRst	= SUCCESS ;				/* Êö´ÂÆö„ÅßOK„Å´„Åô„Çã */
+			UcTofRst	= SUCCESS ;				/* ébíËÇ≈OKÇ…Ç∑ÇÈ */
 		}else{
 			UlValNow = ( (UINT16)0xFFFF - ( StTneVal.StDwdVal.UsHigVal + StTneVal.StDwdVal.UsLowVal ));
 			if( UcTneAxs == X_DIR )			UsValNow = StAdjPar.StHalAdj.UsHlxMxa;
@@ -740,7 +737,7 @@ TRACE("new BIAS=%04x \n", UsBiasVal) ;
 #else
 
 	TneOff( StTneVal, UcTneAxs ) ;
-	UcTofRst	= SUCCESS ;				/* Êö´ÂÆö„ÅßOK„Å´„Åô„Çã */
+	UcTofRst	= SUCCESS ;				/* ébíËÇ≈OKÇ…Ç∑ÇÈ */
 
 	while ( UlTneRst && (UINT32)UcTmeOut )
 	{
@@ -771,7 +768,6 @@ TRACE("	No = %04d (bias count up)\n", UcTmeOut ) ;
 			UcTofRst	= FAILURE ;
 //			if( UcTneAxs == X_DIR ) {
 //				RamRead32A( StCaliData_UiHallBias_X , &UlBiasVal ) ;
-//			}else if( UcTneAxs == Y_DIR ){
 //				RamRead32A( StCaliData_UiHallBias_Y , &UlBiasVal ) ;
 //			}
 //			if(UlBiasVal == 0x00000000){
@@ -1121,33 +1117,33 @@ void	SetSinWavePara( UINT8 UcTableVal ,  UINT8 UcMethodVal )
 	UlFreqDat = CucFreqVal[ UcTableVal ] ;	
 	
 	if( UcMethodVal == 255/*CIRCWAVE*/) {
-		RamWrite32A( SinWave_Phase	,	0x60000000 ) ;		// Ê≠£Âº¶Ê≥¢„ÅÆ‰ΩçÁõ∏Èáè
-		RamWrite32A( CosWave_Phase 	,	0x00000000 );		// Ê≠£Âº¶Ê≥¢„ÅÆ‰ΩçÁõ∏Èáè
+		RamWrite32A( SinWave_Phase	,	0x60000000 ) ;		// ê≥å∑îgÇÃà ëäó 
+		RamWrite32A( CosWave_Phase 	,	0x00000000 );		// ê≥å∑îgÇÃà ëäó 
 	}else{
-		RamWrite32A( SinWave_Phase	,	0x60000000 ) ;		// Ê≠£Âº¶Ê≥¢„ÅÆ‰ΩçÁõ∏Èáè
-		RamWrite32A( CosWave_Phase 	,	0x60000000 );		// Ê≠£Âº¶Ê≥¢„ÅÆ‰ΩçÁõ∏Èáè
+		RamWrite32A( SinWave_Phase	,	0x60000000 ) ;		// ê≥å∑îgÇÃà ëäó 
+		RamWrite32A( CosWave_Phase 	,	0x60000000 );		// ê≥å∑îgÇÃà ëäó 
 	}
 
-	if( UlFreqDat == 0xFFFFFFFF )			/* SineÊ≥¢‰∏≠Ê≠¢ */
+	if( UlFreqDat == 0xFFFFFFFF )			/* SineîgíÜé~ */
 	{
-		RamWrite32A( SinWave_Offset		,	0x00000000 ) ;									// Áô∫ÁîüÂë®Ê≥¢Êï∞„ÅÆ„Ç™„Éï„Çª„ÉÉ„Éà„ÇíË®≠ÂÆö
-		RamWrite32A( SinWave_Phase		,	0x60000000 ) ;									// Ê≠£Âº¶Ê≥¢„ÅÆ‰ΩçÁõ∏Èáè
+		RamWrite32A( SinWave_Offset		,	0x00000000 ) ;									// î≠ê∂é¸îgêîÇÃÉIÉtÉZÉbÉgÇê›íË
+		RamWrite32A( SinWave_Phase		,	0x60000000 ) ;									// ê≥å∑îgÇÃà ëäó 
 
-		RamWrite32A( CosWave_Offset		,	0x00000000 );									// Áô∫ÁîüÂë®Ê≥¢Êï∞„ÅÆ„Ç™„Éï„Çª„ÉÉ„Éà„ÇíË®≠ÂÆö
-		RamWrite32A( CosWave_Phase 		,	0x60000000 );									// Ê≠£Âº¶Ê≥¢„ÅÆ‰ΩçÁõ∏Èáè
+		RamWrite32A( CosWave_Offset		,	0x00000000 );									// î≠ê∂é¸îgêîÇÃÉIÉtÉZÉbÉgÇê›íË
+		RamWrite32A( CosWave_Phase 		,	0x60000000 );									// ê≥å∑îgÇÃà ëäó 
 
 		RamWrite32A( SinWaveC_Regsiter	,	0x00000000 ) ;									// Sine Wave Stop
-		SetTransDataAdr124( SinWave_OutAddr	,	0x00000000 ) ;		// Âá∫ÂäõÂÖà„Ç¢„Éâ„É¨„Çπ
-		SetTransDataAdr124( CosWave_OutAddr	,	0x00000000 );		// Âá∫ÂäõÂÖà„Ç¢„Éâ„É¨„Çπ
+		SetTransDataAdr124( SinWave_OutAddr	,	0x00000000 ) ;		// èoóÕêÊÉAÉhÉåÉX
+		SetTransDataAdr124( CosWave_OutAddr	,	0x00000000 );		// èoóÕêÊÉAÉhÉåÉX
 		RamWrite32A( HALL_RAM_HXOFF1		,	0x00000000 ) ;				// DelayRam Clear
 		RamWrite32A( HALL_RAM_HYOFF1		,	0x00000000 ) ;				// DelayRam Clear
 	}else{
-		RamWrite32A( SinWave_Offset		,	UlFreqDat ) ;									// Áô∫ÁîüÂë®Ê≥¢Êï∞„ÅÆ„Ç™„Éï„Çª„ÉÉ„Éà„ÇíË®≠ÂÆö
-		RamWrite32A( CosWave_Offset		,	UlFreqDat );									// Áô∫ÁîüÂë®Ê≥¢Êï∞„ÅÆ„Ç™„Éï„Çª„ÉÉ„Éà„ÇíË®≠ÂÆö
+		RamWrite32A( SinWave_Offset		,	UlFreqDat ) ;									// î≠ê∂é¸îgêîÇÃÉIÉtÉZÉbÉgÇê›íË
+		RamWrite32A( CosWave_Offset		,	UlFreqDat );									// î≠ê∂é¸îgêîÇÃÉIÉtÉZÉbÉgÇê›íË
 
 		RamWrite32A( SinWaveC_Regsiter	,	0x00000001 ) ;									// Sine Wave Start
-		SetTransDataAdr124( SinWave_OutAddr	,	(UINT32)HALL_RAM_HXOFF1 ) ;		// Âá∫ÂäõÂÖà„Ç¢„Éâ„É¨„Çπ
-		SetTransDataAdr124( CosWave_OutAddr	,	(UINT32)HALL_RAM_HYOFF1 ) ;		// Âá∫ÂäõÂÖà„Ç¢„Éâ„É¨„Çπ
+		SetTransDataAdr124( SinWave_OutAddr	,	(UINT32)HALL_RAM_HXOFF1 ) ;		// èoóÕêÊÉAÉhÉåÉX
+		SetTransDataAdr124( CosWave_OutAddr	,	(UINT32)HALL_RAM_HYOFF1 ) ;		// èoóÕêÊÉAÉhÉåÉX
 
 	}
 }
@@ -1255,7 +1251,7 @@ void	TneFin( ADJ_LOPGAN* ptr )
 			if( UlMinimumValueA >= abs(SlMeasureAveValueA) ) {
 				UlMinimumValueA = abs(SlMeasureAveValueA) ;
 				UsAdxMin = UsAdxOff ;
-				// ÂèéÊùü„ÇíÊó©„ÇÅ„Çã„Åü„ÇÅ„Å´„ÄÅÂá∫ÂäõÂÄ§„Å´ÊØî‰æã„Åï„Åõ„Çã
+				// é˚ë©ÇëÅÇﬂÇÈÇΩÇﬂÇ…ÅAèoóÕílÇ…î‰ó·Ç≥ÇπÇÈ
 				if( SlMeasureAveValueA > 0 )
 					UsAdxOff = (INT16)UsAdxOff + (SlMeasureAveValueA >> 17) + 1 ;
 				else
@@ -1272,7 +1268,7 @@ void	TneFin( ADJ_LOPGAN* ptr )
 			if( UlMinimumValueB >= abs(SlMeasureAveValueB) ) {
 				UlMinimumValueB = abs(SlMeasureAveValueB) ;
 				UsAdyMin = UsAdyOff ;
-				// ÂèéÊùü„ÇíÊó©„ÇÅ„Çã„Åü„ÇÅ„Å´„ÄÅÂá∫ÂäõÂÄ§„Å´ÊØî‰æã„Åï„Åõ„Çã
+				// é˚ë©ÇëÅÇﬂÇÈÇΩÇﬂÇ…ÅAèoóÕílÇ…î‰ó·Ç≥ÇπÇÈ
 				if( SlMeasureAveValueB > 0 )
 					UsAdyOff = (INT16)UsAdyOff + (SlMeasureAveValueB >> 17) + 1 ;
 				else
@@ -1511,7 +1507,7 @@ UINT16	TneADO( )
 //TRACE( "MAX AFTER Y\t=\t0x%04X\r\n", y_max_after ) ;
 //TRACE( "MIN AFTER Y\t=\t0x%04X\r\n", y_min_after ) ;
 
-	// „Éû„Éº„Ç∏„É≥„Åå„Åæ„Å£„Åü„Åè„Å™„ÅÑ„ÇÇ„ÅÆ„ÅØ‰∏çËâØ„Å®„Åô„Çã
+	// É}Å[ÉWÉìÇ™Ç‹Ç¡ÇΩÇ≠Ç»Ç¢Ç‡ÇÃÇÕïsó«Ç∆Ç∑ÇÈ
 	if (x_max_after < gout_x) {
 		UsSts = 1 ;
 	}
@@ -1525,7 +1521,7 @@ UINT16	TneADO( )
 		UsSts = 4 ;
 	}
 	else {
-		// „Éû„Éº„Ç∏„É≥„Ç™„Éº„Éê„Éº„Åß„ÅÇ„Çå„Å∞„ÄÅADOFFSET„ÇíÊõ¥Êñ∞„Åô„Çã
+		// É}Å[ÉWÉìÉIÅ[ÉoÅ[Ç≈Ç†ÇÍÇŒÅAADOFFSETÇçXêVÇ∑ÇÈ
 		if (x_max_after < gout_x_marginp) {
 			x_off -= (gout_x_marginp - x_max_after);
 //TRACE( "UPDATE ADOFF X\t=\t0x%04X\r\n", x_off ) ;
@@ -1697,7 +1693,7 @@ UINT32	TneZeroServo( UINT8 ucposture , float DegreeGap )
 			RamWrite32A( CMD_ZSRV_MODE , ZSRV_DISABLE );
 		}
 		
-		//Âπ≥ÂùáÂÄ§Ê∏¨ÂÆö
+		//ïΩãœílë™íË
 			MesFil124( THROUGH ) ;					// Set Measure Filter
 
 			SlMeasureParameterNum	=	ZERO_SERVO_NUM ;					// Measurement times
@@ -1782,7 +1778,7 @@ TRACE("VAL(H,A) pos = \t%08xh\t%08xh\t%d \n",(int)SlMeasureAveValueA, (int)SlMea
 			}
 	}else{
 		switch(ucposture){
-		case 0x80:	/* Ë®àÁÆó */
+		case 0x80:	/* åvéZ */
 			
 			if( UlPostureSt == 0x05L ){
 				// ( Xhp ) / ( Xap)
@@ -1967,7 +1963,7 @@ UINT32	TneAvc( UINT8 ucposture )
 
 	UlRsltSts = EXE_END ;
 	if( ucposture < 0x7f ){
-		//Âπ≥ÂùáÂÄ§Ê∏¨ÂÆö
+		//ïΩãœílë™íË
 		MesFil124( THROUGH ) ;					// Set Measure Filter
 
 		SlMeasureParameterNum	=	ACCLOF_NUM ;					// Measurement times
@@ -2043,7 +2039,7 @@ TRACE("POS14(X,Y,Z) st = \t%08xh\t%08xh\t%08xh\t%08xh \n", (unsigned int)StPosOf
 		}
 	}else{
 		switch(ucposture){
-		case 0x80:	/* Ë®àÁÆó */
+		case 0x80:	/* åvéZ */
 
 			if(StPosOff124.UlAclOfSt == 0x3fL ){
 				/*X offset*/
@@ -2159,7 +2155,7 @@ UINT8	Actuator_Moving( UINT8 uc_axis, Act_Mov_t *pt_parameter, int *ul_readval )
 
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
-//+=  „Åì„Åì„Åã„ÇâËøΩÂä† by K.Otake                                                                     +=
+//+=  Ç±Ç±Ç©ÇÁí«â¡ by K.Otake                                                                     +=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //********************************************************************************
@@ -2717,7 +2713,7 @@ void	OIS_Pos_Correction_by_AF( UINT16	us_af_code )
 // Explanation		: Flash write linearity correction data function
 // History			: First edition
 //********************************************************************************
-#define N 7  /* „Éá„Éº„ÇøÊï∞ */
+#define N 7  /* ÉfÅ[É^êî */
 
 UINT8	CalcSetMizxAndLinearityData( mlLinearityValue *linval ,  mlMixingValue *mixval )
 {
@@ -2728,7 +2724,7 @@ UINT8	CalcSetMizxAndLinearityData( mlLinearityValue *linval ,  mlMixingValue *mi
 	UINT8		ans;
 	
 	// **************************************************
-	// ÊúÄÂ∞è2‰πóÊ≥ï
+	// ç≈è¨2èÊñ@
 	// **************************************************
 #ifdef __MIX_LIB_METHOD__		// TESTAPP library method
 	for (i=0; i<N; i++) {
@@ -2773,7 +2769,7 @@ TRACE("Xa = %f\n", Xa);
 TRACE("Ya = %f\n", Ya);
 
 	// **************************************************
-	// MIXING‰øÇÊï∞Ë®àÁÆó
+	// MIXINGåWêîåvéZ
 	// **************************************************
 TRACE("degreeX  = %f\n", -atan(Xa)*180/3.14159265358979323846 );
 TRACE("degreeY  = %f\n", +atan(Ya)*180/3.14159265358979323846 );
@@ -2794,11 +2790,11 @@ TRACE("degreeY  = %f\n", +atan(Ya)*180/3.14159265358979323846 );
     mixval->hy45y = +(cos(mixval->radianX) / cos(mixval->radianX - mixval->radianY));
     mixval->hy45x = +(sin(mixval->radianX) / cos(mixval->radianX - mixval->radianY));
 
-	mixval->hxsx = (unsigned char)abs(mixval->hx45x);                                     // >1„Å™„Çâ„Å∞„Ç∑„Éï„ÉàÊï∞„Å®„Åó„Å¶Ë®≠ÂÆö
-	mixval->hysx = (unsigned char)abs(mixval->hy45y);                                     // >1„Å™„Çâ„Å∞„Ç∑„Éï„ÉàÊï∞„Å®„Åó„Å¶Ë®≠ÂÆö
+	mixval->hxsx = (unsigned char)abs(mixval->hx45x);                                     // >1Ç»ÇÁÇŒÉVÉtÉgêîÇ∆ÇµÇƒê›íË
+	mixval->hysx = (unsigned char)abs(mixval->hy45y);                                     // >1Ç»ÇÁÇŒÉVÉtÉgêîÇ∆ÇµÇƒê›íË
 
-    mixval->hx45x = mixval->hx45x / pow(2, (double)mixval->hxsx);        // „Ç∑„Éï„Éà„ÇíÂä†Âë≥„Åó„Å¶ÂÜçË®àÁÆó
-    mixval->hy45y = mixval->hy45y / pow(2, (double)mixval->hysx);        // „Ç∑„Éï„Éà„ÇíÂä†Âë≥„Åó„Å¶ÂÜçË®àÁÆó
+    mixval->hx45x = mixval->hx45x / pow(2, (double)mixval->hxsx);        // ÉVÉtÉgÇâ¡ñ°ÇµÇƒçƒåvéZ
+    mixval->hy45y = mixval->hy45y / pow(2, (double)mixval->hysx);        // ÉVÉtÉgÇâ¡ñ°ÇµÇƒçƒåvéZ
 
 TRACE("hx45x  = %f\n", mixval->hx45x);
 TRACE("hx45y  = %f\n", mixval->hx45y);
@@ -2818,7 +2814,7 @@ TRACE("hy45yL  = %08X\n", mixval->hy45yL);
 TRACE("hy45xL  = %08X\n", mixval->hy45xL);
 
 	// **************************************************
-	// RAM„Å´„Çª„ÉÉ„Éà„Åô„Çã
+	// RAMÇ…ÉZÉbÉgÇ∑ÇÈ
 	// **************************************************
 	RamWrite32A( HF_hx45x, mixval->hx45xL ) ; 
 	RamWrite32A( HF_hx45y, mixval->hx45yL ) ; 
@@ -2982,7 +2978,7 @@ UINT8 Read_InternalStatus_BMI260( void )
 
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
-//+=  „Åì„Åì„Åæ„Åß by K.Otake                                                                         +=
+//+=  Ç±Ç±Ç‹Ç≈ by K.Otake                                                                         +=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 //+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
 

@@ -25,9 +25,7 @@
 //****************************************************
 //	CUSTOMER NECESSARY CREATING FUNCTION LIST
 //****************************************************
-//#ifdef	TRNT
 extern 	INT_32 RamRead32A( UINT_16, void * );
-//#endif
 
 //********************************************************************************
 // Function Name 	: FlashUpload128
@@ -51,7 +49,7 @@ UINT_8 FlashUpload128( UINT_8 ModuleVendor, UINT_8 ActVer, UINT_8 MasterSlave, U
 	do {
 		if( (ptr->Index == ( ((UINT_16)ModuleVendor<<8) + ActVer)) && (ptr->FWType == FWType) && (ptr->MasterSlave == MasterSlave)) {
 
-			// UploadFileãŒ64Byteåˆ»ã¿ã«Paddingã•ã‚Œã¦ã„ãªã„ãªã‚‰ã°ã€Errorã€‚
+			// UploadFile‚ª64Byte‚Ý‚ÉPadding‚³‚ê‚Ä‚¢‚È‚¢‚È‚ç‚ÎAErrorB
 			if( ( ptr->SizeFromCode % 64 ) != 0 )	return (0xF1) ;
 
             if(!RamRead32A(0x8000, &data)) {
@@ -80,7 +78,6 @@ UINT_8 FlashUpload128( UINT_8 ModuleVendor, UINT_8 ActVer, UINT_8 MasterSlave, U
 	return 0xF0 ;
 }
 
-//#ifdef	TRNT
 UINT_8 LoadUserAreaToPM( void )
 {
 	DOWNLOAD_TBL_EXT* ptr ;
@@ -109,7 +106,6 @@ TRACE(" VENDER = %02x , ACT = %02x \n", ModuleVendor , ActVer );
 	return 0xF0 ;
 }
 
-//#endif
 
 
 

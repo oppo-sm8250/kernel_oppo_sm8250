@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2020, Oplus. All rights reserved.
+ */
+
 #include <linux/module.h>
 #include "cam_sensor_cmn_header.h"
 #include "cam_actuator_core.h"
@@ -8,7 +13,7 @@
 
 #include "oplus_cam_actuator_core.h"
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 static uint32_t update_reg_arr[19][4] = {
 	{0xAE, 0x3B, 0x00, 0x0},
 	{0x10, 0x30, 0x00, 0x0},
@@ -30,49 +35,6 @@ static uint32_t update_reg_arr[19][4] = {
 	{0x03, 0x02, 0x5A, 0x0},
 	{0x03, 0x08, 0x24, 0x0},
 };
-
-#define PRJ_VERSION_PATH  "/proc/oppoVersion/prjName"
-static int getfileData(char *filename, char *context)
-{
-	struct file *mfile = NULL;
-	ssize_t size = 0;
-	loff_t offsize = 0;
-	mm_segment_t old_fs;
-	char project[10] = {0};
-
-	memset(project, 0, sizeof(project));
-	mfile = filp_open(filename, O_RDONLY, 0644);
-	if (IS_ERR(mfile))
-	{
-		CAM_ERR(CAM_SENSOR, "%s fopen file %s failed !", __func__, filename);
-		return (-1);
-	}
-
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-	offsize = 0;
-	size = vfs_read(mfile, project, sizeof(project), &offsize);
-	if (size < 0) {
-		CAM_ERR(CAM_SENSOR, "fread file %s error size:%s", __func__, filename);
-		set_fs(old_fs);
-		filp_close(mfile, NULL);
-		return (-1);
-	}
-	set_fs(old_fs);
-	filp_close(mfile, NULL);
-
-	CAM_ERR(CAM_SENSOR, "%s project:%s", __func__, project);
-	memcpy(context, project, size);
-	return 0;
-}
-
-static int getProject(char *project)
-{
-	int rc = 0;
-	rc = getfileData(PRJ_VERSION_PATH, project);
-	return rc;
-}
-
 
 /* add by Fangyan@camera 2020.0105 to update PID of eeprom in driver IC */
 static int RamWriteByte(struct cam_actuator_ctrl_t *a_ctrl,
@@ -196,15 +158,11 @@ static int32_t cam_actuator_check_firmware(struct cam_actuator_ctrl_t *a_ctrl)
 
  int32_t oplus_cam_actuator_power_up(struct cam_actuator_ctrl_t *a_ctrl)
 {
-	char mPrjname[10];
 	int retry = 2;
 	int re = 0;
 	int rc = 0;
 
-	//add by Fangyan@Cam.Drv 2020/01/06, for pid actuator
-	memset(mPrjname, 0, sizeof(mPrjname));
-	getProject(mPrjname);
-	if ((0 == strcmp(mPrjname,"19065") || 0 == strcmp(mPrjname,"19063") || 0 == strcmp(mPrjname,"19361"))
+	if (a_ctrl->need_check_actuator_data
 		&& (1 == a_ctrl->io_master_info.cci_client->cci_i2c_master)
 		&& (0 == a_ctrl->io_master_info.cci_client->cci_device)){
 		for (re = 0;re < retry; re++){
@@ -213,23 +171,21 @@ static int32_t cam_actuator_check_firmware(struct cam_actuator_ctrl_t *a_ctrl)
 				//if rc is error ,update the pid eeprom
 				CAM_INFO(CAM_ACTUATOR, "check the pid data is empty ,will store the pid data!");
 				rc = cam_actuator_update_pid(a_ctrl);
-				}
-				if (rc < 0){
-					CAM_ERR(CAM_ACTUATOR, "update the pid data error,check the io ctrl!");
-				}else {
-					break;
-				}
+			}
+			if (rc < 0){
+				CAM_ERR(CAM_ACTUATOR, "update the pid data error,check the io ctrl!");
+			}else {
+				break;
+			}
 		}
 	}
-
-       return rc;
+	return rc;
 }
 
 void oplus_cam_actuator_i2c_modes_util(
 	struct camera_io_master *io_master_info,
 	struct i2c_settings_list *i2c_list)
 {
-	/* Add by xiaotao.Ding@Cam.Drv 20181122 for sem12152 */
 	uint32_t value;
 	if (i2c_list->i2c_settings.reg_setting[0].reg_addr == 0x0204)
 	{

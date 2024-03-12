@@ -56,6 +56,15 @@ int32_t cam_actuator_parse_dt(struct cam_actuator_ctrl_t *a_ctrl,
 		CAM_DBG(CAM_ACTUATOR, "cci-device %d", a_ctrl->cci_num);
 	}
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	if (!of_property_read_bool(of_node, "need-check-data")) {
+		CAM_DBG(CAM_ACTUATOR, "No need-check-data defined");
+		a_ctrl->need_check_actuator_data = false;
+	} else {
+		a_ctrl->need_check_actuator_data = true;
+	}
+#endif
+
 	if (!soc_info->gpio_data) {
 		CAM_INFO(CAM_ACTUATOR, "No GPIO found");
 		rc = 0;

@@ -221,7 +221,6 @@
 #define		PanTilt_DMA						0x0338
 #define			PanTilt_DMA_ScTpdSts			0x000C + PanTilt_DMA
 
-//#ifdef	SEL_SHIFT_COR
 #define			GyroRAM_Z_GYRO_OFFSET		0x0378 
 
 #define			GYRO_ZRAM_GZ_ADIDAT			0x039C
@@ -242,7 +241,6 @@
 #define		AcclRAM_Z						0x04A8
 #define			ACCLRAM_Z_AC_ADIDAT			0x0000 + AcclRAM_Z
 #define			ACCLRAM_Z_AC_OFFSET			0x0004 + AcclRAM_Z
-//#endif	//SEL_SHIFT_COR
 
 #define		OpticalOffset_X					(0x558)
 #define		OpticalOffset_Y					(0x55C)
@@ -538,7 +536,7 @@
 //==============================================================================
 //IO
 //==============================================================================
-// System Control驟咲ｽｮ繧｢繝峨Ξ繧ｹ
+// System Control配置アドレス
 #define 		SYSDSP_DSPDIV						0xD00014
 #define 		SYSDSP_SOFTRES						0xD0006C
 #define 		SYSDSP_REMAP						0xD000AC
@@ -554,7 +552,7 @@
 /************************************************************************/
 /*        Flash access													*/
 /************************************************************************/
-#define FLASHROM_128		0xE07000	// Flash Memory I/F驟咲ｽｮ繧｢繝峨Ξ繧ｹ
+#define FLASHROM_128		0xE07000	// Flash Memory I/F配置アドレス
 #define 		FLASHROM_FLA_RDAT					(FLASHROM_128 + 0x00)
 #define 		FLASHROM_FLA_WDAT					(FLASHROM_128 + 0x04)
 #define 		FLASHROM_ACSCNT						(FLASHROM_128 + 0x08)

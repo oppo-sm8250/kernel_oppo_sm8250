@@ -2,6 +2,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, Oplus. All rights reserved.
  */
 #ifndef _OPLUS_CAM_OIS_CORE_H_
 #define _OPLUS_CAM_OIS_CORE_H_

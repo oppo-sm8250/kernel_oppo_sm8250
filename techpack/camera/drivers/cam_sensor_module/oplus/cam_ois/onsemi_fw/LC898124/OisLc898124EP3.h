@@ -332,7 +332,6 @@
 #define			GYRO_RAM_GYRO_Switch			(0x0004 + GZFILIN)					// 0x035C
 #define			GYRO_RAM_GYRO_AF_Switch			(0x0001 + GYRO_RAM_GYRO_Switch)		// 0x035D
 
-//#ifdef	ZERO_SERVO
 #define		ZeroServoRAM_X					0x03A8
 #define 		ZeroServoRAM_X_OFFSET			(0x0000 + ZeroServoRAM_X)			// 0x03A8
 #define 		ZeroServoRAM_X_IN				(0x0004 + ZeroServoRAM_X_OFFSET)	// 0x03AC
@@ -354,7 +353,6 @@
 #define 		ZeroServoRAM_Z_LPFOUT			(0x0004 + ZeroServoRAM_Z_LPFIN)		// 0x03E4
 #define 		ZeroServoRAM_Z_ANGOUT			(0x0004 + ZeroServoRAM_Z_LPFOUT)	// 0x03E8
 #define 		ZeroServoRAM_Z_OUT				(0x0004 + ZeroServoRAM_Z_ANGOUT)	// 0x03EC
-//#endif	//ZERO_SERVO
 
 #define		StMeasureFunc					0x0400	//0x02B0
 #define			StMeasFunc_SiSampleNum			(0x0000 + StMeasureFunc		)			// 0x0400
@@ -783,7 +781,7 @@
 //==============================================================================
 //IO
 //==============================================================================
-// System Control驟咲ｽｮ繧｢繝峨Ξ繧ｹ
+// System Control配置アドレス
 #define 	PERICLKON						0xD00000
 #define 	SYSDSP_DSPDIV					0xD00014
 #define 	IOPLEV							0xD00020
@@ -829,7 +827,7 @@
 
 #define 	ADDA_DAO						0xD01054
 
-// PWM I/F驟咲ｽｮ繧｢繝峨Ξ繧ｹ
+// PWM I/F配置アドレス
 #define 	OISDRVFC1						0xD02100
 #define 	OISDRVFC4						0xD0210C
 #define 	OISDRVFC5						0xD02110
@@ -861,7 +859,7 @@
 #define 	ROMINFO							0xE0500C
 #define 	SADR							0xE05030
 
-// E2PROM 驟咲ｽｮ繧｢繝峨Ξ繧ｹ
+// E2PROM 配置アドレス
 #define 	E2P_RDAT						0xE07000
 #define 	E2P_ADR							0xE07008
 #define 	E2P_ASCNT						0xE0700C

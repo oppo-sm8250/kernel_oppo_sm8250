@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2020, Oplus. All rights reserved.
 
 ccflags-y += -I$(srctree)/techpack/camera/include/uapi
 ccflags-y += -I$(srctree)/techpack/camera/drivers/cam_req_mgr

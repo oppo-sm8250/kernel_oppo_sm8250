@@ -1,5 +1,10 @@
-#ifndef VENDOR_EDIT
-#define VENDOR_EDIT
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2020, Oplus. All rights reserved.
+ */
+
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
 #endif
 #include <linux/module.h>
 #include <linux/crc32.h>
@@ -247,8 +252,7 @@ int oplus_cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 	return rc;
 }
 
-#ifdef VENDOR_EDIT
-//add by hongbo.dai@camera, 20191217 for write eeprom interface
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 #define DWORD_DATA_SIZE 4
 uint8_t	EEPROM_Lc898128Write(struct cam_eeprom_ctrl_t *e_ctrl,
 	struct cam_write_eeprom_t *cam_write_eeprom)
@@ -568,8 +572,7 @@ int32_t oplus_cam_eeprom_driver_cmd(struct cam_eeprom_ctrl_t *e_ctrl, void *arg)
 	int                            rc = 0;
 	struct cam_control            *cmd = (struct cam_control *)arg;
 	switch (cmd->op_code) {
-#ifdef VENDOR_EDIT
-		//add by yufeng@camera, 20190115 for write eeprom
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
 		case CAM_WRITE_CALIBRATION_DATA:
 			rc = cam_eeprom_write_data(e_ctrl, arg);
 			if (rc) {

@@ -48,7 +48,7 @@ UINT_32 BackupParameter[30];
 /* function name    : SetThroughParameter 		                                         */
 /* input parameter  :                                                                    */
 /* output parameter :                                                                    */
-/* comment          : DFTã®ä¿‚æ•°ç™ºç”Ÿ    			                                         */
+/* comment          : DFT‚ÌŒW””­¶    			                                         */
 /*                                                                            2018.01.18 */
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
 void SetThroughParameter(UINT_8	UcDirSel )
@@ -145,7 +145,7 @@ void SetThroughParameter(UINT_8	UcDirSel )
 /* function name    : ResetThroughParameter 		                                     */
 /* input parameter  :                                                                    */
 /* output parameter :                                                                    */
-/* comment          : DFTã®ä¿‚æ•°ç™ºç”Ÿ    			                                         */
+/* comment          : DFT‚ÌŒW””­¶    			                                         */
 /*                                                                            2018.01.18 */
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
 void ResetThroughParameter(void)
@@ -199,7 +199,7 @@ void ResetThroughParameter(void)
 /* function name    : CoeffGenerate  		                                             */
 /* input parameter  :                                                                    */
 /* output parameter :                                                                    */
-/* comment          : DFTã®ä¿‚æ•°ç™ºç”Ÿ    			                                         */
+/* comment          : DFT‚ÌŒW””­¶    			                                         */
 /*                                                                            2018.01.18 */
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*/
 #define	Q31 	( 0x7FFFFFFF )
@@ -221,10 +221,10 @@ void CoeffGenerate( double fc )
 	else if ( fc >  5 ){ nDivision = 3; fs = (FS_FREQ / 8); }
 	else 			   { nDivision = 4; fs = (FS_FREQ /16); }
 
-	//***** å–å¾—ã—ãŸå‘¨æ³¢æ•°ãƒ†ãƒ¼ãƒ–ãƒ«ã‹ã‚‰åˆ¤å®šãƒã‚¤ãƒ³ãƒˆã¨åˆ¤å®šthetaã®ç®—å‡º *****
-	df = fs / (double)N;									// FFTã®1ãƒã‚¤ãƒ³ãƒˆå½“ãŸã‚Šã®å‘¨æ³¢æ•°
-	point = (int)(fc / df + 0.5);							// åˆ¤å®šãƒã‚¤ãƒ³ãƒˆã®ç®—å‡º
-	theta = 2.0 * PAI * (double)point * df / fs;			// åˆ¤å®šãƒã‚¤ãƒ³ãƒˆã§ã®ä½ç›¸ã®ç®—å‡º
+	//***** æ“¾‚µ‚½ü”g”ƒe[ƒuƒ‹‚©‚ç”»’èƒ|ƒCƒ“ƒg‚Æ”»’ètheta‚ÌZo *****
+	df = fs / (double)N;									// FFT‚Ì1ƒ|ƒCƒ“ƒg“–‚½‚è‚Ìü”g”
+	point = (int)(fc / df + 0.5);							// ”»’èƒ|ƒCƒ“ƒg‚ÌZo
+	theta = 2.0 * PAI * (double)point * df / fs;			// ”»’èƒ|ƒCƒ“ƒg‚Å‚ÌˆÊ‘Š‚ÌZo
 
 	C0 = (int)((double)Q31 * cos(theta) + 0.5);
 	S0 = (int)((double)Q31 * sin(theta) + 0.5);

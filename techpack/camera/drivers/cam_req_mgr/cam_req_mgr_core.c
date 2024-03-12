@@ -20,8 +20,24 @@ static struct cam_req_mgr_core_device *g_crm_core_dev;
 static struct cam_req_mgr_core_link g_links[MAXIMUM_LINKS_PER_SESSION];
 
 #ifdef VENDOR_EDIT
-static int32_t __cam_req_mgr_find_slot_for_req(
-	struct cam_req_mgr_req_queue *in_q, int64_t req_id);
+static void cam_req_mgr_mark_peer_isp_dev_to_skip(struct cam_req_mgr_core_link *link,
+		int32_t dev_hdl)
+{
+	int i = 0;
+	struct cam_req_mgr_connected_device *dev = NULL;
+
+	for (i = 0; i < link->num_devs; i++) {
+		dev = &link->l_dev[i];
+		if (dev != NULL) {
+			if ((dev_hdl != dev->dev_hdl) &&
+				!(strncmp(dev->dev_info.name, "cam-isp", 7))) {
+				CAM_INFO(CAM_CRM, "dev : %s to skip apply dev_hdl 0x%x",
+						dev->dev_info.name, dev->dev_hdl);
+				link->dev_hdl_to_skip_apply = dev->dev_hdl;
+			}
+		}
+	}
+}
 #endif
 
 void cam_req_mgr_core_link_reset(struct cam_req_mgr_core_link *link)
@@ -56,6 +72,9 @@ void cam_req_mgr_core_link_reset(struct cam_req_mgr_core_link *link)
 	link->prev_sof_timestamp = 0;
 	link->skip_wd_validation = false;
 	link->last_applied_jiffies = 0;
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	link->dev_hdl_to_skip_apply = 0;
+#endif
 }
 
 void cam_req_mgr_handle_core_shutdown(void)
@@ -447,41 +466,10 @@ static void __cam_req_mgr_tbl_set_all_skip_cnt(
 }
 
 #ifdef VENDOR_EDIT
-/*Added by Guobao.Xiao@Cam.Drv, 20191227 for crash caused by zoom repeatedly, add qualcomm patch*/
-/**
- * __cam_req_mgr_reset_slot_sync_mode()
- *
- * @brief    : reset the sync mode for the given slot
- * @link     : link pointer
- * @req_id   : request id
- *
- */
 static void __cam_req_mgr_reset_slot_sync_mode(
 	struct cam_req_mgr_core_link *link,
-	uint64_t                      req_id)
-{
-	struct cam_req_mgr_req_queue *in_q = link->req.in_q;
-	int                           slot_idx = -1;
-
-	slot_idx = __cam_req_mgr_find_slot_for_req(
-		in_q, req_id);
-
-	if (slot_idx != -1) {
-		CAM_DBG(CAM_CRM,
-			"link 0x%x req %lld sync mode %d -> %d",
-			link->link_hdl,
-			req_id,
-			in_q->slot[slot_idx].sync_mode,
-			CAM_REQ_MGR_SYNC_MODE_NO_SYNC);
-		in_q->slot[slot_idx].sync_mode = CAM_REQ_MGR_SYNC_MODE_NO_SYNC;
-	} else {
-		CAM_WARN(CAM_CRM,
-			"Can't get slot on link 0x%x for req %lld",
-			link->link_hdl, req_id);
-	}
-}
+	uint64_t                      req_id);
 #endif
-
 /**
  * __cam_req_mgr_flush_req_slot()
  *
@@ -796,6 +784,14 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 
 	for (i = 0; i < link->num_devs; i++) {
 		dev = &link->l_dev[i];
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+		if ((link->retry_cnt > 0) &&
+			(g_crm_core_dev->recovery_on_apply_fail)) {
+				apply_req.re_apply = true;
+		} else {
+			apply_req.re_apply = false;
+		}
+#endif
 		if (dev) {
 			pd = dev->dev_info.p_delay;
 			if (pd >= CAM_PIPELINE_DELAY_MAX) {
@@ -828,9 +824,19 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 			}
 
 			apply_req.trigger_point = trigger;
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
 			CAM_DBG(CAM_REQ,
 				"SEND: link_hdl: %x pd %d req_id %lld",
 				link->link_hdl, pd, apply_req.request_id);
+#else
+			if (dev->dev_hdl == link->dev_hdl_to_skip_apply) {
+				apply_req.re_apply = true;
+				link->dev_hdl_to_skip_apply = 0;
+			}
+			CAM_DBG(CAM_REQ,
+				"SEND: link_hdl: %x dev_hdl 0x%x pd %d req_id %lld apply_req.re_apply %d",
+				link->link_hdl, dev->dev_hdl, pd, apply_req.request_id, apply_req.re_apply);
+#endif
 			if (dev->ops && dev->ops->apply_req) {
 				rc = dev->ops->apply_req(&apply_req);
 				if (rc < 0) {
@@ -972,6 +978,41 @@ static int32_t __cam_req_mgr_find_slot_for_req(
 
 	return idx;
 }
+
+#ifdef VENDOR_EDIT
+/**
+ * __cam_req_mgr_reset_slot_sync_mode()
+ *
+ * @brief    : reset the sync mode for the given slot
+ * @link     : link pointer
+ * @req_id   : request id
+ *
+ */
+static void __cam_req_mgr_reset_slot_sync_mode(
+	struct cam_req_mgr_core_link *link,
+	uint64_t                      req_id)
+{
+	struct cam_req_mgr_req_queue *in_q = link->req.in_q;
+	int                           slot_idx = -1;
+
+	slot_idx = __cam_req_mgr_find_slot_for_req(
+		in_q, req_id);
+
+	if (slot_idx != -1) {
+		CAM_DBG(CAM_CRM,
+			"link 0x%x req %lld sync mode %d -> %d",
+			link->link_hdl,
+			req_id,
+			in_q->slot[slot_idx].sync_mode,
+			CAM_REQ_MGR_SYNC_MODE_NO_SYNC);
+		in_q->slot[slot_idx].sync_mode = CAM_REQ_MGR_SYNC_MODE_NO_SYNC;
+	} else {
+		CAM_WARN(CAM_CRM,
+			"Can't get slot on link 0x%x for req %lld",
+			link->link_hdl, req_id);
+	}
+}
+#endif
 
 /**
  * __cam_req_mgr_check_sync_for_mslave()
@@ -2902,6 +2943,14 @@ static int cam_req_mgr_cb_notify_err(
 		rc = -EBUSY;
 		goto end;
 	}
+
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+	if (link->dual_trigger) {
+		CAM_INFO(CAM_CRM, "notify error in dual trigger");
+		cam_req_mgr_mark_peer_isp_dev_to_skip(link,
+			err_info->dev_hdl);
+	}
+#endif
 
 	task_data = (struct crm_task_payload *)task->payload;
 	task_data->type = CRM_WORKQ_TASK_NOTIFY_ERR;

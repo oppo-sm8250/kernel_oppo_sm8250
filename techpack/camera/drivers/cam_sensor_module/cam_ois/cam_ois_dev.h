@@ -21,7 +21,6 @@
 #include <cam_subdev.h>
 #include "cam_soc_util.h"
 #include "cam_context.h"
-#include "oplus_cam_ois_dev.h"
 
 #define DEFINE_MSM_MUTEX(mutexname) \
 	static struct mutex mutexname = __MUTEX_INITIALIZER(mutexname)
@@ -83,6 +82,30 @@ struct cam_ois_intf_params {
 	struct cam_req_mgr_crm_cb *crm_cb;
 };
 
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+/*add by lixin@Camera 20200520, for OIS */
+enum cam_ois_type_vendor {
+	CAM_OIS_MASTER,
+	CAM_OIS_SLAVE,
+	CAM_OIS_NONE,
+	CAM_OIS_TYPE_MAX,
+};
+
+enum cam_ois_state_vendor {
+	CAM_OIS_INVALID,
+	CAM_OIS_FW_DOWNLOADED,
+	CAM_OIS_READY,
+};
+struct cam_ois_fw_info {
+	void *ois_fw_coeff_ptr;
+	void *ois_fw_prog_ptr;
+	uint32_t ois_fw_coeff_size;
+	uint32_t ois_fw_prog_size;
+};
+
+#include <linux/kfifo.h>
+#endif
+
 /**
  * struct cam_ois_ctrl_t - OIS ctrl private data
  * @device_name     :   ois device_name
@@ -143,5 +166,7 @@ struct cam_ois_ctrl_t {
 	struct cam_ois_fw_info m_ois_fw_mode;
 #endif
 };
+
+#include "oplus_cam_ois_dev.h"
 
 #endif /*_CAM_OIS_DEV_H_ */

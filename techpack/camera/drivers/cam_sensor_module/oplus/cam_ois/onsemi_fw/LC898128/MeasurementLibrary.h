@@ -1,6 +1,6 @@
 /**
 *	@file
-*	@brief	è¨ˆæ¸¬ãƒ©ã‚¤ãƒ–ãƒ©ãƒªãƒ¼							Ver 1.0.9.x
+*	@brief	Œv‘ªƒ‰ƒCƒuƒ‰ƒŠ[							Ver 1.0.9.x
 */
 /*============================================================================*/
 #ifndef MEASUREMENT_LIBRARY_H_
@@ -9,7 +9,7 @@
 
 /*----------------------------------------------------------------------*/
 /**
-*	@brief	Mixing coefficientï¼ˆmlCalMixCoefé–¢æ•°ï¼‰ç”¨ã®å…¥åŠ›å€¤
+*	@brief	Mixing coefficientimlCalMixCoefŠÖ”j—p‚Ì“ü—Í’l
 */
 struct tagMlMixingValue
 {
@@ -30,13 +30,13 @@ struct tagMlMixingValue
 	INT_32	hx45yL;		//! for Fixed point
 };
 /**
-*	@brief	Mixing coefficientï¼ˆmlCalMixCoefé–¢æ•°ï¼‰ç”¨ã®å…¥åŠ›å€¤
+*	@brief	Mixing coefficientimlCalMixCoefŠÖ”j—p‚Ì“ü—Í’l
 */
 typedef	struct tagMlMixingValue		mlMixingValue;
 
 /*----------------------------------------------------------------------*/
 /**
-*	@brief	Lineaity correctionï¼ˆmlCalLinearCorré–¢æ•°ï¼‰ç”¨ã®å…¥åŠ›å€¤
+*	@brief	Lineaity correctionimlCalLinearCorrŠÖ”j—p‚Ì“ü—Í’l
 */
 struct tagMlLinearityValue
 {
@@ -55,7 +55,7 @@ struct tagMlLinearityValue
 	UINT_32	*coefBYL;		//! for Fixed point
 };
 /**
-*	@brief	Linearity correctionï¼ˆmlCalLinearCorré–¢æ•°ï¼‰ç”¨ã®å…¥åŠ›å€¤
+*	@brief	Linearity correctionimlCalLinearCorrŠÖ”j—p‚Ì“ü—Í’l
 */
 typedef	struct tagMlLinearityValue		mlLinearityValue;
 
@@ -65,49 +65,49 @@ struct tagMlPoint
 	double	Y;
 };
 /**
-*	@brief	Linearity correctionï¼ˆmlCalLinearCorré–¢æ•°ï¼‰ç”¨ã®å…¥åŠ›å€¤
+*	@brief	Linearity correctionimlCalLinearCorrŠÖ”j—p‚Ì“ü—Í’l
 */
 typedef	struct tagMlPoint		mlPoint;
 
 
 /*----------------------------------------------------------------------*/
 /**
-*	@brief	ãƒ©ã‚¤ãƒ–ãƒ©ãƒªãƒ¼ã‚¨ãƒ©ãƒ¼ã‚³ãƒ¼ãƒ‰
+*	@brief	ƒ‰ƒCƒuƒ‰ƒŠ[ƒGƒ‰[ƒR[ƒh
 */
 enum tagErrorCode
 {
-	/**! ã‚¨ãƒ©ãƒ¼ç„¡ã—ã§æ­£å¸¸çµ‚äº† */
+	/**! ƒGƒ‰[–³‚µ‚Å³íI—¹ */
 	ML_OK,
 
-	/**! ãƒ¡ãƒ¢ãƒªä¸è¶³ç­‰ãƒ¡ãƒ¢ãƒªãƒ¼é–¢é€£ã®ã‚¨ãƒ©ãƒ¼ */
+	/**! ƒƒ‚ƒŠ•s‘«“™ƒƒ‚ƒŠ[ŠÖ˜A‚ÌƒGƒ‰[ */
 	ML_MEMORY_ERROR,
-	/**! å¼•æ•°æŒ‡å®šã®ã‚¨ãƒ©ãƒ¼ */
+	/**! ˆø”w’è‚ÌƒGƒ‰[ */
 	ML_ARGUMENT_ERROR,
-	/**! å¼•æ•°ã«NULLãŒæŒ‡ä»¤ã•ã‚Œã¦ã„ã‚‹ã‚¨ãƒ©ãƒ¼ */
+	/**! ˆø”‚ÉNULL‚ªw—ß‚³‚ê‚Ä‚¢‚éƒGƒ‰[ */
 	ML_ARGUMENT_NULL_ERROR,
 
-	/**! æŒ‡å®šã•ã‚ŒãŸãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªãŒå­˜åœ¨ã—ãªã„ã‚¨ãƒ©ãƒ¼ */
+	/**! w’è‚³‚ê‚½ƒfƒBƒŒƒNƒgƒŠ‚ª‘¶İ‚µ‚È‚¢ƒGƒ‰[ */
 	ML_DIRECTORY_NOT_EXIST_ERROR,
-	/**! ç”»åƒãƒ•ã‚¡ã‚¤ãƒ«ãŒå­˜åœ¨ã—ãªã„ã‚¨ãƒ©ãƒ¼ */
+	/**! ‰æ‘œƒtƒ@ƒCƒ‹‚ª‘¶İ‚µ‚È‚¢ƒGƒ‰[ */
 	ML_FILE_NOT_EXIST_ERROR,
-	/**! ãƒ•ã‚¡ã‚¤ãƒ«IOã‚¨ãƒ©ãƒ¼ */
+	/**! ƒtƒ@ƒCƒ‹IOƒGƒ‰[ */
 	ML_FILE_IO_ERROR,
-	/**! æœªæ¤œå‡ºã®ãƒãƒ¼ã‚¯ãŒæœ‰ã‚Š */
+	/**! –¢ŒŸo‚Ìƒ}[ƒN‚ª—L‚è */
 	ML_UNDETECTED_MARK_ERROR,
-	/**! åŒã˜ä½ç½®ã‚’ç¤ºã™ãƒãƒ¼ã‚¯ãŒå¤šé‡æ¤œå‡ºã—ãŸ */
+	/**! “¯‚¶ˆÊ’u‚ğ¦‚·ƒ}[ƒN‚ª‘½dŒŸo‚µ‚½ */
 	ML_MULTIPLEX_DETECTION_MARK_ERROR,
-	/**! å¿…è¦ãªDLLãŒè¦‹ã¤ã‹ã‚‰ãªã„ãªã©å®Ÿè¡Œä¸å¯ãªçŠ¶æ…‹ */
+	/**! •K—v‚ÈDLL‚ªŒ©‚Â‚©‚ç‚È‚¢‚È‚ÇÀs•s‰Â‚Èó‘Ô */
 	ML_NOT_EXECUTABLE,
 
-	/**! æœªè§£æã®ç”»åƒãŒæœ‰ã‚Šã‚¨ãƒ©ãƒ¼ */
+	/**! –¢‰ğÍ‚Ì‰æ‘œ‚ª—L‚èƒGƒ‰[ */
 	ML_THERE_UNANALYZED_IMAGE_ERROR,
 
-	/**! ä¸Šè¨˜ä»¥å¤–ã®ã‚¨ãƒ©ãƒ¼ */
+	/**! ã‹LˆÈŠO‚ÌƒGƒ‰[ */
 	ML_ERROR,
 };
 
 /**
-*	@brief	ãƒ©ã‚¤ãƒ–ãƒ©ãƒªãƒ¼ã‚¨ãƒ©ãƒ¼ã‚³ãƒ¼ãƒ‰
+*	@brief	ƒ‰ƒCƒuƒ‰ƒŠ[ƒGƒ‰[ƒR[ƒh
 */
 typedef	enum tagErrorCode	mlErrorCode;
 
