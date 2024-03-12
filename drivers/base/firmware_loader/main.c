@@ -684,23 +684,6 @@ request_firmware(const struct firmware **firmware_p, const char *name,
 }
 EXPORT_SYMBOL(request_firmware);
 
-#ifdef OPLUS_FEATURE_TP_BSPFWUPDATE
-//Ping.Zhang@PSW.BSP.Tp, 2019-10-15, Add interface to get proper fw
-int request_firmware_select(const struct firmware **firmware_p, const char *name,
-		 struct device *device)
-{
-	int ret;
-
-	/* Need to pin this module until return */
-	__module_get(THIS_MODULE);
-	ret = _request_firmware(firmware_p, name, device, NULL, 0,
-				FW_OPT_UEVENT | FW_OPT_COMPARE);
-	module_put(THIS_MODULE);
-	return ret;
-}
-EXPORT_SYMBOL(request_firmware_select);
-#endif/*OPLUS_FEATURE_TP_BSPFWUPDATE*/
-
 #ifdef VENDOR_EDIT
 //Laixin@PSW.CN.Wi-Fi.Basic.Hardware.1065227 , 2019/10/17
 //Add for: reload wlan bdf without using cache
