@@ -1,0 +1,11 @@
+#include "kona-audio.dtsi"
+#include "kona-pinctrl.dtsi"
+#include "kona-regulators.dtsi"
+
+&wlan {
+	/delete-property/ qcom,cmd_db_name;
+    /delete-property/ vdd-wlan-dig-supply;
+    /delete-property/ qcom,vdd-wlan-dig-config;
+    /delete-property/ wlan-ant-switch-supply;
+    /delete-property/ qcom,wlan-ant-switch-config;
+};

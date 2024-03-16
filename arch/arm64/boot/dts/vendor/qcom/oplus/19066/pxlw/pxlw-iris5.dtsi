@@ -9,7 +9,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#include "pxlw-iris5-cfg-oplua19065_samsung_1440_3168_cmd.dtsi"
+#include "pxlw-iris5-cfg-oplus19065_samsung_1440_3168_cmd.dtsi"
 
 &tlmm {
 	pxlw_iris_gpio: pxlw_iris_gpio {

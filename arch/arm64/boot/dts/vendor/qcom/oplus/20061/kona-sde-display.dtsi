@@ -1,0 +1,55 @@
+#include "dsi-panel-oplus20061-samsung-1440-3216-dsc-cmd.dtsi"
+
+&soc {
+	dsi_panel_oplus_pwr_supply: dsi_panel_oplus_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <0>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "vout";
+			qcom,supply-min-voltage = <1280000>;
+			qcom,supply-max-voltage = <1280000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <0>;
+		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "vdd";
+			qcom,supply-min-voltage = <3200000>;
+			qcom,supply-max-voltage = <3200000>;
+			qcom,supply-enable-load = <857000>;
+			qcom,supply-disable-load = <0>;
+			qcom,supply-post-on-sleep = <0>;
+		};
+	};
+};
+
+&sde_dsi {
+	pinctrl-0 = <&sde_dsi_active &panel_vout_active &sde_te_active &sde_te1_active>;
+	pinctrl-1 = <&sde_dsi_suspend &panel_vout_suspend &sde_te_suspend &sde_te1_suspend>;
+};
+
+&mdss_mdp {
+	connectors = <&sde_dp &sde_wb &sde_dsi &sde_dsi1 &sde_rscc>;
+};
+
+&sde_dsi {
+	qcom,dsi-default-panel = <&dsi_oplus20061_samsung_1440_3216_dsc_cmd>;
+};
+
+&msm_notifier {
+	panel = <&dsi_oplus20061_samsung_1440_3216_dsc_cmd>;
+};

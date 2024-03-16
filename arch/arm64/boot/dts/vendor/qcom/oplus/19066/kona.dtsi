@@ -1,0 +1,2 @@
+#include "kona-audio.dtsi"
+#include "kona-pinctrl.dtsi"

@@ -94,4 +94,5 @@
 
 &wlan {
 	use-nv-mac;
+	cnss-enable-self-recovery;
 };

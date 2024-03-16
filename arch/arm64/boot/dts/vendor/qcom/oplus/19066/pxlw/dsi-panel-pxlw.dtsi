@@ -12,7 +12,6 @@
 
 &dsi_oplus19065_samsung_1440_3168_dsc_cmd {
 	pxlw,iris-chip-enable;
-	pxlw,soft-iris-enable;
 	qcom,iris-supply-entries = <&dsi_iris_pwr_supply>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0","pw_bb_clk2";
 };

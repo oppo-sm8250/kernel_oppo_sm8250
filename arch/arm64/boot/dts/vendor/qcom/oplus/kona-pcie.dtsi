@@ -1,3 +1,7 @@
+&pcie0 {
+	qcom,config-recovery;
+};
+
 &pcie1 {
 	status = "disabled";
 };
