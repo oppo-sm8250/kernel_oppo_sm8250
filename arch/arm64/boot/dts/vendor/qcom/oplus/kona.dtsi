@@ -63,6 +63,10 @@
 		reg = <0x0 0x94100000 0x0 0x4600000>;
 	};
 
+	cnss_wlan_region {
+		size = <0x0 0x1C00000>;
+	};
+
 	ramoops: ramoops@0xB0000000 {
 		compatible = "ramoops";
 		reg = <0 0xB0000000 0 0x00400000>;
@@ -93,6 +97,7 @@
 };
 
 &wlan {
+	qcom,bt-en-gpio = <&tlmm 21 0>;
 	use-nv-mac;
 	cnss-enable-self-recovery;
 };

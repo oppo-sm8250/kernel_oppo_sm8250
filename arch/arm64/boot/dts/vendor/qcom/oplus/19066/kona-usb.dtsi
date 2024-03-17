@@ -1,0 +1,6 @@
+&usb0 {
+    interrupts-extended = <&pdc 14 IRQ_TYPE_EDGE_BOTH>,
+	     <&intc GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>,
+	     <&pdc 17 IRQ_TYPE_LEVEL_HIGH>,
+	     <&pdc 15 IRQ_TYPE_EDGE_BOTH>;
+};

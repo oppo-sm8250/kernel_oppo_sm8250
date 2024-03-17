@@ -1,2 +1,3 @@
 #include "kona-audio.dtsi"
 #include "kona-pinctrl.dtsi"
+#include "kona-usb.dtsi"
