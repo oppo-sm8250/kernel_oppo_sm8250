@@ -1,8 +1,8 @@
 &mdss_mdp {
 	dsi_oppo19065_samsung_1440_3168_dsc_cmd: qcom,mdss_dsi_oppo19065_samsung_1440_3168_dsc_cmd {
 		qcom,mdss-dsi-panel-name = "samsung AMS678UW01 dsc cmd mode panel";
-		oppo,mdss-dsi-vendor-name = "ANA6706";
-		oppo,mdss-dsi-manufacture = "samsung1024";
+		oplus,mdss-dsi-vendor-name = "ANA6706";
+		oplus,mdss-dsi-manufacture = "samsung1024";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;
@@ -42,14 +42,10 @@
 
 		qcom,esd-check-enabled;
 		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
-		qcom,mdss-dsi-panel-status-command = [
-						06 01 00 01 05 00 02 E9 00
-						06 01 00 01 05 00 02 EE 00
-						06 01 00 01 05 00 02 0A 00
-						];
-		qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
-		qcom,mdss-dsi-panel-status-value = <0x00 0x00 0x00 0x00 0x00 0x9C>;
-		qcom,mdss-dsi-panel-status-read-length = <4 1 1>;
+		qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 02 0A 00];
+		qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-panel-status-value = <0x9F>;
+		qcom,mdss-dsi-panel-status-read-length = <1>;
 
 		qcom,dynamic-mode-switch-enabled;
 		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-immediate";
@@ -78,8 +74,8 @@
 
 				qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0","pw_bb_clk2";
 
-				oppo,fod-on-vblank = <1>;
-				oppo,fod-off-vblank = <0>;
+				oplus,fod-on-vblank = <1>;
+				oplus,fod-off-vblank = <0>;
 				qcom,mdss-dsi-panel-read-register-open-command = [
 					39 01 00 00 00 00 03 F0 5A 5A
 					];
@@ -305,6 +301,17 @@
 					15 01 00 00 00 00 02 98 00
 					39 01 00 00 00 00 03 F0 A5 A5
 				];
+
+				qcom,mdss-dsi-panel-register-read-command = [
+					06 01 00 00 00 00 01 DA
+				];
+				qcom,mdss-dsi-panel-level2-key-enable-command = [
+					39 01 00 00 00 00 03 F0 5A 5A
+				];
+				qcom,mdss-dsi-panel-level2-key-disable-command = [
+					39 01 00 00 00 00 03 F0 A5 A5
+				];
+
 				qcom,mdss-dsi-aod-hbm-on-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-aod-hbm-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-timing-switch-command-state = "dsi_hs_mode";
@@ -312,6 +319,7 @@
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-seed-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-seed-0-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-panel-register-read-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-seed-1-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-seed-2-command-state = "dsi_hs_mode";
 
@@ -327,6 +335,8 @@
 				qcom,mdss-dsi-panel-id1-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-read-register-open-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-read-register-close-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-level2-key-enable-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-level2-key-disable-command-state = "dsi_lp_mode";
 			};
 			timing@1 {
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
@@ -350,8 +360,8 @@
 
 				qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0","pw_bb_clk2";
 
-				oppo,fod-on-vblank = <2>;
-				oppo,fod-off-vblank = <0>;
+				oplus,fod-on-vblank = <2>;
+				oplus,fod-off-vblank = <0>;
 
 				qcom,mdss-dsi-panel-read-register-open-command = [
 					39 01 00 00 00 00 03 F0 5A 5A
@@ -578,6 +588,17 @@
 					15 01 00 00 00 00 02 98 00
 					39 01 00 00 00 00 03 F0 A5 A5
 				];
+
+				qcom,mdss-dsi-panel-register-read-command = [
+					06 01 00 00 00 00 01 DA
+				];
+				qcom,mdss-dsi-panel-level2-key-enable-command = [
+					39 01 00 00 00 00 03 F0 5A 5A
+				];
+				qcom,mdss-dsi-panel-level2-key-disable-command = [
+					39 01 00 00 00 00 03 F0 A5 A5
+				];
+
 				qcom,mdss-dsi-aod-hbm-on-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-aod-hbm-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-timing-switch-command-state = "dsi_hs_mode";
@@ -587,7 +608,7 @@
 				qcom,mdss-dsi-seed-0-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-seed-1-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-seed-2-command-state = "dsi_hs_mode";
-
+				qcom,mdss-dsi-panel-register-read-command-state = "dsi_lp_mode";
 				qcom,compression-mode = "dsc";
 				qcom,lm-split = <720 720>;
 				qcom,mdss-dsc-encoders = <2>;
@@ -600,6 +621,8 @@
 				qcom,mdss-dsi-panel-id1-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-read-register-open-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-read-register-close-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-level2-key-enable-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-level2-key-disable-command-state = "dsi_lp_mode";
 			};
 			timing@2 {
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
@@ -623,8 +646,8 @@
 
 				qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0","pw_bb_clk2";
 
-				oppo,fod-on-vblank = <1>;
-				oppo,fod-off-vblank = <0>;
+				oplus,fod-on-vblank = <1>;
+				oplus,fod-off-vblank = <0>;
 
 				qcom,mdss-dsi-panel-read-register-open-command = [
 					39 01 00 00 00 00 03 F0 5A 5A
@@ -851,6 +874,17 @@
 					15 01 00 00 00 00 02 98 00
 					39 01 00 00 00 00 03 F0 A5 A5
 				];
+
+				qcom,mdss-dsi-panel-register-read-command = [
+					06 01 00 00 00 00 01 DA
+				];
+				qcom,mdss-dsi-panel-level2-key-enable-command = [
+					39 01 00 00 00 00 03 F0 5A 5A
+				];
+				qcom,mdss-dsi-panel-level2-key-disable-command = [
+					39 01 00 00 00 00 03 F0 A5 A5
+				];
+
 				qcom,mdss-dsi-aod-hbm-on-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-aod-hbm-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-timing-switch-command-state = "dsi_hs_mode";
@@ -860,7 +894,7 @@
 				qcom,mdss-dsi-seed-0-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-seed-1-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-seed-2-command-state = "dsi_hs_mode";
-
+				qcom,mdss-dsi-panel-register-read-command-state = "dsi_lp_mode";
 				qcom,compression-mode = "dsc";
 				qcom,lm-split = <540 540>;
 				qcom,mdss-dsc-encoders = <2>;
@@ -873,6 +907,8 @@
 				qcom,mdss-dsi-panel-id1-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-read-register-open-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-read-register-close-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-level2-key-enable-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-level2-key-disable-command-state = "dsi_lp_mode";
 			};
 			timing@3 {
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
@@ -896,8 +932,8 @@
 
 				qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0","pw_bb_clk2";
 
-				oppo,fod-on-vblank = <2>;
-				oppo,fod-off-vblank = <0>;
+				oplus,fod-on-vblank = <2>;
+				oplus,fod-off-vblank = <0>;
 
 				qcom,mdss-dsi-panel-read-register-open-command = [
 					39 01 00 00 00 00 03 F0 5A 5A
@@ -1132,6 +1168,17 @@
 					15 01 00 00 00 00 02 98 00
 					39 01 00 00 00 00 03 F0 A5 A5
 				];
+
+				qcom,mdss-dsi-panel-register-read-command = [
+					06 01 00 00 00 00 01 DA
+				];
+				qcom,mdss-dsi-panel-level2-key-enable-command = [
+					39 01 00 00 00 00 03 F0 5A 5A
+				];
+				qcom,mdss-dsi-panel-level2-key-disable-command = [
+					39 01 00 00 00 00 03 F0 A5 A5
+				];
+
 				qcom,mdss-dsi-aod-hbm-on-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-aod-hbm-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-timing-switch-command-state = "dsi_hs_mode";
@@ -1141,7 +1188,7 @@
 				qcom,mdss-dsi-seed-0-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-seed-1-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-seed-2-command-state = "dsi_hs_mode";
-
+				qcom,mdss-dsi-panel-register-read-command-state = "dsi_lp_mode";
 				qcom,compression-mode = "dsc";
 				qcom,lm-split = <540 540>;
 				qcom,mdss-dsc-encoders = <2>;
@@ -1154,6 +1201,8 @@
 				qcom,mdss-dsi-panel-id1-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-read-register-open-state = "dsi_lp_mode";
 				qcom,mdss-dsi-panel-read-register-close-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-level2-key-enable-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-panel-level2-key-disable-command-state = "dsi_lp_mode";
 			};
 		};
 	};
@@ -1161,7 +1210,6 @@
 
 &dsi_oppo19065_samsung_1440_3168_dsc_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,iris-supply-entries = <&dsi_iris_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-normal-max-level = <1023>;
@@ -1200,13 +1248,12 @@
 };
 
 &dsi_oppo19065_samsung_1440_3168_dsc_cmd {
-	qcom,platform-iris-reset-gpio = <&tlmm 174 0>;
-	qcom,platform-iris-vdd-gpio = <&tlmm 175 0>;
-	qcom,platform-analog-bypass-gpio = <&tlmm 173 0>;
-	qcom,platform-analog-bypass-status-gpio = <&tlmm 112 0>;
+	//qcom,platform-iris-reset-gpio = <&tlmm 174 0>;
+	//qcom,platform-iris-vdd-gpio = <&tlmm 175 0>;
+	//qcom,platform-analog-bypass-gpio = <&tlmm 173 0>;
+	//qcom,platform-analog-bypass-status-gpio = <&tlmm 112 0>;
 	qcom,platform-panel-te-esd-gpio = <&tlmm 109 0>;
 };
-
 &dsi_oppo19065_samsung_1440_3168_dsc_cmd {
 	qcom,panel_voltage_vddi_name = "vddio";
 	qcom,panel_voltage_vddi = <0 1650000 1800000 1950000>;

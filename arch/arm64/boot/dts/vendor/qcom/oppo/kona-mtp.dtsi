@@ -30,7 +30,7 @@
 
 &soc {
 	nfc_chipset {
-		compatible = "oppo-nfc-chipset";
+		compatible = "oplus-nfc-chipset";
 		chipset-19066 = "SN100T";
 		chipset-19362 = "SN100T";
 	};
@@ -49,20 +49,20 @@
 		};
 	};
 
-	oppo_fp_common {
-		compatible = "oppo,fp_common";
-		oppo,fp_gpio_num = <1>; /* the gpio number of fingerprint id used */
-		oppo,fp_gpio_0 = <&tlmm 9 0x0>;
-				pinctrl-names = "default";
+	oplus_fp_common {
+		compatible = "oplus,fp_common";
+		oplus,fp_gpio_num = <1>; /* the gpio number of fingerprint id used */
+		oplus,fp_gpio_0 = <&tlmm 9 0x0>;
+                pinctrl-names = "default";
 		pinctrl-0 = <&gpio_id2_default>;
 		goodix_optical_G5 {
-			oppo,fp-id = <1>; /* fp id mapping table */
+			oplus,fp-id = <1>; /* fp id mapping table */
 			vendor-chip = <11>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
 			eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
 			chip-name = "G_OPTICAL_G5";  /* /proc/fp_id, will be displayed in engineer menu  */
 		};
 		goodix_optical_G6 {
-			oppo,fp-id = <0>; /* fp id mapping table */
+			oplus,fp-id = <0>; /* fp id mapping table */
 			vendor-chip = <11>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
 			eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
 			chip-name = "G_OPTICAL_G6";  /* /proc/fp_id, will be displayed in engineer menu  */
@@ -91,27 +91,31 @@
 		};
 	};
 
-	oppo_secure_common {
-		compatible = "oppo,secure_common";
+	oplus_secure_common {
+		compatible = "oplus,secure_common";
+		oplus,sec_reg_num = <0x7805E8>;
+		oplus,sec_en_anti_reg = <0x7801F4>;
+		oplus,sec_override1_reg = <0x7860C0>;
+		oplus,override1_en_value = <0x1>;
 	};
 
-	/*enum sensor_id { OPPO_ACCEL,OPPO_GYRO,OPPO_MAG,OPPO_LIGHT,OPPO_PROXIMITY,OPPO_SAR,OPPO_CT,OPPO_BAROMETER,SENSORS_NUM};*/
-	oppo_sensor {
-		compatible = "oppo,sensor-devinfo";
+	/*enum sensor_id { ACCEL,GYRO,MAG,LIGHT,PROXIMITY,SAR,CT,BAROMETER,SENSORS_NUM};*/
+	oplus_sensor {
+		compatible = "oplus,sensor-devinfo";
 		als-row-coe = <110>;
 		/*enum {LSM6DSM = 0x01, BMI160 = 0x02, LSM6DS3 = 0x04};*/
 		gsensor@0 {
 			sensor-name = <0x1>;//LSM6DSM
 			sensor-direction = <0>;
 			sensor-index = <0>;//source num
-			sensor-type = <0>;//OPPO_ACCEL
+			sensor-type = <0>;//ACCEL
 		};
 		/* enum {AKM0991X = 0x01, MMC5603 = 0x02};*/
 		msensor@0 {
 			sensor-name = <0x1>;//AKM09918
 			sensor-direction = <0>;
 			sensor-index = <0>;
-			sensor-type = <2>;//OPPO_MAG
+			sensor-type = <2>;//MAG
 			parameter-number= <18>;
 			//sensor-parameter = <1>;//0-useless;other- to differ special parameter
 			soft-mag-parameter = <9887 0 1457 0 73 0 1262 0 10096 0 283 1 933 0 663 1 10867 0>;//e00 sign e01 sign...
@@ -120,13 +124,13 @@
 			sensor-name = <0x2>;//MMC5603
 			sensor-direction = <0>;
 			sensor-index = <1>;
-			sensor-type = <2>;//OPPO_MAG
+			sensor-type = <2>;//MAG
 		};
 		/*enum {STK3A5X=0x01,TCS3701=0x02,TCS3408=0x04};*/
 		lsensor@0 {
 			sensor-name = <0x0>;//TCS3408 0-use other driver//compatible old
 			sensor-index = <0>;
-			sensor-type = <3>;//OPPO_LIGHT
+			sensor-type = <3>;//LIGHT
 			als-type = <1>;
 			is-unit-device = <0>;
 			is-als-dri = <0>;
@@ -137,7 +141,7 @@
 		psensor@0 {
 			sensor-name = <0x1>;//STK33502
 			sensor-index = <0>;
-			sensor-type = <4>;//OPPO_PROXIMITY
+			sensor-type = <4>;//PROXIMITY
 			bus-number = <5>;
 			irq-number = <122>;
 			ps-type = <1>;
@@ -145,70 +149,72 @@
 			/*1-need close 2-close has contidition 0-not close*/
 			is_need_close_pd = <2>;
 			sn_number = <0xf2950863 0x09347b81 0xa5d679f5 0x5fe0fa1b 0xfcfb33ca
-					0x85df9dee 0x30682ac0 0xddf4bc3d 0xb8d72979 0xe83f0a90
-					0x24a9bcf0 0x77d4a0f0 0xb6870ef3 0x15e9693b 0x21858a59
-					0x35a15be7 0x6c682a71 0x45e3d4ee>;
+				    0x85df9dee 0x30682ac0 0xddf4bc3d 0xb8d72979 0xe83f0a90
+				    0x24a9bcf0 0x77d4a0f0 0xb6870ef3 0x15e9693b 0x21858a59
+				    0x35a15be7 0x6c682a71 0x45e3d4ee>;
 		};
 		/*enum {LPS22HH = 0x01, BMP380 = 0x02}*/
 		bsensor@0 {
 			sensor-name = <0x1>;//LPS22HH
 			sensor-index = <0>;
-			sensor-type = <0x7>;//OPPO_BAROMETER
+			sensor-type = <0x8>;//BAROMETER
 		};
 		/* enum {SX9324 = 0x01} */
 		ssensor@0 {
 			sensor-name = <0x1>;//SX9324
 			sensor-index = <0>;
-			sensor-type = <5>;//OPPO_SAR
+			sensor-type = <5>;//SAR
 		};
-		/* enum {tcs3408 = 0x01 tcs3408_rear = 0x02} */
+		/* enum {tcs3408 = 0x01  stk37600 = 0x02} */
 		cctsensor@0 {
+			decoupled-driver = <0>; //0 - tcs3408 driver; 1 - oplus_cct driver
 			sensor-name = <0x1>; //tcs3408
 			sensor-index = <0>;
-			sensor-type = <6>; //OPPO_CT
+			sensor-type = <6>; //CCT
 		};
-		cctsensor@1 {
-			sensor-name = <0x2>; //tcs3408_rear
-			sensor-index = <1>;
-			sensor-type = <6>; //OPPO_CT
-			cfg-num = <2>;
+		cctrsensor@0 {
+			decoupled-driver = <0>; //0 - tcs3408 driver; 1 - oplus_cct driver
+			sensor-name = <0x1>; //tcs3408
+			sensor-index = <0>;
+			sensor-type = <7>; //CCT_REAR
+			para-matrix = <2>;//0-default
 		};
 		/*virtual sensor
 		enum sensor_algo_id {
-			OPPO_PICKUP_DETECT,
-			OPPO_LUX_AOD,
-			OPPO_TP_GESTURE,
-			OPPO_FP_DISPLAY,
-			OPPO_FREE_FALL,
-			OPPO_CAMERA_PROTECT,
+			PICKUP_DETECT,
+			LUX_AOD,
+			TP_GESTURE,
+			FP_DISPLAY,
+			FREE_FALL,
+			CAMERA_PROTECT,
 			SENSOR_ALGO_NUM
 		}*/
 		pickup_detect {
-			sensor-type = <0>;//OPPO_PICKUP_DETECT
+			sensor-type = <0>;//PICKUP_DETECT
 			is-virtual-sensor;
 			is-need-prox = <1>;
 			prox-type = <0>;
 		};
 		lux_aod {
-			sensor-type = <1>; //OPPO_LUX_AOD
+			sensor-type = <1>; //LUX_AOD
 			is-virtual-sensor;
 			thrd-low = <12>;
 			thrd-high = <50>;
 			als-type = <0>;
 		};
 		fp_display {
-			sensor-type = <3>;//OPPO_FP_DISPLAY
+			sensor-type = <3>;//FP_DISPLAY
 			is-virtual-sensor;
 			prox-type = <0>; // 0 - proximity; 1 - proximity_fake
 		};
 		free_fall {
-			sensor-type = <4>;//OPPO_FREE_FALL
+			sensor-type = <4>;//FREE_FALL
 			is-virtual-sensor;
 		};
 	};
 
 	devinfo {
-		compatible = "oppo-devinfo";
+		compatible = "oplus-devinfo";
 
 		pinctrl-names = "active", "sleep";
 		pinctrl-0 = <&hw_id_active>;
@@ -279,7 +285,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&ts_int_active &ts_reset_active>;
 
-				touchpanel,default_hor_area = <7>;
+                touchpanel,default_hor_area = <7>;
 		touchpanel,max-num-support = <10>;
 		touchpanel,tx-rx-num = <17 38>;
 		earsense,tx-rx-num = <17 18>;
@@ -287,11 +293,11 @@
 		touchpanel,display-coords = <1440 3168>;
 		touchpanel,touchmajor-limit = <32 54>;
 		project_id = <19065>;
-				vid_len = <2>;
-				tp_type = <8>; // TP-SAMSUNG = 8;
-				platform_support_project = <19066 19067 19362>;
-				platform_support_project_dir = <19065 19065 19065>;
-				platform_support_project_commandline = "mdss_dsi_oppo19065_samsung_1440_3168_dsc_cmd","default_commandline","default_commandline" ;
+                vid_len = <2>;
+                tp_type = <8>; // TP-SAMSUNG = 8;
+                platform_support_project = <19066 19067 19362>;
+                platform_support_project_dir = <19065 19065 19065>;
+                platform_support_project_commandline = "19065_samsung_1440_3168_dsc_cmd","default_commandline","default_commandline" ;
 
 		touchpanel,elimination-range = <20 200 200>;
 		prevention,no_handle_para = <0 0 0>;
@@ -315,6 +321,7 @@
 		kalman_value = <2000 500 256 1024 0x10001>;
 
 		/* SW Support Feature Control */
+		health_monitor_v2_support;
 		//ear_sense_support;
 		black_gesture_support;
 		//fw_edge_limit_support;
@@ -329,6 +336,7 @@
 		pressure_report_support;
 		irq_need_dev_resume_ok;
 		report_rate_white_list_support;
+		exception_upload_support;
 
 		/*
 		 *Virtual Key Config:
@@ -523,7 +531,7 @@
 
 	mp2650-charger@5c {
 		status = "okay";
-		compatible = "oppo,mp2650-charger";
+		compatible = "oplus,mp2650-charger";
 		reg = <0x5c 0>;
 
 		qcom,mps_otg_en-gpio = <&pm8150_gpios 3 0x00>;
@@ -531,7 +539,6 @@
 		pinctrl-0 = <&mps_otg_en_active>;
 		pinctrl-1 = <&mps_otg_en_sleep>;
 		pinctrl-2 = <&mps_otg_en_default>;
-
 	};
 };
 
@@ -541,13 +548,13 @@
 
 	da9313-divider@68 {
 		status = "okay";
-		compatible = "oppo,da9313-divider";
+		compatible = "oplus,da9313-divider";
 		reg = <0x68 0>;
 	};
 
 	bq27541-battery@55 {
 		status = "okay";
-		compatible = "oppo,bq27541-battery";
+		compatible = "oplus,bq27541-battery";
 		reg = <0x55>;
 		qcom,modify-soc-smooth;
 		qcom,modify-soc-calibration;
@@ -557,19 +564,20 @@
 
 	stm8s_fastcg@26{
 		status = "okay";
-		compatible = "oppo,stm8s-fastcg";
+		compatible = "oplus,stm8s-fastcg";
 		reg = <0x26>;
 		qcom,vooc-low-temp = <50>;
-		qcom,oppo_batt_4400mv;
+		qcom,oplus_batt_4400mv;
 		qcom,support_vooc_by_normal_charger_path;
 		qcom,vooc_fw_update_newmethod;
 		qcom,vooc-high-temp = <430>;
 		qcom,vooc-low-soc = <1>;
 		qcom,vooc-high-soc = <90>;
-		qcom,vooc-fw-type = <0x24>;//6A
+		qcom,vooc-fw-type = <0x27>;//6A
 
+		qcom,support_fake_vooc_check = <0>;
 		qcom,vooc_multistep_adjust_current_support;
-		qcom,vooc_multistep_initial_batt_temp = <310>;
+		qcom,vooc_multistep_initial_batt_temp = <1000>;
 		qcom,vooc_strategy_normal_current = <0x06>;
 		qcom,vooc-normal-to-little-cool-current = <0x05>;
 		qcom,vooc_batt_over_high_temp = <440>;
@@ -601,7 +609,6 @@
 		qcom,vooc_strategy2_high2_current = <0x03>;
 		qcom,vooc_strategy2_high3_current = <0x02>;
 
-
 		pinctrl-names = "switch1_act_switch2_act", "switch1_sleep_switch2_sleep",
 						"switch1_act_switch3_act", "switch1_sleep_switch3_sleep",
 						"switch1_act_switch2_sleep", "switch1_sleep_switch2_act",
@@ -622,6 +629,7 @@
 		pinctrl-11 = <&charging_reset_sleep >;
 
 		qcom,charging_switch1-gpio = <&tlmm 82 0x00>;
+
 		qcom,charging_reset-gpio = <&tlmm 10 0x00>;
 		qcom,charging_clock-gpio = <&tlmm 131 0x00>;
 		qcom,charging_data-gpio = <&tlmm 129 0x00>;
@@ -635,13 +643,17 @@
 	qcom,qc3-disable;
 	qcom,hvdcp-disable;
 	qcom,float-option = <1>;
-	qcom,oppo-pps-usbpd-detection = <&pm8150b_pdphy>;
+	qcom,oplus-pps-usbpd-detection = <&pm8150b_pdphy>;
 
-	//for oppo chg framework:
+	qcom,usbtemp_batttemp_gap = <18>;
+
+	//for oplus chg framework:
 	qcom,input_current_charger_ma = <2000>;
 	qcom,pd_input_current_charger_ma = <2000>;
 	qcom,qc_input_current_charger_ma = <2000>;
+
 	qcom,input_current_usb_ma = <500>;
+
 	qcom,input_current_cdp_ma = <1500>;
 	qcom,input_current_led_ma = <1200>;
 	qcom,input_current_led_ma_high = <1800>;
@@ -649,7 +661,9 @@
 	qcom,input_current_led_ma_normal = <2000>;
 	qcom,led_warm_bat_decidegc = <350>;
 	qcom,led_high_bat_decidegc = <370>;
+
 	qcom,input_current_camera_ma = <1200>;
+
 	qcom,input_current_vooc_led_ma_high = <1800>;
 	qcom,input_current_vooc_led_ma_warm = <1800>;
 	qcom,input_current_vooc_led_ma_normal = <3600>;
@@ -659,7 +673,9 @@
 	qcom,vooc_temp_bat_warm_decidegc = <370>;
 	qcom,input_current_vooc_ma_high = <2200>;
 	qcom,vooc_temp_bat_hot_decidegc = <440>;
+
 	qcom,charger_current_vooc_ma_normal = <1800>;
+
 	qcom,chg_ctrl_by_calling;
 	qcom,input_current_calling_ma = <1500>;
 
@@ -751,6 +767,7 @@
 	qcom,vooc_project = <3>;
 	qcom,vbatt_num = <2>;
 	qcom,ffc_support;
+	qcom,dual_ffc;
 	recharge_after_full;
 
 	qcom,normal_vterm_hw_inc = <18>;
@@ -788,6 +805,8 @@
 	qcom,default_temp_little_cool_vfloat_mv = <4435>;
 	qcom,default_little_cool_vfloat_over_sw_limit = <4445>;
 
+	qcom,smart_charge_version = <0>;
+
 	//for control:
 	qcom,check_batt_full_by_sw;
 	qcom,external_gauge;
@@ -796,6 +815,8 @@
 	qcom,chg_ctrl_by_camera;
 	qcom,sw_vfloat_over_protect_enable;
 	qcom,lpd-disable;
+
+	qcom,skip_usbtemp_cool_down;
 
 	//for PD9V or QC9V
 	qcom,vbatt_pdqc_to_5v_thr = <4180>;
@@ -809,17 +830,14 @@
 	qcom,dischg-gpio = <&pm8150_gpios 9 0x00>;
 
 	pinctrl-names = "default",
-			"chargerid_switch_active",
-			"chargerid_switch_sleep",
-			"chargerid_switch_default",
-			"ship_active", "ship_sleep",
-			"ccdetect_active", "ccdetect_sleep",
-			"dischg_enable", "dischg_disable",
-			"gpio1_adc_default","gpio8_adc_default",
-			"gpio5_adc_default",
-			"charger_int_default",
-			"input_pg_default",
-			"charger_error_default";
+					"chargerid_switch_active", "chargerid_switch_sleep", "chargerid_switch_default",
+					"ship_active", "ship_sleep",
+					"ccdetect_active", "ccdetect_sleep",
+					"dischg_enable", "dischg_disable",
+					"gpio1_adc_default","gpio8_adc_default","gpio5_adc_default",
+					"charger_int_default",
+					"input_pg_default",
+					"charger_error_default";
 
 	pinctrl-0 = <&gpio7_adc_default>;
 	pinctrl-1 = <&chargerid_switch_active>;
