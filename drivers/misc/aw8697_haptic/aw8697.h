@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 #ifndef _AW8697_H_
 #define _AW8697_H_
 
@@ -54,8 +58,7 @@
 #ifdef LRA_0619
 #define AW8697_HAPTIC_F0_PRE                1700    // 170Hz
 #define AW8697_HAPTIC_F0_CALI_PERCEN        7       // -7%~7%
-#ifdef VENDOR_EDIT
-/* tongfeng.Huang@BSP.CHG.Basic, 2019/01/09,  Add for F0  voltage */
+#ifdef OPLUS_FEATURE_CHG_BASIC
 #define AW8697_HAPTIC_CONT_DRV_LVL          52     // 105*6.1/256=2.50v
 #else
 #define AW8697_HAPTIC_CONT_DRV_LVL          105     // 105*6.1/256=2.50v
@@ -75,8 +78,7 @@
 #define AW8697_HAPTIC_CONT_ZC_THR           0x0ff1
 #define AW8697_HAPTIC_CONT_NUM_BRK          3
 #endif
-#ifdef VENDOR_EDIT
-/* Hang.Zhao@PSW.BSP.CHG.Basic,2019/10/25, Modify for different haptics */
+#ifdef OPLUS_FEATURE_CHG_BASIC
 #define AW8697_0832_HAPTIC_F0_PRE                2350    // 235Hz
 #define AW8697_0832_HAPTIC_F0_CALI_PERCEN        7       // -7%~7%
 #define AW8697_0832_HAPTIC_CONT_DRV_LVL          105     // 125*6.1/256=2.98v
@@ -223,6 +225,10 @@ enum aw8697_haptic_activate_mode {
   AW8697_HAPTIC_ACTIVATE_CONT_MODE = 1,
 };
 
+enum aw8697_haptic_vibration_style {
+	AW8697_HAPTIC_VIBRATION_CRISP_STYLE = 0,
+	AW8697_HAPTIC_VIBRATION_SOFT_STYLE = 1,
+};
 
 enum aw8697_haptic_cont_vbat_comp_mode {
     AW8697_HAPTIC_CONT_VBAT_SW_COMP_MODE = 0,
@@ -316,6 +322,51 @@ struct trig{
     unsigned char second_seq;
 };
 
+
+#define AAC_RICHTAP
+#ifdef AAC_RICHTAP
+
+enum {
+    RICHTAP_UNKNOWN = -1,
+    RICHTAP_AW_8697 = 0x05,
+};
+
+enum {
+    MMAP_BUF_DATA_VALID = 0x55,
+    MMAP_BUF_DATA_FINISHED = 0xAA,
+    MMAP_BUF_DATA_INVALID = 0xFF,
+};
+
+#define RICHTAP_IOCTL_GROUP 0x52
+#define RICHTAP_GET_HWINFO          _IO(RICHTAP_IOCTL_GROUP, 0x03)
+#define RICHTAP_SET_FREQ            _IO(RICHTAP_IOCTL_GROUP, 0x04)
+#define RICHTAP_SETTING_GAIN        _IO(RICHTAP_IOCTL_GROUP, 0x05)
+#define RICHTAP_OFF_MODE            _IO(RICHTAP_IOCTL_GROUP, 0x06)
+#define RICHTAP_TIMEOUT_MODE        _IO(RICHTAP_IOCTL_GROUP, 0x07)
+#define RICHTAP_RAM_MODE            _IO(RICHTAP_IOCTL_GROUP, 0x08)
+#define RICHTAP_RTP_MODE            _IO(RICHTAP_IOCTL_GROUP, 0x09)
+#define RICHTAP_STREAM_MODE         _IO(RICHTAP_IOCTL_GROUP, 0x0A)
+#define RICHTAP_UPDATE_RAM          _IO(RICHTAP_IOCTL_GROUP, 0x10)
+#define RICHTAP_GET_F0              _IO(RICHTAP_IOCTL_GROUP, 0x11)
+#define RICHTAP_STOP_MODE           _IO(RICHTAP_IOCTL_GROUP, 0x12)
+
+#define RICHTAP_MMAP_BUF_SIZE   1000
+#define RICHTAP_MMAP_PAGE_ORDER   2
+#define RICHTAP_MMAP_BUF_SUM    16
+
+#pragma pack(4)
+struct mmap_buf_format {
+    uint8_t status;
+    uint8_t bit;
+    int16_t length;
+    uint32_t reserve;
+    struct mmap_buf_format *kernel_next;
+    struct mmap_buf_format *user_next;
+    uint8_t data[RICHTAP_MMAP_BUF_SIZE];
+};
+#pragma pack()
+
+#endif
 struct aw8697 {
     struct regmap *regmap;
     struct i2c_client *i2c;
@@ -347,8 +398,11 @@ struct aw8697 {
     unsigned long int microsecond;
     unsigned int sys_frequency;
     unsigned int rtp_len;
-
-
+#ifdef CONFIG_OPLUS_HAPTIC_OOS
+	unsigned int sin_num;
+	size_t sin_data_lenght;
+	unsigned int sin_add_flag;
+#endif
     int reset_gpio;
     int irq_gpio;
     int device_id;
@@ -360,6 +414,8 @@ struct aw8697 {
     unsigned char play_mode;
 
     unsigned char activate_mode;
+
+	unsigned char vibration_style;
 
     unsigned char auto_boost;
 
@@ -411,11 +467,22 @@ struct aw8697 {
     struct haptic_audio haptic_audio;
     unsigned int clock_standard_OSC_lra_rtim_code;
     unsigned int clock_system_f0_cali_lra;
-#ifdef VENDOR_EDIT
-    /* tongfeng.Huang@BSP.CHG.Basic, 2018/11/24,  Add for operat para */
+#ifdef AAC_RICHTAP
+    uint8_t *rtp_ptr;
+    struct mmap_buf_format *start_buf;
+    struct work_struct haptic_rtp_work;
+        //wait_queue_head_t doneQ;
+    bool done_flag;
+    bool haptic_rtp_mode;
+#endif
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
     struct work_struct  motor_old_test_work;
     unsigned int motor_old_test_mode;
     atomic_t qos_cnt;
+#endif
+#ifdef CONFIG_OPLUS_HAPTIC_OOS
+	int boot_mode;
 #endif
 };
 
@@ -449,14 +516,17 @@ struct aw8697_que_seq {
 #define AW8697_HAPTIC_SET_GAIN            _IOWR(AW8697_HAPTIC_IOCTL_MAGIC, 6, unsigned int)
 #define AW8697_HAPTIC_PLAY_REPEAT_SEQ     _IOWR(AW8697_HAPTIC_IOCTL_MAGIC, 7, unsigned int)
 
-#ifdef VENDOR_EDIT
-/* tongfeng.Huang@BSP.CHG.Basic, 2018/11/24,  Add for operat para */
-#define OPPO_F0_VAL_MAX_0815                     1800
-#define OPPO_F0_VAL_MIN_0815                     1600
-#define OPPO_F0_VAL_MAX_0832                     2350
-#define OPPO_F0_VAL_MIN_0832                     2250
-#define OPPO_F0_VAL_MAX_0833                     2380
-#define OPPO_F0_VAL_MIN_0833                     2260
+#ifdef OPLUS_FEATURE_CHG_BASIC
+#define F0_VAL_MAX_0815                     1800
+#define F0_VAL_MIN_0815                     1600
+#define F0_VAL_MAX_0832                     2350
+#define F0_VAL_MIN_0832                     2250
+#define F0_VAL_MAX_0833                     2380
+#define F0_VAL_MIN_0833                     2260
+#define F0_VAL_MAX_0619                     1780
+#define F0_VAL_MIN_0619                     1650
+#define F0_VAL_MAX_1040                     1780
+#define F0_VAL_MIN_1040                     1650
 
 #define AW8697_HAPTIC_BASE_VOLTAGE          6000
 #define AW8697_HAPTIC_MAX_VOLTAGE           10000
@@ -465,44 +535,62 @@ struct aw8697_que_seq {
 #define AW8697_HAPTIC_MEDIUM_LEVEL_VOL      1600
 #define AW8697_HAPTIC_MEDIUM_LEVEL_REG_VAL  0
 #define AW8697_HAPTIC_HIGH_LEVEL_VOL        2500
+#ifdef CONFIG_OPLUS_HAPTIC_OOS
+#define AW8697_HAPTIC_HIGH_LEVEL_REG_VAL    0x16
+#else
 #define AW8697_HAPTIC_HIGH_LEVEL_REG_VAL    0x18
-
+#endif
 //#define AW8697_HAPTIC_RAM_VBAT_COMP_GAIN  0x80
 
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_1        1
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_2        2
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_3        3
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_4        4
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_5        5
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_6        6
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_7        7
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_8        8
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_9        9
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_10       10
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_11       11
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_12       12
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_13       13
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_14       14
-#define AW8697_OPPO_WAVEFORM_INDEX_TRADITIONAL_15       15
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_1        1
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_2        2
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_3        3
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_4        4
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_5        5
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_6        6
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_7        7
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_8        8
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_9        9
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_10       10
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_11       11
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_12       12
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_13       13
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_14       14
+#define AW8697_WAVEFORM_INDEX_TRADITIONAL_15       15
 
-#define AW8697_OPPO_RTP_LONG_SOUND_INDEX                44
+#define AW8697_RTP_LONG_SOUND_INDEX                44
 #define AUDIO_READY_STATUS  1024
 #define RINGTONES_START_INDEX   1
 #define RINGTONES_END_INDEX  40
 #define RINGTONES_SIMPLE_INDEX  48
 #define RINGTONES_PURE_INDEX    49
+#ifdef CONFIG_OPLUS_HAPTIC_OOS
+#define RINGTONES_NEWLIFE_INDEX 98
+#endif
 #define NEW_RING_START          120
 #define NEW_RING_END            160
 #define REALME_RING_START       161
-#define REALME_RING_END         170
+#define REALME_RING_END         167
 
+#define OPLUS_START_INDEX       201
+#define OPLUS_END_INDEX         320
+#define OPLUS_RING_START_INDEX  152
+#define OPLUS_RING_END_INDEX    231
 
-#define AW8697_OPPO_WAVEFORM_INDEX_CS_PRESS             16
-#define AW8697_OPPO_WAVEFORM_INDEX_TRANSIENT            8
-#define AW8697_OPPO_WAVEFORM_INDEX_SINE_CYCLE           9
-#define AW8697_OPPO_WAVEFORM_INDEX_HIGH_TEMP            51
-#define AW8697_OPPO_WAVEFORM_INDEX_OLD_STEADY           52
-#define AW8697_OPPO_WAVEFORM_INDEX_LISTEN_POP           53
+#define AW8697_WAVEFORM_INDEX_CS_PRESS             16
+#ifdef CONFIG_OPLUS_HAPTIC_OOS
+#define AW8697_WAVEFORM_INDEX_TRANSIENT            8
+#else
+#define AW8697_WAVEFORM_INDEX_TRANSIENT            8
+#endif
+#ifdef CONFIG_OPLUS_HAPTIC_OOS
+#define AW8697_WAVEFORM_INDEX_SINE_CYCLE           9
+#else
+#define AW8697_WAVEFORM_INDEX_SINE_CYCLE           9
+#endif
+#define AW8697_WAVEFORM_INDEX_HIGH_TEMP            51
+#define AW8697_WAVEFORM_INDEX_OLD_STEADY           52
+#define AW8697_WAVEFORM_INDEX_LISTEN_POP           53
 
 
 enum aw8697_haptic_custom_level {

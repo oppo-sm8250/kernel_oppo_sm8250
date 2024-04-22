@@ -1323,9 +1323,8 @@ config TOUCHSCREEN_ST
 
 source "drivers/input/touchscreen/st/Kconfig"
 
-#ifdef VENDOR_EDIT
-#Wanghao@Bsp.group.Tp,2017-09-20,Added for common touchpanel driver 
-source "drivers/input/touchscreen/oppo_touchscreen/Kconfig"
+#ifdef OPLUS_FEATURE_TP_BASIC
+source "drivers/input/touchscreen/oplus_touchscreen/Kconfig"
 #endif
 
 config TOUCHSCREEN_SYNAPTICS_DSX
@@ -1354,12 +1353,7 @@ config TOUCHSCREEN_SYNAPTICS_TCM
 	  To compile this driver as a module, choose M here: the
 	  module will be called synaptics_tcm.
 
-#ifdef VENDOR_EDIT
-# han hack for oppo touchscreen
 #source "drivers/input/touchscreen/synaptics_tcm/Kconfig"
-
-#source "drivers/input/touchscreen/focaltech_touch/Kconfig"
-#endif
 
 source "drivers/input/touchscreen/nt36xxx/Kconfig"
 

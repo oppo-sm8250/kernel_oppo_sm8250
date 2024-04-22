@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
- *  Copyright (c) 2017-2020, Pixelworks, Inc.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, Pixelworks, Inc.
  *
- *  These files contain modifications made by Pixelworks, Inc., in 2019-2020.
+ * These files contain modifications made by Pixelworks, Inc., in 2019-2020.
  */
-
 
 #ifndef MDSS_DSI_IRIS_MODE_SWITCH
 #define MDSS_DSI_IRIS_MODE_SWITCH
 
 #define GRCP_HEADER 4
 
-#define CEILING(x,y) (((x)+((y)-1))/(y))
+#define CEILING(x, y) (((x)+((y)-1))/(y))
 
 #define IRIS_FRC_MIF_ADDR	0xf2020000
 #define IRIS_GMD_ADDR		0xf20a0000
@@ -124,14 +123,14 @@
 #define HISTMV_CTRL_2			0x00194
 #define HISTMV_CTRL_3			0x00198
 #define HISTMV_CTRL_4			0x0019c
-#define HISTMV_STEP			0x001a0
+#define HISTMV_STEP				0x001a0
 #define HISTMV_BASE			0x001a4
 #define HLMD_CTRL				0x001d4
 #define MVC_SW_UPDATE			0x1ff00
 
 /* FI */
 #define FI_CLOCK_GATING			0x0000c
-#define FI_RANGE_CTRL			0x00014
+#define FI_RANGE_CTRL				0x00014
 #define FI_DEMO_COL_SIZE		0x00018
 #define FI_DEMO_MODE_CTRL		0x0001c
 #define FI_DEMO_MODE_RING		0x00020
@@ -188,7 +187,7 @@
 #define PWIL_CSC_OFFSET1		0x00094
 #define PWIL_CSC_OFFSET2		0x00098
 #define PWIL_PIAD_FRC_INFO		0x00108
-#define PWIL_DISP_CTRL0 		0x010b0
+#define PWIL_DISP_CTRL0		0x010b0
 #define PWIL_FBO_CTRL			0x010c8
 #define PWIL_CMD_CTRL0			0x010f0
 #define PWIL_CMD_CTRL1			0x010f4
@@ -255,11 +254,11 @@
 #define DTG_UPDATE				0x10000
 
 #define MCU_SW_RESET			0x000c8
-#define IRIS_PROXY_MB0			0xf0040000 //OSD protect window use
+#define IRIS_PROXY_MB0			0xf0040000
 #define IRIS_PROXY_MB1			0xf0040008
 #define IRIS_PROXY_MB5			0xf0040028
-#define IRIS_MCU_INFO_1 		0xf0fe0000
-#define IRIS_MCU_INFO_2 		0xf0fe0004
+#define IRIS_MCU_INFO_1		0xf0fe0000
+#define IRIS_MCU_INFO_2		0xf0fe0004
 #define IRIS_UNIT_CTRL_INTEN		0xf0060008
 #define IRIS_TX_RESERVE_0		0xf1880038
 #define IRIS_DPORT_CTRL0		0xf1220000
@@ -296,12 +295,13 @@ void iris_set_video_frame_rate_ms(u32 framerate);
 void iris_set_out_frame_rate(u32 framerate);
 void iris_set_frc_var_display(int var_disp);
 int iris_mode_switch_update(void);
-#ifdef CONFIG_DEBUG_FS
-int iris_ms_debugfs_init(struct dsi_display *display);
-#endif
+int iris_dbgfs_ms_init(struct dsi_display *display);
 void iris_set_ap_te(u8 ap_te);
-void iris_vfr_update(struct iris_cfg *pcfg, bool enable);
+bool iris_update_vfr(struct iris_cfg *pcfg, bool enable);
 int32_t iris_fi_osd_protect_window(u32 Top_left_position, u32 bottom_right_position, u32 osd_window_ctrl, u32 Enable, u32 DynCompensate);
 void iris_fi_demo_window(u32 DemoWinMode);
 void iris_fi_demo_window_cal(void);
+void iris_update_frc_fps(u8 iris_fps);
+void iris_set_pwil_disp_ctrl(void);
 #endif
+

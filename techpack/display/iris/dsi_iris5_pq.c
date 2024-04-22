@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
- *  Copyright (c) 2017-2020, Pixelworks, Inc.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, Pixelworks, Inc.
  *
- *  These files contain modifications made by Pixelworks, Inc., in 2019-2020.
+ * These files contain modifications made by Pixelworks, Inc., in 2019-2020.
  */
-
-
 #include <video/mipi_display.h>
 #include <sde_encoder_phys.h>
 #include "dsi_iris5_api.h"
@@ -15,7 +13,8 @@
 #include "dsi_iris5_lp.h"
 #include "dsi_iris5_pq.h"
 #include "dsi_iris5_ioctl.h"
-#include "iris_log.h"
+#include "dsi_iris5_log.h"
+
 
 extern uint8_t iris_pq_update_path;
 
@@ -181,11 +180,11 @@ void iris_set_sdr2hdr_mode(u8 val)
 	iris_sdr2hdr_mode = val;
 }
 
-int iris5_hdr_enable_get(void)
+int iris_get_hdr_enable(void)
 {
 	struct iris_cfg *pcfg = iris_get_cfg();
 
-	if (pcfg->valid < 2)
+	if (pcfg->valid < PARAM_PARSED)
 		return 0;
 	else if (iris_HDR10_YCoCg)
 		return 2;
@@ -197,7 +196,7 @@ int iris5_hdr_enable_get(void)
 		return 0;
 }
 
-bool iris5_dspp_dirty(void)
+bool iris_dspp_dirty(void)
 {
 	struct quality_setting *pqlt_cur_setting = &iris_setting.quality_cur;
 
@@ -218,7 +217,7 @@ void iris_quality_setting_off(void)
 		iris_sdr2hdr_level_set(SDR2HDR_Bypass);
 		iris_setting.quality_cur.pq_setting.cmcolorgamut = 0;
 		iris_cm_color_gamut_set(
-			iris_setting.quality_cur.pq_setting.cmcolorgamut);
+				iris_setting.quality_cur.pq_setting.cmcolorgamut);
 	} else {
 		iris_cm_color_gamut_pre_clear();
 	}
@@ -252,10 +251,10 @@ static int iris_capture_disable_pq(struct iris_update_ipopt *popt, bool *skiplas
 	if ((!iris_capture_ctrl_en) && (!iris_debug_cap)) {
 		if (!iris_dynamic_power_get())
 			len = iris_init_update_ipopt_t(popt, IP_OPT_MAX, IRIS_IP_PWIL,
-				0x50, 0x50, IRIS_LAST_BIT_CTRL);
+					0x50, 0x50, IRIS_LAST_BIT_CTRL);
 		else
 			len = iris_init_update_ipopt_t(popt, IP_OPT_MAX, IRIS_IP_PWIL,
-				0x52, 0x52, IRIS_LAST_BIT_CTRL);
+					0x52, 0x52, IRIS_LAST_BIT_CTRL);
 
 		*skiplast = 1;
 	}
@@ -270,12 +269,12 @@ static int iris_capture_enable_pq(struct iris_update_ipopt *popt, int oldlen)
 
 	if ((!iris_capture_ctrl_en) && (!iris_debug_cap))
 		len = iris_init_update_ipopt_t(popt, IP_OPT_MAX, IRIS_IP_PWIL,
-			0x51, 0x51,
-			(!iris_dynamic_power_get()) ? 0x01 : 0x0);
+				0x51, 0x51,
+				(!iris_dynamic_power_get()) ? 0x01 : 0x0);
 
 	if (!iris_dynamic_power_get() && !iris_skip_dma)
 		len = iris_init_update_ipopt_t(
-			popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
+				popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
 	return len;
 }
 
@@ -289,10 +288,10 @@ static int iris_capture_disable_lce(struct iris_update_ipopt *popt, bool *skipla
 			&& (!iris_debug_cap)) {
 		if (!iris_dynamic_power_get())
 			iris_init_update_ipopt_t(popt, IP_OPT_MAX, IRIS_IP_PWIL,
-				0x50, 0x50, IRIS_LAST_BIT_CTRL);
+					0x50, 0x50, IRIS_LAST_BIT_CTRL);
 		else
 			iris_init_update_ipopt_t(popt, IP_OPT_MAX, IRIS_IP_PWIL,
-				0x52, 0x52, IRIS_LAST_BIT_CTRL);
+					0x52, 0x52, IRIS_LAST_BIT_CTRL);
 
 		*skiplast = 1;
 	}
@@ -309,13 +308,13 @@ static int iris_capture_enable_lce(struct iris_update_ipopt *popt, int oldlen)
 			&& (iris_lce_power_status_get())
 			&& (!iris_debug_cap))
 		len = iris_init_update_ipopt_t(popt, IP_OPT_MAX, IRIS_IP_PWIL,
-			0x51, 0x51, (!iris_dynamic_power_get())?0x01:0x0);
+				0x51, 0x51, (!iris_dynamic_power_get())?0x01:0x0);
 
 	if (!iris_dynamic_power_get() && !iris_skip_dma) {
 		len = iris_init_update_ipopt_t(
-			popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe3, 0xe3, 0x01);
+				popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe3, 0xe3, 0x01);
 		len = iris_init_update_ipopt_t(
-			popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
+				popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
 	}
 	return len;
 }
@@ -376,6 +375,12 @@ void iris_pq_parameter_init(void)
 	else
 		iris_yuv_datapath = true;
 
+	/* no pxlw node */
+	if (pcfg->valid <= PARAM_EMPTY) {
+		IRIS_LOGW("no pxlw node");
+		return;
+	}
+
 	iris_dbc_lut_index = 0;
 	if (pcfg->panel->panel_mode == DSI_OP_VIDEO_MODE)
 		iris_debug_cap = true;
@@ -392,34 +397,6 @@ void iris_pq_parameter_init(void)
 	pqlt_cur_setting->colortempvalue = 6500;
 
 	IRIS_LOGI("%s, iris_min_x_value=%d, iris_max_x_value = %d", __func__, iris_min_x_value, iris_max_x_value);
-}
-
-void iris_frc_parameter_init(void)
-{
-	struct iris_cfg *pcfg = iris_get_cfg();
-	struct dsi_mode_info *timing;
-	u32 refresh_rate;
-
-	if (pcfg->panel->cur_mode) {
-		timing = &pcfg->panel->cur_mode->timing;
-		refresh_rate = timing->refresh_rate;
-		IRIS_LOGI("refresh_rate: %d!", refresh_rate);
-		if ((refresh_rate % 10) != 0) {
-			refresh_rate = ((refresh_rate + 5) / 10) * 10;
-			IRIS_LOGW("change refresh_rate from %d to %d!", timing->refresh_rate, refresh_rate);
-		}
-		pcfg->frc_setting.out_fps = refresh_rate;
-		pcfg->frc_setting.default_out_fps = refresh_rate;
-		pcfg->panel_te = timing->refresh_rate;
-		pcfg->ap_te = timing->refresh_rate;
-		pcfg->frc_setting.input_vtotal = DSI_V_TOTAL(timing);
-		// temp treat display timing same as input timing
-		pcfg->frc_setting.disp_hres = timing->h_active;
-		pcfg->frc_setting.disp_vres = timing->v_active;
-		pcfg->frc_setting.disp_htotal = DSI_H_TOTAL(timing);
-		pcfg->frc_setting.disp_vtotal = DSI_V_TOTAL(timing);
-	}
-
 }
 
 void iris_peaking_level_set(u32 level)
@@ -470,13 +447,13 @@ static int iris_cm_csc_para_set(struct iris_update_ipopt *popt, uint8_t skip_las
 	opt_id = 0x40;
 	psopt = iris_find_ip_opt(ip, opt_id);
 	if (psopt == NULL) {
-		IRIS_LOGE("can not find ip = %02x opt_id = %02x", ip, opt_id);
+		IRIS_LOGE("can not find i_iris_p = %02x opt_id = %02x", ip, opt_id);
 		return 1;
 	}
 
 	data = (uint32_t *)psopt->cmd[0].msg.tx_buf;
 	IRIS_LOGD("csc: csc0=0x%x, csc1=0x%x, csc2=0x%x, csc3=0x%x, csc4=0x%x",
-		csc_value[0], csc_value[1], csc_value[2], csc_value[3], csc_value[4]);
+			csc_value[0], csc_value[1], csc_value[2], csc_value[3], csc_value[4]);
 	val = csc_value[0];
 	val &= 0x7fff7fff;
 	data[3] = val;
@@ -515,7 +492,7 @@ void iris_cm_csc_level_set(u32 csc_ip, u32 *csc_value)
 	is_ulps_enable = iris_disable_ulps(path);
 	iris_update_pq_opt(popt, len, path);
 	iris_enable_ulps(path, is_ulps_enable);
-	IRIS_LOGD("%s csc len=%d", (csc_ip == IRIS_IP_DPP) ? "dpp" : "cm", len);
+	//IRIS_LOGD("%s iris_c_s_c l_e_n=%d", (csc_ip == IRIS_IP_DPP) ? "d_p_p" : "c_m", len);
 }
 
 void iris_cm_6axis_level_set(u32 level)
@@ -561,7 +538,7 @@ void iris_cm_ftc_enable_set(u32 level)
 	len = iris_capture_disable_pq(popt, &skiplast);
 
 	len = iris_update_ip_opt(
-		popt, IP_OPT_MAX, IRIS_IP_CM, locallevel, skiplast);
+			popt, IP_OPT_MAX, IRIS_IP_CM, locallevel, skiplast);
 
 	len = iris_capture_enable_pq(popt, len);
 
@@ -588,14 +565,14 @@ void iris_scurve_enable_set(u32 level)
 
 	if (level > 0) {
 		enable = 1;
-		scurvelevel = (0x70 + (level -1));
+		scurvelevel = (0x70 + (level - 1));
 		len = iris_update_ip_opt(
-			popt, IP_OPT_MAX, IRIS_IP_DPP, scurvelevel, 0x01);
+				popt, IP_OPT_MAX, IRIS_IP_DPP, scurvelevel, 0x01);
 	}
 
 	locallevel = 0x50 | enable;
 	len = iris_update_ip_opt(
-		popt, IP_OPT_MAX, IRIS_IP_DPP, locallevel, skiplast);
+			popt, IP_OPT_MAX, IRIS_IP_DPP, locallevel, skiplast);
 
 	len = iris_capture_enable_pq(popt, len);
 
@@ -622,7 +599,7 @@ int iris_cm_ratio_set(struct iris_update_ipopt *popt, uint8_t skip_last)
 	else if (pqlt_cur_setting->pq_setting.cmcolortempmode == IRIS_COLOR_TEMP_AUTO)
 		value = pqlt_cur_setting->cctvalue;
 	else
-		value = IRIS_CCT_MIN_VALUE; //CID89833 OoB access
+		value = IRIS_CCT_MIN_VALUE;
 
 
 	if (value > iris_max_color_temp)
@@ -652,7 +629,7 @@ int iris_cm_ratio_set(struct iris_update_ipopt *popt, uint8_t skip_last)
 
 	iris_update_bitmask_regval_nonread(&regval, false);
 	len = iris_init_update_ipopt_t(
-		popt, IP_OPT_MAX, IRIS_IP_DPP, 0xfd, 0xfd, skip_last);
+			popt, IP_OPT_MAX, IRIS_IP_DPP, 0xfd, 0xfd, skip_last);
 	IRIS_LOGI("cm color temperature value=%d", value);
 	return len;
 }
@@ -749,14 +726,14 @@ void iris_cm_color_temp_set(void)
 	/*struct quality_setting *pqlt_cur_setting = & iris_setting.quality_cur;*/
 
 	/*if(pqlt_cur_setting->pq_setting.cmcolorgamut == 0) {*/
-		iris_init_ipopt_ip(popt,  IP_OPT_MAX);
-		len = iris_capture_disable_pq(popt, &skiplast);
-		len = iris_cm_ratio_set(popt, skiplast);
+	iris_init_ipopt_ip(popt,  IP_OPT_MAX);
+	len = iris_capture_disable_pq(popt, &skiplast);
+	len = iris_cm_ratio_set(popt, skiplast);
 
-		len = iris_capture_enable_pq(popt, len);
-		is_ulps_enable = iris_disable_ulps(path);
-		iris_update_pq_opt(popt, len, path);
-		iris_enable_ulps(path, is_ulps_enable);
+	len = iris_capture_enable_pq(popt, len);
+	is_ulps_enable = iris_disable_ulps(path);
+	iris_update_pq_opt(popt, len, path);
+	iris_enable_ulps(path, is_ulps_enable);
 	/*}*/
 	IRIS_LOGI("%s, len = %d",  __func__, len);
 }
@@ -815,7 +792,7 @@ void iris_cm_color_gamut_set(u32 level)
 
 	/*use liner gamma if cm lut disable*/
 	if (pqlt_cur_setting->pq_setting.cmcolortempmode ==
-		IRIS_COLOR_TEMP_OFF)
+			IRIS_COLOR_TEMP_OFF)
 		gammalevel = 0;
 	else
 		gammalevel = level + 1;
@@ -825,8 +802,8 @@ void iris_cm_color_gamut_set(u32 level)
 	iris_update_ip_opt(popt, IP_OPT_MAX, CM_LUT, level * 3 + 0, 0x01);
 	iris_update_ip_opt(popt, IP_OPT_MAX, CM_LUT, level * 3 + 1, 0x01);
 	len = iris_update_ip_opt(
-		popt, IP_OPT_MAX, CM_LUT,
-		level*3 + 2, (pqlt_cur_setting->source_switch == 0) ? 0x01 : skiplast);
+			popt, IP_OPT_MAX, CM_LUT,
+			level*3 + 2, (pqlt_cur_setting->source_switch == 0) ? 0x01 : skiplast);
 
 	/*do not generate lut table for source switch.*/
 	if (pqlt_cur_setting->source_switch == 0) {
@@ -848,9 +825,9 @@ void iris_cm_color_gamut_pre_clear(void)
 	if (pqlt_cur_setting->source_switch != 0) {
 		pqlt_cur_setting->source_switch = 0;
 		iris_cm_color_gamut_set(
-			iris_setting.quality_cur.pq_setting.cmcolorgamut);
+				iris_setting.quality_cur.pq_setting.cmcolorgamut);
 		iris_cm_colortemp_mode_set(
-			iris_setting.quality_cur.pq_setting.cmcolortempmode);
+				iris_setting.quality_cur.pq_setting.cmcolortempmode);
 	}
 }
 
@@ -902,28 +879,28 @@ static int iris_lce_gamm1k_set(
 
 		if (pqlt_cur_setting->luxvalue >= (m_dwTH_LuxAdj * 8))
 			dwLux_i = MIN(8191,
-				(8 * m_dwTH_LuxAdj + pqlt_cur_setting->luxvalue / 8 - m_dwTH_LuxAdj));
+					(8 * m_dwTH_LuxAdj + pqlt_cur_setting->luxvalue / 8 - m_dwTH_LuxAdj));
 		else
 			dwLux_i = pqlt_cur_setting->luxvalue;
 
 		if (dwLux_i <= m_dwXLuxBuffer[0])
 			dwnBL_AL = MIN(m_dwGLuxBuffer[0],
-				m_dwBLux + (m_dwKLuxBuffer[0] * dwLux_i) / 64);
+					m_dwBLux + (m_dwKLuxBuffer[0] * dwLux_i) / 64);
 		else if (dwLux_i <= m_dwXLuxBuffer[1])
 			dwnBL_AL = MIN(m_dwGLuxBuffer[1],
-				m_dwGLuxBuffer[0] + (m_dwKLuxBuffer[1] * (dwLux_i - m_dwXLuxBuffer[0])) / 64);
+					m_dwGLuxBuffer[0] + (m_dwKLuxBuffer[1] * (dwLux_i - m_dwXLuxBuffer[0])) / 64);
 		else if (dwLux_i <= m_dwXLuxBuffer[2])
 			dwnBL_AL = MIN(m_dwGLuxBuffer[2],
-				m_dwGLuxBuffer[1] + (m_dwKLuxBuffer[2] * (dwLux_i - m_dwXLuxBuffer[1])) / 64);
+					m_dwGLuxBuffer[1] + (m_dwKLuxBuffer[2] * (dwLux_i - m_dwXLuxBuffer[1])) / 64);
 		else if (dwLux_i <= m_dwXLuxBuffer[3])
 			dwnBL_AL = MIN(m_dwGLuxBuffer[3],
-				m_dwGLuxBuffer[2] + (m_dwKLuxBuffer[3] * (dwLux_i - m_dwXLuxBuffer[2])) / 64);
+					m_dwGLuxBuffer[2] + (m_dwKLuxBuffer[3] * (dwLux_i - m_dwXLuxBuffer[2])) / 64);
 		else if (dwLux_i <= m_dwXLuxBuffer[4])
 			dwnBL_AL = MIN(m_dwGLuxBuffer[4],
-				m_dwGLuxBuffer[3] + (m_dwKLuxBuffer[4] * (dwLux_i - m_dwXLuxBuffer[3])) / 64);
+					m_dwGLuxBuffer[3] + (m_dwKLuxBuffer[4] * (dwLux_i - m_dwXLuxBuffer[3])) / 64);
 		else
 			dwnBL_AL = MIN(m_dwGLuxBuffer[5],
-				m_dwGLuxBuffer[4] + (m_dwKLuxBuffer[5] * (dwLux_i - m_dwXLuxBuffer[4])) / 64);
+					m_dwGLuxBuffer[4] + (m_dwKLuxBuffer[5] * (dwLux_i - m_dwXLuxBuffer[4])) / 64);
 
 		if (dwnBL_AL < 1024)
 			dwGain = 0;
@@ -939,15 +916,15 @@ static int iris_lce_gamm1k_set(
 		regval.value = ((*payload) & 0x00ffffff) | (dwAHEGAMMA1K << 24);
 		iris_update_bitmask_regval_nonread(&regval, false);
 		len = iris_init_update_ipopt_t(
-			popt, IP_OPT_MAX, IRIS_IP_LCE,
-			0xfd, 0xfd, skip_last);
+				popt, IP_OPT_MAX, IRIS_IP_LCE,
+				0xfd, 0xfd, skip_last);
 	}
 	IRIS_LOGI("lux value=%d", pqlt_cur_setting->luxvalue);
 	return len;
 }
 
 static int iris_lce_gamm1k_restore(
-	struct iris_update_ipopt *popt, uint8_t skip_last)
+		struct iris_update_ipopt *popt, uint8_t skip_last)
 {
 	u32 level;
 	struct iris_update_regval regval;
@@ -957,7 +934,7 @@ static int iris_lce_gamm1k_restore(
 
 
 	level = (pqlt_cur_setting->pq_setting.lcemode) * 6
-				+ pqlt_cur_setting->pq_setting.lcelevel;
+		+ pqlt_cur_setting->pq_setting.lcelevel;
 	payload = iris_get_ipopt_payload_data(IRIS_IP_LCE, level, 5);
 
 	regval.ip = IRIS_IP_LCE;
@@ -994,7 +971,7 @@ void iris_lce_mode_set(u32 mode)
 	len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_LCE, locallevel, 0x01);
 
 	if (pqlt_cur_setting->pq_setting.alenable == true
-		&& pqlt_cur_setting->pq_setting.sdr2hdr == SDR2HDR_Bypass)
+			&& pqlt_cur_setting->pq_setting.sdr2hdr == SDR2HDR_Bypass)
 		len = iris_lce_gamm1k_set(popt, skiplast);
 	else
 		len = iris_lce_gamm1k_restore(popt, skiplast);
@@ -1028,11 +1005,11 @@ void iris_lce_level_set(u32 level)
 		locallevel = level + 6;
 
 	len = iris_update_ip_opt(
-		popt, IP_OPT_MAX, IRIS_IP_LCE, locallevel, 0x01);
+			popt, IP_OPT_MAX, IRIS_IP_LCE, locallevel, 0x01);
 
 	/* hdr's al may use lce */
 	if (pqlt_cur_setting->pq_setting.alenable == true
-		&& pqlt_cur_setting->pq_setting.sdr2hdr == SDR2HDR_Bypass)
+			&& pqlt_cur_setting->pq_setting.sdr2hdr == SDR2HDR_Bypass)
 		len = iris_lce_gamm1k_set(popt, skiplast);
 	else
 		len = iris_lce_gamm1k_restore(popt, skiplast);
@@ -1108,21 +1085,21 @@ void iris_lce_demo_window_set(u32 vsize, u32 hsize, u8 inwnd)
 	int data;
 	uint8_t path = iris_pq_update_path;
 
-	IRIS_LOGI("iris_lce_demo_window_set E %d %d %d", vsize, hsize, inwnd);
+	IRIS_LOGI("%s E %d %d %d", __func__, vsize, hsize, inwnd);
 
 	iris_init_ipopt_ip(popt,  IP_OPT_MAX);
 	len = iris_capture_disable_lce(popt, &skiplast);
 
-        // RESERVED
+	// RESERVED
 	payload = iris_get_ipopt_payload_data(IRIS_IP_LCE, 0xF0, 2);
-        // payload[0]: RESERVED,
-        // [11:0] = DEMO_HSIZE, 0x00000FFF
-        // [27:16] = DEMO_VSIZE, 0x0FFF0000
+	// payload[0]: RESERVED,
+	// [11:0] = DEMO_HSIZE, 0x00000FFF
+	// [27:16] = DEMO_VSIZE, 0x0FFF0000
 	data = (payload[0] & (~0x0FFF0FFF)) | ((vsize & 0x0FFF) << 16) | (hsize & 0x0FFF);
 	iris_set_ipopt_payload_data(IRIS_IP_LCE, 0xF0, 2, data);
 	len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_LCE, 0xF0, 0x01);
 
-        // NR_CTRL
+	// NR_CTRL
 	level = (pqlt_cur_setting->pq_setting.lcemode) * 6
 		+ pqlt_cur_setting->pq_setting.lcelevel;
 	payload = iris_get_ipopt_payload_data(IRIS_IP_LCE, level, 2);
@@ -1131,9 +1108,9 @@ void iris_lce_demo_window_set(u32 vsize, u32 hsize, u8 inwnd)
 	// bit15 = DEMO_V_EN
 	// bit17 = WND_CHANGE, 0: in window, 1: out of window
 	data = (payload[12] & (~0x0002C000)) |
-	       ((hsize != 0? 1:0) << 14) |
-	       ((vsize != 0? 1:0) << 15) |
-	       ((inwnd & 0x01) << 17);
+		((hsize != 0 ? 1:0) << 14) |
+		((vsize != 0 ? 1:0) << 15) |
+		((inwnd & 0x01) << 17);
 	iris_set_ipopt_payload_data(IRIS_IP_LCE, level, 14, data);
 	len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_LCE, level, skiplast);
 
@@ -1143,7 +1120,7 @@ void iris_lce_demo_window_set(u32 vsize, u32 hsize, u8 inwnd)
 	iris_update_pq_opt(popt, len, path);
 	iris_enable_ulps(path, is_ulps_enable);
 
-	IRIS_LOGI("iris_lce_demo_window_set X %d %d %d, len=%d", vsize, hsize, inwnd, len);
+	IRIS_LOGI("%s X %d %d %d, len=%d", __func__, vsize, hsize, inwnd, len);
 }
 
 
@@ -1190,13 +1167,14 @@ void iris_dbc_level_set(u32 level)
 
 void iris_reading_mode_set(u32 level)
 {
-	u32 locallevel;
+	u32 locallevel, locallevel_cm;
 	bool skiplast = 0;
 	int len;
 	struct iris_update_ipopt popt[IP_OPT_MAX];
 	struct quality_setting *pqlt_cur_setting = &iris_setting.quality_cur;
 	bool is_ulps_enable = 0;
 	uint8_t path = iris_pq_update_path;
+	// struct iris_cfg *pcfg = iris_get_cfg_by_index(DSI_PRIMARY);
 	//bool cm_csc_enable = true;
 
 	/*only take affect when sdr2hdr bypass */
@@ -1205,6 +1183,9 @@ void iris_reading_mode_set(u32 level)
 		len = iris_capture_disable_pq(popt, &skiplast);
 
 		locallevel = 0x40 | level;
+		// FIXME: WA for old pxlw-dtsi
+		// locallevel_cm = (pcfg->dual_setting ? 0x40 : 0x48) | level;
+		locallevel_cm = 0x40 | level;
 
 		//if ((level == 0) &&
 		//	(pqlt_cur_setting->pq_setting.cm6axis == 0))
@@ -1213,7 +1194,7 @@ void iris_reading_mode_set(u32 level)
 		//len = iris_cm_csc_set(popt, 0x01, cm_csc_enable);
 
 		iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_CM,
-				locallevel, 0x01);
+				locallevel_cm, 0x01);
 		len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_DPP,
 				locallevel, skiplast);
 
@@ -1260,7 +1241,7 @@ void iris_ambient_light_lut_set(uint32_t lut_offset)
 	if (pqlt_cur_setting->pq_setting.alenable == true) {
 
 		if (pqlt_cur_setting->pq_setting.sdr2hdr >= HDR10In_ICtCp &&
-			pqlt_cur_setting->pq_setting.sdr2hdr <= ICtCpIn_YCbCr) {
+				pqlt_cur_setting->pq_setting.sdr2hdr <= ICtCpIn_YCbCr) {
 
 			if (!(iris_sdr2hdr_lut2ctl & 0xFFE00000)) {
 				payload = iris_get_ipopt_payload_data(IRIS_IP_SDR2HDR, (AL_SDR2HDR_INDEX_OFFSET + 2), 83);
@@ -1294,9 +1275,9 @@ void iris_ambient_light_lut_set(uint32_t lut_offset)
 				iris_sdr2hdr_lutyctl = payload[0];
 			}
 			iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_SDR2HDR,
-				(AL_SDR2HDR_INDEX_OFFSET + 5), 0x01);
-		//(AL_SDR2HDR_INDEX_OFFSET +
-		//	pqlt_cur_setting->pq_setting.sdr2hdr), 0x01);
+					(AL_SDR2HDR_INDEX_OFFSET + 5), 0x01);
+			//(AL_SDR2HDR_INDEX_OFFSET +
+			//	pqlt_cur_setting->pq_setting.sdr2hdr), 0x01);
 			len = iris_update_ip_opt(popt, IP_OPT_MAX, AMBINET_SDR2HDR_LUT,
 					0x0, skiplast);
 			payload = iris_get_ipopt_payload_data(IRIS_IP_SDR2HDR, (AL_SDR2HDR_INDEX_OFFSET + 5), 83);
@@ -1351,8 +1332,8 @@ void iris_ambient_light_lut_set(uint32_t lut_offset)
 	iris_update_pq_opt(popt, len, path);
 	iris_enable_ulps(path, is_ulps_enable);
 	IRIS_LOGD("al=%d hdr level=%d",
-		pqlt_cur_setting->pq_setting.alenable,
-		pqlt_cur_setting->pq_setting.sdr2hdr);
+			pqlt_cur_setting->pq_setting.alenable,
+			pqlt_cur_setting->pq_setting.sdr2hdr);
 }
 
 void iris_maxcll_lut_set(u32 lutpos)
@@ -1450,6 +1431,7 @@ void iris_sdr2hdr_level_set(u32 level)
 	bool dma_sent = false;
 	bool is_ulps_enable = 0;
 	uint8_t path = iris_pq_update_path;
+	// struct iris_cfg *pcfg = iris_get_cfg_by_index(DSI_PRIMARY);
 
 	iris_init_ipopt_ip(popt,  IP_OPT_MAX);
 	if ((!iris_dynamic_power_get()) && (iris_capture_ctrl_en == true))
@@ -1509,7 +1491,7 @@ void iris_sdr2hdr_level_set(u32 level)
 	}
 
 	if ((level <= ICtCpIn_YCbCr)
-		&& (level >= HDR10In_ICtCp)) {
+			&& (level >= HDR10In_ICtCp)) {
 		/*channel order YUV, ICtCp*/
 		pwil_channel_order = 0x60;
 		if (level == ICtCpIn_YCbCr)
@@ -1586,8 +1568,11 @@ void iris_sdr2hdr_level_set(u32 level)
 		iris_sdr2hdr_lutyctl = payload[0];
 	}
 
+	// FIXME: WA for old pxlw-dtsi
+	//if (!pcfg->dual_setting)
+	//	cm_csc += 8;
 	iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_CM,
-				cm_csc, 0x01);
+			cm_csc, 0x01);
 
 	/*add the workaround to let hdr and cm lut */
 	/*table take affect at the same time*/
@@ -1599,7 +1584,7 @@ void iris_sdr2hdr_level_set(u32 level)
 	regval.opt_id = 0xfc;
 	regval.mask = 0x00000031;
 	regval.value = (pqlt_cur_setting->pq_setting.cmcolortempmode == 0)
-					? 0x00000020 : 0x00000011;
+		? 0x00000020 : 0x00000011;
 
 	iris_update_bitmask_regval_nonread(&regval, false);
 	len = iris_init_update_ipopt_t(popt, IP_OPT_MAX, IRIS_IP_DPP,
@@ -1608,7 +1593,7 @@ void iris_sdr2hdr_level_set(u32 level)
 	if (pqlt_cur_setting->source_switch == 1) {
 		/*use liner gamma if cm lut disable*/
 		if (pqlt_cur_setting->pq_setting.cmcolortempmode ==
-			IRIS_COLOR_TEMP_OFF)
+				IRIS_COLOR_TEMP_OFF)
 			gammalevel = 0;
 		else
 			gammalevel = pqlt_cur_setting->pq_setting.cmcolorgamut + 1;
@@ -1621,7 +1606,7 @@ void iris_sdr2hdr_level_set(u32 level)
 		peaking_csc = 0x11;
 	else {
 		if ((pqlt_cur_setting->pq_setting.readingmode == 0)
-			&& (pqlt_cur_setting->pq_setting.cm6axis == 0))
+				&& (pqlt_cur_setting->pq_setting.cm6axis == 0))
 			cm_csc_enable = false;
 
 		if (pqlt_cur_setting->pq_setting.peaking == 0)
@@ -1906,13 +1891,13 @@ void iris_panel_nits_set(u32 bl_ratio, bool bSystemRestore, int level)
 		led_pwm1[1] = (unsigned char)(bl_lvl & 0xff);
 		backlight_cmd.msg.tx_len = 2;
 	}
-	iris5_panel_cmd_passthrough(pcfg->panel, &cmdset);
+	iris_pt_send_panel_cmd(pcfg->panel, &cmdset);
 
 	// Support HBM for different panels.
 	hbm_data[1] = (bSystemRestore) ? pcfg->panel_hbm[0] : pcfg->panel_hbm[1];
 	cmdset.cmds = &hbm_cmd;
 	if (pcfg->panel_hbm[0] != pcfg->panel_hbm[1])
-		iris5_panel_cmd_passthrough(pcfg->panel, &cmdset);
+		iris_pt_send_panel_cmd(pcfg->panel, &cmdset);
 	IRIS_LOGD("panel_nits: bl_lvl=0x%x, hbm=0x%x, restore=%d", bl_lvl, hbm_data[1], bSystemRestore);
 #endif
 }
@@ -1967,7 +1952,7 @@ void iris_scaler_gamma_enable(bool lightup_en, u32 level)
 	else {
 		if (!iris_dynamic_power_get())
 			len = iris_init_update_ipopt_t(
-				popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
+					popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
 	}
 
 	is_ulps_enable = iris_disable_ulps(path);
@@ -2005,9 +1990,11 @@ void iris_hdr_csc_prepare(void)
 	}
 }
 
-static void iris5_dynamic_vfr(struct iris_cfg *pcfg, struct dsi_display *display) {
+static void iris_dynamic_vfr(struct iris_cfg *pcfg, struct dsi_display *display)
+{
 	if (iris_virtual_display(display)) {
 		int video_update_wo_osd = atomic_read(&pcfg->video_update_wo_osd);
+
 		IRIS_LOGV("clean video_update_wo_osd");
 		atomic_set(&pcfg->video_update_wo_osd, 0);
 		if (video_update_wo_osd >= 4) {
@@ -2024,7 +2011,7 @@ static void iris5_dynamic_vfr(struct iris_cfg *pcfg, struct dsi_display *display
 	}
 }
 
-int iris5_kickoff(void *phys_enc)
+int iris_kickoff(void *phys_enc)
 {
 	struct sde_encoder_phys *phys_encoder = phys_enc;
 	struct sde_connector *c_conn = NULL;
@@ -2040,20 +2027,19 @@ int iris5_kickoff(void *phys_enc)
 	if (c_conn == NULL)
 		return -EFAULT;
 
-    if(c_conn->connector_type != DRM_MODE_CONNECTOR_DSI)
-        return 0;
+	if (c_conn->connector_type != DRM_MODE_CONNECTOR_DSI)
+		return 0;
 
 	display = c_conn->display;
 	if (display == NULL)
 		return -EFAULT;
 
 	pcfg = iris_get_cfg_by_index(DSI_PRIMARY);
-	if (pcfg->fod_pending) {
-		iris5_fod_post(pcfg->panel);
-	}
+	if (pcfg->fod_pending)
+		iris_post_fod(pcfg->panel);
 	if (pcfg->dynamic_vfr)
-		iris5_dynamic_vfr(pcfg, display);
-	if (iris_virtual_display(display) || pcfg->valid < 2)
+		iris_dynamic_vfr(pcfg, display);
+	if (iris_virtual_display(display) || pcfg->valid < PARAM_PARSED)
 		return 0;
 
 	complete(&pcfg->frame_ready_completion);
@@ -2082,7 +2068,7 @@ void iris_hdr_csc_complete(int step)
 		IRIS_LOGD("Wait frame ready.");
 		reinit_completion(&pcfg->frame_ready_completion);
 		if (!wait_for_completion_timeout(&pcfg->frame_ready_completion,
-						 msecs_to_jiffies(50)))
+					msecs_to_jiffies(50)))
 			IRIS_LOGE("%s: timeout waiting for frame ready", __func__);
 	}
 
@@ -2130,7 +2116,7 @@ int32_t  iris_update_ip_opt(
 
 	if (pq_ipopt_val == NULL) {
 		IRIS_LOGI("can not get pq ipot val ip = %02x, opt_id = %02x",
-					ip, opt_id);
+				ip, opt_id);
 		return 1;
 	}
 
@@ -2139,7 +2125,7 @@ int32_t  iris_update_ip_opt(
 			for (i = 0; i < pq_ipopt_val->opt_cnt; i++) {
 				if (((opt_id & 0x1f)%CM_LUT_GROUP)
 						== (((pq_ipopt_val->popt[i]) & 0x1f)
-								% CM_LUT_GROUP)) {
+							% CM_LUT_GROUP)) {
 					old_opt = pq_ipopt_val->popt[i];
 					pq_ipopt_val->popt[i] = opt_id;
 					cnt = iris_init_update_ipopt_t(popt, len, ip,
@@ -2164,8 +2150,8 @@ int32_t  iris_update_ip_opt(
 		} else { /*DBC LUT table*/
 			for (i = 0; i < pq_ipopt_val->opt_cnt; i++) {
 				if (((opt_id & 0xe0)
-					== ((pq_ipopt_val->popt[i]) & 0xe0))
-					&& (((pq_ipopt_val->popt[i]) & 0x1f) != 0)) {
+							== ((pq_ipopt_val->popt[i]) & 0xe0))
+						&& (((pq_ipopt_val->popt[i]) & 0x1f) != 0)) {
 
 					old_opt = pq_ipopt_val->popt[i];
 					pq_ipopt_val->popt[i] = opt_id;
@@ -2195,7 +2181,7 @@ int32_t  iris_update_ip_opt(
 		for (i = 0; i < pq_ipopt_val->opt_cnt; i++) {
 			if ((opt_id % CM_LUT_GROUP)
 					== (pq_ipopt_val->popt[i]
-							% CM_LUT_GROUP)) {
+						% CM_LUT_GROUP)) {
 				old_opt = pq_ipopt_val->popt[i];
 				pq_ipopt_val->popt[i] = opt_id;
 				cnt = iris_init_update_ipopt_t(popt, len, ip,
@@ -2352,7 +2338,7 @@ void iris_pwil_cmd_disp_mode_set(bool cmd_disp_on)
 
 	if (!iris_dynamic_power_get())
 		len = iris_init_update_ipopt_t(
-			popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
+				popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
 	is_ulps_enable = iris_disable_ulps(path);
 	iris_update_pq_opt(popt, len, path);
 	iris_enable_ulps(path, is_ulps_enable);
@@ -2367,7 +2353,10 @@ void iris_psf_mif_efifo_set(u8 mode, bool osd_enable)
 	int len;
 	bool is_ulps_enable = 0;
 	uint8_t path = iris_pq_update_path;
-
+	struct iris_cfg *pcfg = iris_get_cfg_by_index(DSI_PRIMARY);
+	/* disable efifo */
+	if (true)
+		return;
 	iris_init_ipopt_ip(popt,  IP_OPT_MAX);
 	if (!iris_dynamic_power_get())
 		skiplast = 1;
@@ -2375,7 +2364,7 @@ void iris_psf_mif_efifo_set(u8 mode, bool osd_enable)
 		enable = true;
 
 	regval.ip = IRIS_IP_PSR_MIF;
-	regval.opt_id = 0xfd;
+	regval.opt_id = pcfg->dual_setting ? 0xfe : 0xfd;
 	regval.mask = 0x1000;
 	regval.value = ((enable == true) ? 0 : 0x1000);
 	iris_update_bitmask_regval_nonread(&regval, false);
@@ -2383,7 +2372,7 @@ void iris_psf_mif_efifo_set(u8 mode, bool osd_enable)
 			regval.opt_id, regval.opt_id, skiplast);
 	if (!iris_dynamic_power_get())
 		len = iris_init_update_ipopt_t(
-			popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
+				popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
 	is_ulps_enable = iris_disable_ulps(path);
 	iris_update_pq_opt(popt, len, path);
 	iris_enable_ulps(path, is_ulps_enable);
@@ -2398,11 +2387,12 @@ void iris_psf_mif_dyn_addr_set(bool dyn_addr_enable)
 	int len;
 	bool is_ulps_enable = 0;
 	uint8_t path = iris_pq_update_path;
+	struct iris_cfg *pcfg = iris_get_cfg_by_index(DSI_PRIMARY);
 
 	iris_init_ipopt_ip(popt,  IP_OPT_MAX);
 
 	regval.ip = IRIS_IP_PSR_MIF;
-	regval.opt_id = 0xfd;
+	regval.opt_id = pcfg->dual_setting ? 0xfe : 0xfd;
 	regval.mask = 0x2000;
 	regval.value = ((dyn_addr_enable == false) ? 0 : 0x2000);
 	iris_update_bitmask_regval_nonread(&regval, false);
@@ -2410,7 +2400,7 @@ void iris_psf_mif_dyn_addr_set(bool dyn_addr_enable)
 			regval.opt_id, regval.opt_id, skiplast);
 	if (!dyn_addr_enable)
 		len = iris_init_update_ipopt_t(
-			popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
+				popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
 	is_ulps_enable = iris_disable_ulps(path);
 	iris_update_pq_opt(popt, len, path);
 	iris_enable_ulps(path, is_ulps_enable);
@@ -2432,7 +2422,7 @@ void iris_ms_pwil_dma_update(struct iris_mspwil_parameter *par)
 	int temp = 0;
 	bool is_ulps_enable = 0;
 	uint8_t path = iris_pq_update_path;
-//	uint32_t tx_reserve_0;
+	//	uint32_t tx_reserve_0;
 
 	iris_init_ipopt_ip(popt,  IP_OPT_MAX);
 	len = iris_capture_disable_pq(popt, &skiplast);
@@ -2440,16 +2430,15 @@ void iris_ms_pwil_dma_update(struct iris_mspwil_parameter *par)
 	// frc_var_disp, 0xf1240108
 	if (par->frc_var_disp != -1) {
 		// MIPI_TX ECO
-//		payload = iris_get_ipopt_payload_data(IRIS_IP_TX, 0x00, 2);
-//		if (payload && payload[15] == 0xf1880038) {
-//			tx_reserve_0 = payload[16];
-//			tx_reserve_0 &= ~(1<<28);
-//			tx_reserve_0 |= par->frc_var_disp << 28;
-//			iris_set_ipopt_payload_data(IRIS_IP_TX, 0x00, 2+16, tx_reserve_0);
-//			len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_TX, 0x00, 0x01);
-//		} else {
-//			pr_err("cannot find IRIS_TX_RESERVE_0, payload[15]: %x\n", payload[15]);
-//		}
+		//		payload = iris_get_ipopt_payload_data(IRIS_IP_TX, 0x00, 2);
+		//		if (payload && payload[15] == 0xf1880038) {
+		//			tx_reserve_0 = payload[16];
+		//			tx_reserve_0 &= ~(1<<28);
+		//			tx_reserve_0 |= par->frc_var_disp << 28;
+		//			iris_set_ipopt_payload_data(IRIS_IP_TX, 0x00, 2+16, tx_reserve_0);
+		//			len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_TX, 0x00, 0x01);
+		//			pr_err("cannot find IRIS_TX_RESERVE_0, payload[15]: %x\n", payload[15]);
+		//		}
 
 		regval.ip = IRIS_IP_PWIL;
 		regval.opt_id = 0x23;
@@ -2467,15 +2456,18 @@ void iris_ms_pwil_dma_update(struct iris_mspwil_parameter *par)
 	if (par->frc_pt_switch_on != -1) {
 		payload = iris_get_ipopt_payload_data(IRIS_IP_PWIL, 0xF1, 2);
 		pwil_datapath = (payload[2] & (~0x80000000)) | pwil_datapath;
+		pwil_datapath &= ~0x00800000;		// blending before scale(PP)
+		if (pcfg->dual_setting && par->frc_pt_switch_on == 0)
+			pwil_datapath |= 0x00800000;	// blending after scale(PP)
 		iris_set_ipopt_payload_data(IRIS_IP_PWIL, 0xF1, 4, pwil_datapath);
-//		len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_PWIL, 0xF1, 0x01);
+		//		len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_PWIL, 0xF1, 0x01);
 	}
 	// cmd_disp_on, 0xf1240000
 	if (par->cmd_disp_on != -1) {
 		payload = iris_get_ipopt_payload_data(IRIS_IP_PWIL, 0xF1, 2);
 		pwil_ctrl = (payload[0] & (~0x10)) | pwil_ctrl;
 		iris_set_ipopt_payload_data(IRIS_IP_PWIL, 0xF1, 2, pwil_ctrl);
-//		len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_PWIL, 0xF1, 0x01);
+		//		len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_PWIL, 0xF1, 0x01);
 	}
 
 	if (par->frc_pt_switch_on != -1 || par->cmd_disp_on != -1)
@@ -2494,10 +2486,13 @@ void iris_ms_pwil_dma_update(struct iris_mspwil_parameter *par)
 	}
 
 	if (par->mvc_01phase_update) {
-		payload = iris_get_ipopt_payload_data(IRIS_IP_PWIL, 0xB0, 2);
+		int pwil_video_opt = 0xB0;
+		if (pcfg->dual_setting)
+			pwil_video_opt = 0xB1;
+		payload = iris_get_ipopt_payload_data(IRIS_IP_PWIL, pwil_video_opt, 2);
 		temp = (payload[2] & (~0x80000000)) | (par->mvc_01phase<<31);
-		iris_set_ipopt_payload_data(IRIS_IP_PWIL, 0xb0, 4, temp);
-		iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_PWIL, 0xB0, 0x01);
+		iris_set_ipopt_payload_data(IRIS_IP_PWIL, pwil_video_opt, 4, temp);
+		iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_PWIL, pwil_video_opt, 0x01);
 	}
 
 	len = iris_capture_enable_pq(popt, len);
@@ -2520,9 +2515,9 @@ void iris_dtg_frame_rate_set(u32 framerate)
 	iris_init_ipopt_ip(popt, IP_OPT_MAX);
 	len = iris_capture_disable_pq(popt, &skiplast);
 	if (framerate == HIGH_FREQ)
-		len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_DTG, 0x0, 0x0);
-	else
 		len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_DTG, 0x1, 0x0);
+	else
+		len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_DTG, 0x0, 0x0);
 	len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_DTG, 0xF0, 0x0);
 	len = iris_capture_enable_pq(popt, len);
 	is_ulps_enable = iris_disable_ulps(path);
@@ -2530,7 +2525,7 @@ void iris_dtg_frame_rate_set(u32 framerate)
 	iris_enable_ulps(path, is_ulps_enable);
 
 }
-#ifdef CONFIG_DEBUG_FS
+
 static ssize_t iris_pq_config_write(struct file *file, const char __user *buff,
 		size_t count, loff_t *ppos)
 {
@@ -2541,32 +2536,31 @@ static ssize_t iris_pq_config_write(struct file *file, const char __user *buff,
 	};
 
 	struct iris_cfg_log arr[] = {
-					{IRIS_PEAKING, "IRIS_PEAKING"},
-					{IRIS_DBC_LEVEL, "IRIS_DBC_LEVEL"},
-					{IRIS_LCE_LEVEL, "IRIS_LCE_LEVEL"},
-					{IRIS_DEMO_MODE, "IRIS_DEMO_MODE"},
-					{IRIS_SDR2HDR, "IRIS_SDR2HDR"},
-					{IRIS_DYNAMIC_POWER_CTRL, "IRIS_DYNAMIC_POWER_CTRL"},
-					{IRIS_LCE_MODE, "IRIS_LCE_MODE"},
-					{IRIS_GRAPHIC_DET_ENABLE, "IRIS_GRAPHIC_DET_ENABLE"},
-					{IRIS_HDR_MAXCLL, "IRIS_HDR_MAXCLL"},
-					{IRIS_ANALOG_BYPASS_MODE, "IRIS_ANALOG_BYPASS_MODE"},
-					{IRIS_CM_6AXES, "IRIS_CM_6AXES"},
-					{IRIS_CM_FTC_ENABLE, "IRIS_CM_FTC_ENABLE"},
-					{IRIS_S_CURVE, "IRIS_S_CURVE"},
-					{IRIS_CM_COLOR_TEMP_MODE, "IRIS_CM_COLOR_TEMP_MODE"},
-					{IRIS_CM_COLOR_GAMUT, "IRIS_CM_COLOR_GAMUT"},
-					{IRIS_CM_COLOR_GAMUT_PRE, "IRIS_CM_COLOR_GAMUT_PRE"},
-					{IRIS_CCT_VALUE, "IRIS_CCT_VALUE"},
-					{IRIS_COLOR_TEMP_VALUE, "IRIS_COLOR_TEMP_VALUE"},
-					{IRIS_AL_ENABLE, "IRIS_AL_ENABLE"},
-					{IRIS_LUX_VALUE, "IRIS_LUX_VALUE"},
-					{IRIS_READING_MODE, "IRIS_READING_MODE"},
-					{IRIS_CHIP_VERSION, "IRIS_CHIP_VERSION"},
-					{IRIS_PANEL_TYPE, "IRIS_PANEL_TYPE"},
-					{IRIS_LCE_DEMO_WINDOW, "IRIS_LCE_DEMO_WINDOW"},
-					{IRIS_CM_PARA_SET, "IRIS_CM_PARA_SET"},
-				};
+		{IRIS_PEAKING, "IRIS_PEAKING"},
+		{IRIS_DBC_LEVEL, "IRIS_DBC_LEVEL"},
+		{IRIS_LCE_LEVEL, "IRIS_LCE_LEVEL"},
+		{IRIS_DEMO_MODE, "IRIS_DEMO_MODE"},
+		{IRIS_SDR2HDR, "IRIS_SDR2HDR"},
+		{IRIS_DYNAMIC_POWER_CTRL, "IRIS_DYNAMIC_POWER_CTRL"},
+		{IRIS_LCE_MODE, "IRIS_LCE_MODE"},
+		{IRIS_GRAPHIC_DET_ENABLE, "IRIS_GRAPHIC_DET_ENABLE"},
+		{IRIS_HDR_MAXCLL, "IRIS_HDR_MAXCLL"},
+		{IRIS_ANALOG_BYPASS_MODE, "IRIS_ANALOG_BYPASS_MODE"},
+		{IRIS_CM_6AXES, "IRIS_CM_6AXES"},
+		{IRIS_CM_FTC_ENABLE, "IRIS_CM_FTC_ENABLE"},
+		{IRIS_S_CURVE, "IRIS_S_CURVE"},
+		{IRIS_CM_COLOR_TEMP_MODE, "IRIS_CM_COLOR_TEMP_MODE"},
+		{IRIS_CM_COLOR_GAMUT, "IRIS_CM_COLOR_GAMUT"},
+		{IRIS_CM_COLOR_GAMUT_PRE, "IRIS_CM_COLOR_GAMUT_PRE"},
+		{IRIS_CCT_VALUE, "IRIS_CCT_VALUE"},
+		{IRIS_COLOR_TEMP_VALUE, "IRIS_COLOR_TEMP_VALUE"},
+		{IRIS_AL_ENABLE, "IRIS_AL_ENABLE"},
+		{IRIS_LUX_VALUE, "IRIS_LUX_VALUE"},
+		{IRIS_READING_MODE, "IRIS_READING_MODE"},
+		{IRIS_CHIP_VERSION, "IRIS_CHIP_VERSION"},
+		{IRIS_PANEL_TYPE, "IRIS_PANEL_TYPE"},
+		{IRIS_LCE_DEMO_WINDOW, "IRIS_LCE_DEMO_WINDOW"},
+	};
 	u32 type;
 	u32 value;
 	int i = 0;
@@ -2594,7 +2588,7 @@ static const struct file_operations iris_pq_config_fops = {
 };
 
 
-int iris_pq_debugfs_init(struct dsi_display *display)
+int iris_dbgfs_pq_init(struct dsi_display *display)
 {
 	struct iris_cfg *pcfg;
 
@@ -2611,13 +2605,13 @@ int iris_pq_debugfs_init(struct dsi_display *display)
 	if (debugfs_create_file("iris_pq_config", 0644, pcfg->dbg_root, display,
 				&iris_pq_config_fops) == NULL) {
 		IRIS_LOGE("%s(%d): debugfs_create_file: index fail",
-			__FILE__, __LINE__);
+				__FILE__, __LINE__);
 		return -EFAULT;
 	}
 	return 0;
 }
-#endif
-int iris5_update_backlight(u8 PkgMode, u32 bl_lvl)
+
+int iris_update_backlight(u8 pkg_mode, u32 bl_lvl)
 {
 	int rc = 0;
 	struct iris_cfg *pcfg = NULL;
@@ -2644,7 +2638,7 @@ int iris5_update_backlight(u8 PkgMode, u32 bl_lvl)
 		return rc;
 
 	if (panel->bl_config.bl_max_level > 255) {
-		if (PkgMode) {
+		if (pkg_mode) {
 			led_pwm1[1] = (unsigned char)(bl_lvl >> 8);
 			led_pwm1[2] = (unsigned char)(bl_lvl & 0xff);
 		} else {
@@ -2657,33 +2651,32 @@ int iris5_update_backlight(u8 PkgMode, u32 bl_lvl)
 	}
 
 	if (pcfg->abypss_ctrl.abypass_mode == PASS_THROUGH_MODE)
-		rc = iris5_panel_cmd_passthrough(panel, &cmdset);
+		rc = iris_pt_send_panel_cmd(panel, &cmdset);
 	else
-		rc = iris5_dsi_cmds_send(panel, cmdset.cmds, cmdset.count, cmdset.state);
+		rc = iris_dsi_send_cmds(panel, cmdset.cmds, cmdset.count, cmdset.state);
 
 	return rc;
 }
 
-void iris_pwil_sdr2hdr_resolution_set(bool enter_frc_mode) {
+void iris_pwil_sdr2hdr_resolution_set(bool enter_frc_mode)
+{
 	struct quality_setting *pqlt_cur_setting = &iris_setting.quality_cur;
 	struct iris_cfg *pcfg = NULL;
 	struct iris_update_ipopt popt[IP_OPT_MAX];
 	bool skiplast = 0;
 	int len = 0;
 	uint32_t  *payload = NULL;
-	u32 resolution=0,num_ratio = 0;
+	u32 resolution = 0, num_ratio = 0;
 	bool is_ulps_enable = 0;
 	uint8_t path = iris_pq_update_path;
 
-	if (pqlt_cur_setting->pq_setting.sdr2hdr >= SDR709_2_p3 && pqlt_cur_setting->pq_setting.sdr2hdr <= SDR709_2_2020)
-	{
+	if (pqlt_cur_setting->pq_setting.sdr2hdr >= SDR709_2_p3 && pqlt_cur_setting->pq_setting.sdr2hdr <= SDR709_2_2020) {
 		pcfg = iris_get_cfg();
 		iris_init_ipopt_ip(popt,  IP_OPT_MAX);
-		if(enter_frc_mode) {
+		if (enter_frc_mode) {
 			num_ratio = (1<<28) / (pcfg->frc_setting.memc_hres * pcfg->frc_setting.memc_vres);
 			resolution = (pcfg->frc_setting.memc_vres & 0xFFF) | (pcfg->frc_setting.memc_hres & 0xFFF)<<16;
-		}
-		else {
+		} else {
 			num_ratio = (1<<28) / (pcfg->frc_setting.disp_vres * pcfg->frc_setting.disp_hres);
 			resolution = (pcfg->frc_setting.disp_vres & 0xFFF) | (pcfg->frc_setting.disp_hres & 0xFFF)<<16;
 		}
@@ -2698,15 +2691,16 @@ void iris_pwil_sdr2hdr_resolution_set(bool enter_frc_mode) {
 
 		if (!iris_dynamic_power_get())
 			len = iris_init_update_ipopt_t(
-				popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
-                is_ulps_enable = iris_disable_ulps(path);
+					popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
+		is_ulps_enable = iris_disable_ulps(path);
 		iris_update_pq_opt(popt, len, path);
-                iris_enable_ulps(path, is_ulps_enable);
+		iris_enable_ulps(path, is_ulps_enable);
 	}
 }
 
 void iris_dom_set(int mode)
 {
+	// struct iris_cfg *pcfg = iris_get_cfg_by_index(DSI_PRIMARY);
 	struct iris_update_ipopt popt[IP_OPT_MAX];
 	bool skiplast = 0;
 	int len;
@@ -2714,6 +2708,15 @@ void iris_dom_set(int mode)
 	uint32_t  *payload = NULL;
 	uint8_t path = iris_pq_update_path;
 	uint32_t dport_ctrl0;
+
+	// IRIS_LOGD("%s, mode: %d, DOM cnt: %d-%d", __func__, mode, pcfg->dom_cnt_in_ioctl, pcfg->dom_cnt_in_frc);
+	// if (mode != 0) {
+	// 	if (atomic_read(&pcfg->dom_cnt_in_ioctl) && atomic_read(&pcfg->dom_cnt_in_frc)) {
+	// 		IRIS_LOGI("%s, both set dom in ioctl and frc", __func__);
+	// 		atomic_set(&pcfg->dom_cnt_in_frc, 0);
+	// 		return;
+	// 	}
+	// }
 
 	iris_init_ipopt_ip(popt,  IP_OPT_MAX);
 	len = iris_capture_disable_pq(popt, &skiplast);
@@ -2730,6 +2733,9 @@ void iris_dom_set(int mode)
 	is_ulps_enable = iris_disable_ulps(path);
 	iris_update_pq_opt(popt, len, path);
 	iris_enable_ulps(path, is_ulps_enable);
+	// if (mode == 0)
+	// 	atomic_set(&pcfg->dom_cnt_in_ioctl, 1);
+	// 	atomic_set(&pcfg->dom_cnt_in_ioctl, 0);
 }
 
 static int iris_brightness_para_set(struct iris_update_ipopt *popt, uint8_t skip_last, uint32_t *value)
@@ -2771,7 +2777,7 @@ static int iris_brightness_para_set(struct iris_update_ipopt *popt, uint8_t skip
 	val &= 0x00007fff;
 	data[7] = val;
 
-	iris_send_ipopt_cmds(ip, opt_id);
+	len = iris_update_ip_opt(popt, IP_OPT_MAX, ip, opt_id, skip_last);
 
 	return len;
 }
@@ -2790,68 +2796,234 @@ void iris_brightness_level_set(u32 *value)
 	len = iris_brightness_para_set(popt, skiplast, value);
 	len = iris_capture_enable_pq(popt, len);
 
+	// TODO: improve performance
+	// iris_init_ipopt_ip(popt,  IP_OPT_MAX);
+	// len = iris_brightness_para_set(popt, skiplast, value);
+	// if (!iris_dynamic_power_get() && !iris_skip_dma) {
+	//     len = iris_init_update_ipopt_t(
+	//         popt, IP_OPT_MAX, IRIS_IP_DMA, 0xe2, 0xe2, 0);
+	// }
+
 	is_ulps_enable = iris_disable_ulps(path);
 	iris_update_pq_opt(popt, len, path);
 	iris_enable_ulps(path, is_ulps_enable);
 }
 
-void iris_cm_para_level_set(u32 level)
+int32_t iris_parse_color_temp_range(struct device_node *np, struct iris_cfg *pcfg)
 {
-	u32 locallevel;
+	int32_t rc = 0;
+
+	/* 2500K~7500K for default */
+	pcfg->min_color_temp = 2500;
+	pcfg->max_color_temp = 7500;
+
+	rc = of_property_read_u32(np, "pxlw,min-color-temp", &(pcfg->min_color_temp));
+	if (rc) {
+		IRIS_LOGE("can not get property: pxlw,min-color-temp");
+		return rc;
+	}
+	IRIS_LOGI("pxlw,min-color-temp: %d", pcfg->min_color_temp);
+
+	rc = of_property_read_u32(np, "pxlw,max-color-temp", &(pcfg->max_color_temp));
+	if (rc) {
+		IRIS_LOGE("can not get property:pxlw,max-color-temp");
+		return rc;
+	}
+	IRIS_LOGI("pxlw,max-color-temp: %d", pcfg->max_color_temp);
+
+	return rc;
+}
+
+static int32_t _iris_count_ip(const uint8_t *data, int32_t len, int32_t *pval)
+{
+	int tmp = 0;
+	int i = 0;
+	int j = 0;
+
+	if (data == NULL || len == 0 || pval == NULL) {
+		IRIS_LOGE("%s(), invalid data or pval or len", __func__);
+		return -EINVAL;
+	}
+
+	tmp = data[0];
+	len = len >> 1;
+
+	for (i = 0; i < len; i++) {
+		if (tmp == data[2 * i]) {
+			pval[j]++;
+		} else {
+			tmp = data[2 * i];
+			j++;
+			pval[j]++;
+		}
+	}
+
+	/*j begin from 0*/
+	return j + 1;
+}
+
+static int32_t _iris_alloc_pq_init_space(struct iris_cfg *pcfg,
+		const uint8_t *pdata, int32_t item_cnt)
+{
+	int32_t i = 0;
+	int32_t size = 0;
+	int32_t ip_cnt = 0;
+	int32_t rc = 0;
+	int32_t *ptr = NULL;
+	struct iris_pq_init_val *pinit_val = &pcfg->pq_init_val;
+
+	if (pdata == NULL || item_cnt == 0) {
+		IRIS_LOGE("%s(), invalide input, data: %p, size: %d", pdata, item_cnt);
+		return -EINVAL;
+	}
+
+	size = sizeof(*ptr) * (item_cnt >> 1);
+	ptr = vmalloc(size);
+	if (ptr == NULL) {
+		IRIS_LOGE("can not malloc space for ptr");
+		return -EINVAL;
+	}
+	memset(ptr, 0x00, size);
+
+	ip_cnt = _iris_count_ip(pdata, item_cnt, ptr);
+	if (ip_cnt <= 0) {
+		IRIS_LOGE("can not static ip option");
+		rc = -EINVAL;
+		goto EXIT_FREE;
+	}
+
+	pinit_val->ip_cnt = ip_cnt;
+	size = sizeof(struct iris_pq_ipopt_val) * ip_cnt;
+	pinit_val->val = vmalloc(size);
+	if (pinit_val->val == NULL) {
+		IRIS_LOGE("can not malloc pinit_val->val");
+		rc = -EINVAL;
+		goto EXIT_FREE;
+	}
+
+	for (i = 0; i < ip_cnt; i++) {
+		pinit_val->val[i].opt_cnt = ptr[i];
+		size = sizeof(uint8_t) * ptr[i];
+		pinit_val->val[i].popt = vmalloc(size);
+	}
+
+EXIT_FREE:
+	vfree(ptr);
+	ptr = NULL;
+
+	return rc;
+}
+int32_t iris_parse_default_pq_param(struct device_node *np,
+		struct iris_cfg *pcfg)
+{
+	int32_t i = 0;
+	int32_t j = 0;
+	int32_t k = 0;
+	int32_t item_cnt = 0;
+	int32_t rc = 0;
+	const uint8_t *key = "pxlw,iris-pq-default-val";
+	const uint8_t *pdata = NULL;
+	struct iris_pq_init_val *pinit_val = &pcfg->pq_init_val;
+
+	pdata = of_get_property(np, key, &item_cnt);
+	if (!pdata) {
+		IRIS_LOGE("%s pxlw,iris-pq-default-val fail", __func__);
+		return -EINVAL;
+	}
+
+	rc = _iris_alloc_pq_init_space(pcfg, pdata, item_cnt);
+	if (rc) {
+		IRIS_LOGE("malloc error");
+		return rc;
+	}
+
+	for (i = 0; i < pinit_val->ip_cnt; i++) {
+		struct iris_pq_ipopt_val *pval = &(pinit_val->val[i]);
+
+		pval->ip = pdata[k++];
+		for (j = 0; j < pval->opt_cnt; j++) {
+			pval->popt[j] = pdata[k];
+			k += 2;
+		}
+		/*need to skip one*/
+		k -= 1;
+	}
+
+	if (IRIS_IF_LOGV()) {
+		IRIS_LOGE("ip_cnt = %0x", pinit_val->ip_cnt);
+		for (i = 0; i < pinit_val->ip_cnt; i++) {
+			char ptr[256];
+			int32_t len = 0;
+			int32_t sum = 256;
+			struct iris_pq_ipopt_val *pval = &(pinit_val->val[i]);
+
+			snprintf(ptr, sum, "ip is %0x opt is ", pval->ip);
+			for (j = 0; j < pval->opt_cnt; j++) {
+				len = strlen(ptr);
+				sum -= len;
+				snprintf(ptr + len, sum, "%0x ", pval->popt[j]);
+			}
+			IRIS_LOGE("%s", ptr);
+		}
+	}
+
+	return rc;
+}
+
+void iris_cm_setting_switch(bool dual)
+{
 	bool skiplast = 0;
 	int len;
 	struct iris_update_ipopt popt[IP_OPT_MAX];
 	bool is_ulps_enable = 0;
 	uint8_t path = iris_pq_update_path;
+	struct quality_setting *pqlt_cur_setting = &iris_setting.quality_cur;
+	uint32_t  *payload = NULL;
+	u32 pwil_datapath;
+	u32 cm_csc = 0x40;
+	// FIXME: WA for old pxlw-dtsi
+	// u32 pwil_csc = dual ? 0x95 : 0x96;
+	u32 pwil_csc = 0x95;
 
+	if (pqlt_cur_setting->pq_setting.readingmode != 0)
+		cm_csc = 0x41;
+	switch (pqlt_cur_setting->pq_setting.sdr2hdr) {
+	case HDR10In_ICtCp:
+	case HDR10In_YCbCr:
+	case ICtCpIn_YCbCr:
+		cm_csc = 0x45;
+		break;
+	case SDR709_2_709:
+		/*TODOS*/
+		break;
+	case SDR709_2_p3:
+		cm_csc = 0x46;
+		break;
+	case SDR709_2_2020:
+		/*TODOS*/
+		break;
+	default:
+		break;
+	}
+	// FIXME: WA for old pxlw-dtsi
+	// if (!dual)
+	// 	cm_csc += 8;
 	iris_init_ipopt_ip(popt,  IP_OPT_MAX);
-	locallevel = 0x20 | (u8)level;
 	len = iris_capture_disable_pq(popt, &skiplast);
 
-	len = iris_update_ip_opt(
-		popt, IP_OPT_MAX, IRIS_IP_CM, locallevel, skiplast);
+	len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_CM, cm_csc, skiplast);
+	len = iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_PWIL, pwil_csc, skiplast);
+
+	payload = iris_get_ipopt_payload_data(IRIS_IP_PWIL, 0xF1, 2);
+	pwil_datapath = payload[2] & ~0x00800000;// blending before PP
+	if (dual)
+		pwil_datapath |= 0x00800000;	// blending after PP
+	iris_set_ipopt_payload_data(IRIS_IP_PWIL, 0xF1, 4, pwil_datapath);
+	iris_update_ip_opt(popt, IP_OPT_MAX, IRIS_IP_PWIL, 0xF1, 0x01);
 
 	len = iris_capture_enable_pq(popt, len);
 
 	is_ulps_enable = iris_disable_ulps(path);
 	iris_update_pq_opt(popt, len, path);
 	iris_enable_ulps(path, is_ulps_enable);
-	IRIS_LOGI("cm para level=%d, len=%d", level, len);
 }
-
-void iris_cm_csc_cmp_set(bool enable)
-{
-	u32 locallevel = 0;
-	struct quality_setting *pqlt_cur_setting = &iris_setting.quality_cur;
-	bool skiplast = 0;
-	int len = 0;
-	struct iris_update_ipopt popt[IP_OPT_MAX];
-	bool is_ulps_enable = 0;
-	uint8_t path = iris_pq_update_path;
-	u8 level = 0;
-
-	if ((pqlt_cur_setting->pq_setting.sdr2hdr == SDR2HDR_Bypass)
-			&& (pqlt_cur_setting->pq_setting.readingmode == 0)) {
-		iris_init_ipopt_ip(popt,  IP_OPT_MAX);
-
-		level = enable ? 0x07 : 0x00;
-		locallevel = 0x40 | level;
-		len = iris_capture_disable_pq(popt, &skiplast);
-
-		len = iris_update_ip_opt(
-				popt, IP_OPT_MAX, IRIS_IP_CM, locallevel, 0x01);
-
-		level = enable ? 0x01 : 0x00;
-		locallevel = 0x60 | level;
-		len = iris_update_ip_opt(
-				popt, IP_OPT_MAX, IRIS_IP_DPP, locallevel, skiplast);
-
-		len = iris_capture_enable_pq(popt, len);
-
-		is_ulps_enable = iris_disable_ulps(path);
-		iris_update_pq_opt(popt, len, path);
-		iris_enable_ulps(path, is_ulps_enable);
-	}
-	IRIS_LOGI("cm csc cmp=%d, len=%d", enable, len);
-}
-

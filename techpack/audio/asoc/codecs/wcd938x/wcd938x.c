@@ -1744,6 +1744,10 @@ static int wcd938x_codec_enable_adc(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMD:
 		switch (w->shift) {
 		case 0:
+			#ifdef OPLUS_ARCH_EXTENDS
+			snd_soc_component_update_bits(component,
+				WCD938X_DIGITAL_CDC_TX_ANA_MODE_0_1, 0x0F, 0x00);
+			#endif /* OPLUS_ARCH_EXTENDS */
 			snd_soc_component_update_bits(component,
 				WCD938X_DIGITAL_CDC_TX_ANA_MODE_0_1, 0x0F,
 				0x00);
@@ -1751,6 +1755,10 @@ static int wcd938x_codec_enable_adc(struct snd_soc_dapm_widget *w,
 				WCD938X_DIGITAL_CDC_DIG_CLK_CTL, 0x10, 0x00);
 			break;
 		case 1:
+			#ifdef OPLUS_ARCH_EXTENDS
+			snd_soc_component_update_bits(component,
+				WCD938X_DIGITAL_CDC_TX_ANA_MODE_0_1, 0xF0, 0x00);
+			#endif /* OPLUS_ARCH_EXTENDS */
 			snd_soc_component_update_bits(component,
 				WCD938X_DIGITAL_CDC_TX_ANA_MODE_0_1, 0xF0,
 				0x00);
@@ -1758,6 +1766,10 @@ static int wcd938x_codec_enable_adc(struct snd_soc_dapm_widget *w,
 				WCD938X_DIGITAL_CDC_DIG_CLK_CTL, 0x20, 0x00);
 			break;
 		case 2:
+			#ifdef OPLUS_ARCH_EXTENDS
+			snd_soc_component_update_bits(component,
+				WCD938X_DIGITAL_CDC_TX_ANA_MODE_2_3, 0x0F, 0x00);
+			#endif /* OPLUS_ARCH_EXTENDS */
 			snd_soc_component_update_bits(component,
 				WCD938X_DIGITAL_CDC_TX_ANA_MODE_2_3, 0x0F,
 				0x00);
@@ -1765,6 +1777,10 @@ static int wcd938x_codec_enable_adc(struct snd_soc_dapm_widget *w,
 				WCD938X_DIGITAL_CDC_DIG_CLK_CTL, 0x40, 0x00);
 			break;
 		case 3:
+			#ifdef OPLUS_ARCH_EXTENDS
+			snd_soc_component_update_bits(component,
+				WCD938X_DIGITAL_CDC_TX_ANA_MODE_2_3, 0xF0, 0x00);
+			#endif /* OPLUS_ARCH_EXTENDS */
 			snd_soc_component_update_bits(component,
 				WCD938X_DIGITAL_CDC_TX_ANA_MODE_2_3, 0xF0,
 				0x00);

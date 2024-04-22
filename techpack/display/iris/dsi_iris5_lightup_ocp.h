@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
- *  Copyright (c) 2017-2020, Pixelworks, Inc.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, Pixelworks, Inc.
  *
- *  These files contain modifications made by Pixelworks, Inc., in 2019-2020.
+ * These files contain modifications made by Pixelworks, Inc., in 2019-2020.
  */
+#ifndef _DSI_IRIS_LIGHTUP_OCP_H_
+#define _DSI_IRIS_LIGHTUP_OCP_H_
 
-#ifndef _DSI_IRIS5_LIGHTUP_OCP_H_
-#define _DSI_IRIS5_LIGHTUP_OCP_H_
 
 #define IRIS_MIPI_TX_HEADER_ADDR  0xF189C010
 #define IRIS_MIPI_TX_PAYLOAD_ADDR  0xF189C014
 #define IRIS_MIPI_TX_HEADER_ADDR_I3  0xF0C1C010
 #define IRIS_MIPI_TX_PAYLOAD_ADDR_I3  0xF0C1C014
 #define IRIS_TOP_PMU_STATUS     0xF0000094
-#define IRIS_ULPS_CTRL     		0xF00000C0
+#define IRIS_ULPS_CTRL		0xF00000C0
 
 #define OCP_BURST_WRITE 0x0
 #define OCP_SINGLE_WRITE_BYTEMASK 0x4
@@ -111,17 +111,15 @@ struct iris_ocp_dsi_tool_input {
 };
 
 
-void iris_ocp_write(u32 address, u32 value);
-void iris_ocp_write2(u32 header, u32 address, u32 size, u32 *pvalues);
-void iris_ocp_write3(u32 size, u32 *pvalues);
+void iris_ocp_write_val(u32 address, u32 value);
+void iris_ocp_write_vals(u32 header, u32 address, u32 size, u32 *pvalues);
+void iris_ocp_write_mult_vals(u32 size, u32 *pvalues);
 u32 iris_ocp_read(u32 address, u32 type);
-u32 iris_dsi_ocp_read(u32 address, u32 type);
 void iris_write_test(struct dsi_panel *panel, u32 iris_addr, int ocp_type, u32 pkt_size);
-void iris_write_test_muti_pkt(struct dsi_panel *panel, struct iris_ocp_dsi_tool_input * ocp_input);
+void iris_write_test_muti_pkt(struct dsi_panel *panel, struct iris_ocp_dsi_tool_input *ocp_input);
 
-int iris5_dsi_cmds_send(struct dsi_panel *panel, struct dsi_cmd_desc *cmds, u32 count, enum dsi_cmd_set_state state);
-int iris_i2c_read_panel_data( u32 reg_addr, u32 size, u32 *pvalues);
-void iris_pwil_mode_set(struct dsi_panel *pane, u8 mode, bool osd_enable, int state);
-u32 iris_ocp_read_by_path(u32 address, u32 mode, u32 path);
+int iris_dsi_send_cmds(struct dsi_panel *panel, struct dsi_cmd_desc *cmds, u32 count, enum dsi_cmd_set_state state);
+int iris_i2c_read_panel_data(u32 reg_addr, u32 size, u32 *pvalues);
+void iris_set_pwil_mode(struct dsi_panel *pane, u8 mode, bool osd_enable, int state);
 
-#endif // _DSI_IRIS5_LIGHTUP_OCP_H_
+#endif // _DSI_IRIS_LIGHTUP_OCP_H_

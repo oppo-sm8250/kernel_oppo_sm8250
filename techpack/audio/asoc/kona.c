@@ -4751,7 +4751,11 @@ static bool msm_usbc_swap_gnd_mic(struct snd_soc_component *component, bool acti
 	if (!pdata->fsa_handle)
 		return false;
 
+	#ifndef OPLUS_ARCH_EXTENDS
 	return fsa4480_switch_event(pdata->fsa_handle, FSA_MIC_GND_SWAP);
+	#else
+	return (0 == fsa4480_switch_event(pdata->fsa_handle, FSA_MIC_GND_SWAP));
+	#endif /* OPLUS_ARCH_EXTENDS */
 }
 
 static bool msm_swap_gnd_mic(struct snd_soc_component *component, bool active)
@@ -5443,7 +5447,21 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 			goto clk_off;
 		}
 
-		#ifdef VENDOR_EDIT
+		#ifdef OPLUS_ARCH_EXTENDS
+		if ((!mi2s_intf_conf[index].msm_is_mi2s_master)
+				#ifndef OPLUS_FEATURE_PLATFORM_LITO
+				&& (index == PRIM_MI2S)) {
+				#else
+				&& (index == SEC_MI2S)) {
+				#endif/*OPLUS_FEATURE_PLATFORM_LITO*/
+			ret = snd_soc_dai_set_fmt(rtd->codec_dai, fmt | SND_SOC_DAIFMT_I2S);
+			if (ret < 0) {
+				pr_warn("%s: set codec fmt fail, ret=%d \n", __func__, ret);
+			}
+		}
+		#endif /* OPLUS_ARCH_EXTENDS */
+
+		#ifdef OPLUS_FEATURE_MI2S_SLAVE
 		if (mi2s_intf_conf[index].msm_is_ext_mclk) {
 			pr_debug("%s: Enabling mclk, clk_freq_in_hz = %u\n",
 				__func__, mi2s_mclk[index].clk_freq_in_hz);

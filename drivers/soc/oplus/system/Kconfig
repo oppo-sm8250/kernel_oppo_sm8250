@@ -5,12 +5,12 @@ config OPLUS_SYSTEM_KERNEL
 	define this config to add oplus sytstem kernel feature
 
 config OPPO_ARCH_FILE
-  bool "for build directory oppo"
+  bool "for build directory oplus"
   ---help---
   say Y to buid in
 
 config OPPO_COMMON_SOFT
-  bool "config oppo common software"
+  bool "config oplus common software"
   select OPPO_ARCH_FILE
   help
 	define this config to get project verion from sharemem.

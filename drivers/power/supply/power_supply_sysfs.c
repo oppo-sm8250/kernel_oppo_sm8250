@@ -515,24 +515,24 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(chargerid_volt),
 	POWER_SUPPLY_ATTR(ship_mode),
 	POWER_SUPPLY_ATTR(call_mode),
-#ifdef CONFIG_OPPO_CHIP_SOC_NODE
+#ifdef CONFIG_OPLUS_CHIP_SOC_NODE
 	POWER_SUPPLY_ATTR(chip_soc),
 #endif
-#ifdef CONFIG_OPPO_SHORT_USERSPACE
+#ifdef CONFIG_OPLUS_SHORT_USERSPACE
 	POWER_SUPPLY_ATTR(short_c_batt_limit_chg),
 	POWER_SUPPLY_ATTR(short_c_batt_limit_rechg),
 #else
 	POWER_SUPPLY_ATTR(short_c_batt_update_change),
 	POWER_SUPPLY_ATTR(short_c_batt_in_idle),
 	POWER_SUPPLY_ATTR(short_c_batt_cv_status),
-#endif /*CONFIG_OPPO_SHORT_USERSPACE*/
+#endif /*CONFIG_OPLUS_SHORT_USERSPACE*/
 #endif /* OPLUS_FEATURE_CHG_BASIC */
 #ifdef OPLUS_FEATURE_CHG_BASIC//Fanhong.Kong@PSW.BSP.CHG, 2017/10/20, Add for hw battery check
-#ifdef CONFIG_OPPO_SHORT_HW_CHECK
+#ifdef CONFIG_OPLUS_SHORT_HW_CHECK
 	POWER_SUPPLY_ATTR(short_c_hw_feature),
 	POWER_SUPPLY_ATTR(short_c_hw_status),
 #endif
-#ifdef CONFIG_OPPO_SHORT_IC_CHECK
+#ifdef CONFIG_OPLUS_SHORT_IC_CHECK
 	POWER_SUPPLY_ATTR(short_ic_otp_status),
 	POWER_SUPPLY_ATTR(short_ic_volt_thresh),
 	POWER_SUPPLY_ATTR(short_ic_otp_value),

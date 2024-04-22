@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
- *  Copyright (c) 2017-2020, Pixelworks, Inc.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, Pixelworks, Inc.
  *
- *  These files contain modifications made by Pixelworks, Inc., in 2019-2020.
+ * These files contain modifications made by Pixelworks, Inc., in 2019-2020.
  */
+#ifndef _DSI_IRIS_PQ_H_
+#define _DSI_IRIS_PQ_H_
 
-#ifndef _DSI_IRIS5_PQ_H_
-#define _DSI_IRIS5_PQ_H_
 
 enum {
 	IRIS_LCE_GRAPHIC = 0x00,
@@ -122,9 +122,9 @@ void iris_dtg_frame_rate_set(u32 framerate);
 int32_t iris_update_ip_opt(
 		struct iris_update_ipopt *popt, int len, uint8_t ip,
 		uint8_t opt_id, uint8_t skip_last);
-#ifdef CONFIG_DEBUG_FS
-int iris_pq_debugfs_init(struct dsi_display *display);
-#endif
+
+int iris_dbgfs_pq_init(struct dsi_display *display);
+
 u8 iris_get_dbc_lut_index(void);
 
 struct iris_setting_info *iris_get_setting(void);
@@ -147,10 +147,13 @@ struct msmfb_iris_maxcll_info *iris_get_maxcll_info(void);
 
 void iris_scaler_gamma_enable(bool lightup_en, u32 level);
 
-void iris_frc_parameter_init(void);
 void iris_dom_set(int mode);
 
 void iris_brightness_level_set(u32 *value);
-void iris_cm_para_level_set(u32 level);
-void iris_cm_csc_cmp_set(bool enable);
-#endif // _DSI_IRIS5_PQ_H_
+
+int32_t iris_parse_color_temp_range(struct device_node *np, struct iris_cfg *pcfg);
+
+int32_t iris_parse_default_pq_param(struct device_node *np, struct iris_cfg *pcfg);
+
+void iris_cm_setting_switch(bool dual);
+#endif // _DSI_IRIS_PQ_H_

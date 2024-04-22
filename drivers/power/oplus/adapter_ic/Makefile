@@ -1,2 +1,2 @@
 
-obj-y	+= oppo_stm.o
+obj-y	+= oplus_stm.o

@@ -19,6 +19,10 @@
 #include "battery.h"
 
 #ifdef OPLUS_FEATURE_CHG_BASIC
+#include <linux/time.h>
+#include <linux/jiffies.h>
+#include <linux/sched/clock.h>
+#include <linux/usb/typec.h>
 #include <linux/usb/usbpd.h>
 #endif
 
@@ -31,6 +35,7 @@ enum print_reason {
 	PR_WLS		= BIT(5),
 };
 
+#define OTG_VOTER			"OTG_VOTER"
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
 #define USER_VOTER			"USER_VOTER"
 #define PD_VOTER			"PD_VOTER"
@@ -95,10 +100,12 @@ enum print_reason {
 #define CC_MODE_VOTER			"CC_MODE_VOTER"
 #define MAIN_FCC_VOTER			"MAIN_FCC_VOTER"
 #define DCIN_AICL_VOTER			"DCIN_AICL_VOTER"
+#define WIRED_CONN_VOTER		"WIRED_CONN_VOTER"
 #define WLS_PL_CHARGING_VOTER		"WLS_PL_CHARGING_VOTER"
 #define ICL_CHANGE_VOTER		"ICL_CHANGE_VOTER"
 #define OVERHEAT_LIMIT_VOTER		"OVERHEAT_LIMIT_VOTER"
 #define TYPEC_SWAP_VOTER		"TYPEC_SWAP_VOTER"
+#define WLCH_FFC_VOTER			"WLCH_FFC_VOTER"
 
 #define BOOST_BACK_STORM_COUNT	3
 #ifdef OPLUS_FEATURE_CHG_BASIC
@@ -122,6 +129,9 @@ enum print_reason {
 #define USB_RESERVE3	0x08//bit3
 #define USB_RESERVE4	0x10//bit4
 #define USB_DONOT_USE	0x80000000//bit31
+#define ADC_CHECK_HIGH_LEVEL_1	0x1282
+#define ADC_CHECK_HIGH_LEVEL_2	0x1283
+#define ADC_CHECK_HIGH_LEVEL_3	0x3546
 #endif
 
 #define SDP_100_MA			100000
@@ -416,6 +426,7 @@ struct smb_iio {
 	struct iio_channel	*chgid_v_chan;
 	struct iio_channel	*usbtemp_v_chan;
 	struct iio_channel	*usbtemp_sup_v_chan;
+	struct iio_channel	*op_skin_therm_chan;
 #endif
 	struct iio_channel	*die_temp_chan;
 	struct iio_channel	*skin_temp_chan;
@@ -569,8 +580,8 @@ struct smb_charger {
 	bool			typec_irq_en;
 	bool			typec_role_swap_failed;
 #ifdef OPLUS_FEATURE_CHG_BASIC
-	struct	usbpd	*oppo_pd;
-	struct	usbpd_svid_handler	oppo_svid_handler;
+	struct	usbpd	*oplus_pd;
+	struct	usbpd_svid_handler	oplus_svid_handler;
 #endif
 	/* cached status */
 	bool			system_suspend_supported;
@@ -615,6 +626,7 @@ struct smb_charger {
 	u8			typec_try_mode;
 	enum lpd_stage		lpd_stage;
 	bool			lpd_disabled;
+	bool			adc_check_pulse;
 	enum lpd_reason		lpd_reason;
 	bool			fcc_stepper_enable;
 	int			die_temp;
@@ -705,6 +717,7 @@ struct smb_charger {
 #ifdef OPLUS_FEATURE_CHG_BASIC
 /* Jianchao.Shi@BSP.CHG.Basic, 2018/01/30, sjc Add for using gpio as CC detect */
 	struct work_struct	chargerid_switch_work;
+	struct delayed_work  switch_to_wired_work;
 	struct mutex pinctrl_mutex;
 
 	int			ccdetect_gpio;
@@ -1034,9 +1047,4 @@ int smblib_get_qc3_main_icl_offset(struct smb_charger *chg, int *offset_ua);
 
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);
-#ifdef OPLUS_FEATURE_CHG_BASIC
-int smblib_request_dpdm(struct smb_charger *chg, bool enable);
-const struct apsd_result *smblib_get_apsd_result(struct smb_charger *chg);
-void register_oppo_pdsvooc_svid(struct work_struct *work);
-#endif
 #endif /* __SMB5_CHARGER_H */

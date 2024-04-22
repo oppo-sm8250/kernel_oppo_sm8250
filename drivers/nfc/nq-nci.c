@@ -23,7 +23,7 @@
 #endif
 #include <linux/jiffies.h>
 
-#include "oppo_nfc/oppo_nfc.h"
+#include "oplus_nfc/oplus_nfc.h"
 
 
 #include <linux/regulator/consumer.h>
@@ -1198,6 +1198,7 @@ static const struct file_operations nfc_dev_fops = {
 #endif
 };
 
+#ifndef OPLUS_BUG_STABILITY
 /*
  * function: get_nfcc_hw_info()
  *
@@ -1326,12 +1327,14 @@ err_nfcc_hw_info:
 
 	return ret;
 }
+#endif /* OPLUS_BUG_STABILITY */
 
 /* Check for availability of NQ_ NFC controller hardware */
 static int nfcc_hw_check(struct i2c_client *client, struct nqx_dev *nqx_dev)
 {
 	int ret = 0;
 
+	int gpio_retry_count = 0;
 #ifndef OPLUS_BUG_STABILITY
 //ZhangNan@CONNECTIVITY.NFC.BASIC.1209105, 2019/04/25,Modify for: send get firmware version
 	unsigned char reset_ntf_len = 0;

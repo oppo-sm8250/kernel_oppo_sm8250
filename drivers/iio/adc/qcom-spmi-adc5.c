@@ -777,10 +777,38 @@ static int adc_read_raw(struct iio_dev *indio_dev,
 	struct adc_channel_prop *prop;
 	u16 adc_code_volt, adc_code_cur;
 	int ret;
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	s64 voltage = 0, adc_vdd_ref_mv = 1875;
+#endif
 
 	prop = &adc->chan_props[chan->address];
 
 	switch (mask) {
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	case IIO_CHAN_INFO_OFFSET:
+		ret = adc_do_conversion(adc, prop, chan,
+				&adc_code_volt, &adc_code_cur);
+		if (ret)
+			break;
+		if (*val2 < 0) {
+			voltage = (s64) adc_code_volt * adc_vdd_ref_mv * 1000;
+			voltage = div64_s64(voltage, adc->data->full_scale_code_volt);
+			pr_err("%s : adc_code_volt before compensation : %d(uV)\n", __func__, voltage);
+			voltage += *val2;
+			pr_err("%s : adc_code_volt after compensation : %d(uV)\n", __func__, voltage);
+			voltage = voltage * adc->data->full_scale_code_volt;
+			adc_code_volt = (u16)div64_s64(voltage, (adc_vdd_ref_mv * 1000));
+		}
+		if ((chan->type == IIO_VOLTAGE) || (chan->type == IIO_TEMP))
+			ret = qcom_vadc_hw_scale(prop->scale_fn_type,
+				&adc_prescale_ratios[prop->prescale],
+				adc->data, prop->lut_index,
+				adc_code_volt, val);
+		if (ret)
+			break;
+
+		return IIO_VAL_INT;
+#endif
 	case IIO_CHAN_INFO_PROCESSED:
 		ret = adc_do_conversion(adc, prop, chan,
 				&adc_code_volt, &adc_code_cur);

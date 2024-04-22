@@ -1,14 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C), 2020, OPPO Mobile Comm Corp., Ltd.
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
  * File: - arch.c
  * Description: which platform you use.
  * Version: 1.0
- * Date: 2020/03/28
- * Author: Xiong.xing@BSP.Kernel.Stability
  *
- *----------------------Revision History: ---------------------------
- *   <author>        <date>         <version>         <desc>
- *  xiong.xing     2020/03/28        1.0              created
  *-------------------------------------------------------------------
  */
 

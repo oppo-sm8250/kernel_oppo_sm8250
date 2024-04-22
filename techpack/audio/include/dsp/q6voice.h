@@ -461,6 +461,32 @@ struct vss_icommon_cmd_set_param {
 	uint8_t param_data[0];
 } __packed;
 
+#ifdef OPLUS_FEATURE_AUDIODETECT
+struct vss_icommon_cmd_get_param {
+	/* APR Header */
+	struct apr_hdr apr_hdr;
+
+	/* The memory mapping header to be used when sending outband */
+	struct vss_icommon_mem_mapping_hdr mem_hdr;
+
+	/* Size of the parameter data payload in bytes. */
+	uint16_t payload_size;
+
+	/* Valid ID of the module. */
+	uint32_t module_id;
+
+	/* Instance of the module. */
+	uint16_t instance_id;
+
+	/* This field must be set to zero. */
+	uint16_t reserved;
+
+	/* Valid ID of the parameter. */
+	uint32_t param_id;
+
+} __packed;
+#endif /* OPLUS_FEATURE_AUDIODETECT */
+
 /* TO MVM commands */
 #define VSS_IMVM_CMD_CREATE_PASSIVE_CONTROL_SESSION	0x000110FF
 /**< No payload. Wait for APRV2_IBASIC_RSP_RESULT response. */

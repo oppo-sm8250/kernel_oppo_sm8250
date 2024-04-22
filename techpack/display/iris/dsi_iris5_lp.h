@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
- *  Copyright (c) 2017-2020, Pixelworks, Inc.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, Pixelworks, Inc.
  *
- *  These files contain modifications made by Pixelworks, Inc., in 2019-2020.
+ * These files contain modifications made by Pixelworks, Inc., in 2019-2020.
  */
-
-#ifndef _DSI_IRIS5_LP_H_
-#define _DSI_IRIS5_LP_H_
+#ifndef _DSI_IRIS_LP_H_
+#define _DSI_IRIS_LP_H_
 #include "dsi_iris5_i3c.h"
-
-
-#define POR_CLOCK 180	/* 0.1 Mhz*/
 
 /* option IDs */
 #define ID_SYS_PMU_CTRL 0xf0
@@ -32,21 +28,9 @@
 #define DISP_CMD_SHAWDOW_EN_MASK  0x00000040
 #define DISP_CMD_SHAWDOW_EN_SHIFT 6
 
-#define IRIS_REG_INTSTAT_RAW  0xf189ffe4
-#define TXFALSE_CONTROL_MASK  0X00040000
+#define IRIS_REG_INTSTAT_RAW 0xf189ffe4
+#define TXFALSE_CONTROL_MASK  0x00040000
 #define PQ_SWITCH_MASK BIT(3)
-
-enum iris_onewired_cmd {
-	POWER_UP_SYS = 1,
-	ENTER_ANALOG_BYPASS = 2,
-	EXIT_ANALOG_BYPASS = 3,
-	POWER_DOWN_SYS = 4,
-	RESET_SYS = 5,
-	FORCE_ENTER_ANALOG_BYPASS = 6,
-	FORCE_EXIT_ANALOG_BYPASS = 7,
-	POWER_UP_MIPI = 8,
-	POWER_DOWN_MIPI = 9,
-};
 
 enum iris_pmu_domain {
 	MIPI_PWR = (0x1 << 2),
@@ -84,6 +68,9 @@ enum iris_abyp_lp_mode {
 	ABYP_POWER_DOWN_PLL = 3,
 };
 
+/* parse low power control info */
+int32_t iris_parse_lp_ctrl(struct device_node *np, struct iris_cfg *pcfg);
+
 /* init iris low power*/
 void iris_lp_preinit(void);
 void iris_lp_init(void);
@@ -112,11 +99,6 @@ int iris_pmu_lce_set(bool on);
 /* lce dynamic pmu mask enable */
 void iris_lce_dynamic_pmu_mask_set(bool enable);
 
-/* send one wired commands via GPIO */
-void iris_one_wired_cmd_send(struct dsi_panel *panel, int cmd);
-
-int iris_one_wired_cmd_init(struct dsi_panel *panel);
-
 /* Switch PT and Bypass mode */
 bool iris_abypass_switch_proc(struct dsi_display *display, int mode, bool pending, bool first);
 
@@ -130,9 +112,9 @@ void iris_dma_trigger_load(void);
 void iris_ulps_source_sel(enum iris_ulps_sel ulps_sel);
 
 bool iris_ulps_enable_get(void);
-#ifdef CONFIG_DEBUG_FS
-int iris_lp_debugfs_init(struct dsi_display *display);
-#endif
+
+int iris_dbgfs_lp_init(struct dsi_display *display);
+
 void iris_sde_encoder_rc_lock(void);
 
 void iris_sde_encoder_rc_unlock(void);
@@ -155,7 +137,7 @@ bool iris_pmu_frc_get(void);
 /* get bsram domain power state */
 bool iris_pmu_bsram_get(void);
 /* Iris abyp lp */
-void iris_abyp_lp(int mode); //CID90440
+void iris_abyp_lp(int mode);
 /* Iris power up MIPI */
 void iris_power_up_mipi(void);
 /* Iris reset MIPI domain*/
@@ -195,4 +177,4 @@ static inline void iris_enable_ulps(uint8_t path, bool is_ulps_enable)
 	}
 }
 
-#endif // _DSI_IRIS5_LP_H_
+#endif // _DSI_IRIS_LP_H_

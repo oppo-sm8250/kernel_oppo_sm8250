@@ -58,13 +58,16 @@ static int ufshcd_wb_buf_flush_disable(struct ufs_hba *hba);
 static bool ufshcd_wb_is_buf_flush_needed(struct ufs_hba *hba);
 static int ufshcd_wb_toggle_flush_during_h8(struct ufs_hba *hba, bool set);
 
-#if defined(CONFIG_UFSFEATURE) && defined(CONFIG_UFSHPB)
+#ifdef OPLUS_FEATURE_UFSPLUS
+//Jinghua.Yu@BSP.Storage.UFS 2020/06/12, Add TAG for UFS plus
+#if defined(CONFIG_UFSFEATURE)
 int ufsplus_hpb_status = 0;
 EXPORT_SYMBOL(ufsplus_hpb_status);
 #endif
 #if defined(CONFIG_UFSFEATURE) && defined(CONFIG_UFSTW)
 int ufsplus_tw_status = 0;
 EXPORT_SYMBOL(ufsplus_tw_status);
+#endif
 #endif
 
 #ifdef CONFIG_DEBUG_FS
@@ -3631,9 +3634,8 @@ static int ufshcd_comp_scsi_upiu(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 
 	if (likely(lrbp->cmd)) {
 #if defined(CONFIG_UFSFEATURE)
-		ufsf_hpb_change_lun(&hba->ufsf, lrbp);
-		ufsf_tw_prep_fn(&hba->ufsf, lrbp);
-		ufsf_hpb_prep_fn(&hba->ufsf, lrbp);
+		ufsf_change_read10_debug_lun(&hba->ufsf, lrbp);
+		ufsf_prep_fn(&hba->ufsf, lrbp);
 #endif
 		ret = ufshcd_prepare_req_desc_hdr(hba, lrbp,
 				&upiu_flags, lrbp->cmd->sc_data_direction);
@@ -3920,7 +3922,7 @@ send_orig_cmd:
 		ufshcd_vops_setup_xfer_req(hba, add_tag, (add_lrbp->cmd ? true : false));
 		ufshcd_send_command(hba, add_tag);
 		pre_req_err = -EBUSY;
-		atomic64_inc(&hba->ufsf.ufshpb_lup[add_lrbp->lun]->pre_req_cnt);
+		atomic64_inc(&hba->ufsf.hpb_lup[add_lrbp->lun]->pre_req_cnt);
 		ufsf_para.pre_req++;
 	}
 #endif
@@ -6300,12 +6302,8 @@ static int ufshcd_slave_configure(struct scsi_device *sdev)
 #ifdef VENDOR_EDIT
 //Jinghua.Yu@BSP.Storage.UFS 2020/06/12, Add TAG for UFS plus
 #if defined(CONFIG_UFSFEATURE)
-	struct ufsf_feature *ufsf = &hba->ufsf;
+	ufsf_slave_configure(&hba->ufsf, sdev);
 
-	if (ufsf_is_valid_lun(sdev->lun)) {
-		ufsf->sdev_ufs_lu[sdev->lun] = sdev;
-		ufsf->slave_conf_cnt++;
-	}
 #endif
 #endif
 	blk_queue_update_dma_pad(q, PRDT_DATA_BYTE_COUNT_PAD - 1);
@@ -6650,6 +6648,9 @@ static void __ufshcd_transfer_req_compl(struct ufs_hba *hba,
 
 			/* Do not touch lrbp after scsi done */
 			cmd->scsi_done(cmd);
+#if defined (CONFIG_UFSFEATURE)
+			scsi_req = true;
+#endif
 		} else if (lrbp->command_type == UTP_CMD_TYPE_DEV_MANAGE ||
 			lrbp->command_type == UTP_CMD_TYPE_UFS_STORAGE) {
 			lrbp->compl_time_stamp = ktime_get();
@@ -6670,6 +6671,9 @@ static void __ufshcd_transfer_req_compl(struct ufs_hba *hba,
 
 	/* we might have free'd some tags above */
 	wake_up(&hba->dev_cmd.tag_wq);
+#if defined(CONFIG_UFSFEATURE)
+	ufsf_on_idle(&hba->ufsf, scsi_req);
+#endif
 }
 
 /**
@@ -7230,9 +7234,7 @@ static void ufshcd_exception_event_handler(struct work_struct *work)
 
 	if (status & MASK_EE_URGENT_BKOPS)
 		ufshcd_bkops_exception_event_handler(hba);
-#if defined(CONFIG_UFSFEATURE)
-	ufsf_tw_ee_handler(&hba->ufsf);
-#endif
+
 out:
 	ufshcd_scsi_unblock_requests(hba);
 	/*
@@ -7553,7 +7555,18 @@ static void ufshcd_rls_handler(struct work_struct *work)
 	hba = container_of(work, struct ufs_hba, rls_work);
 
 	pm_runtime_get_sync(hba->dev);
+#ifndef OPLUS_BUG_STABILITY
 	down_write(&hba->lock);
+#else
+	ret = down_write_trylock(&hba->lock);
+	if (0 == ret)//fail try lock
+	{
+		usleep_range(500000, 500000);//500ms
+		queue_work(hba->recovery_wq, &hba->rls_work);
+		pm_runtime_put_sync(hba->dev);
+		return;
+	}
+#endif
 	ufshcd_scsi_block_requests(hba);
 	if (ufshcd_is_shutdown_ongoing(hba))
 		goto out;
@@ -8028,8 +8041,7 @@ out:
 	hba->req_abort_count = 0;
 	if (!err) {
 #if defined(CONFIG_UFSFEATURE)
-		ufsf_hpb_reset_lu(&hba->ufsf);
-		ufsf_tw_reset_lu(&hba->ufsf);
+		ufsf_reset_lu(&hba->ufsf);
 #endif
 		err = SUCCESS;
 	} else {
@@ -8252,16 +8264,15 @@ static int ufshcd_host_reset_and_restore(struct ufs_hba *hba)
 	int err;
 	unsigned long flags;
 
+#ifdef OPLUS_FEATURE_UFSPLUS
+	ufsf_reset_host(&hba->ufsf);
+#endif
 	/*
 	 * Stop the host controller and complete the requests
 	 * cleared by h/w
 	 */
 	spin_lock_irqsave(hba->host->host_lock, flags);
 	ufshcd_hba_stop(hba, false);
-#if defined(CONFIG_UFSFEATURE)
-	ufsf_hpb_reset_host(&hba->ufsf);
-	ufsf_tw_reset_host(&hba->ufsf);
-#endif
 	hba->silence_err_logs = true;
 	ufshcd_complete_requests(hba);
 	hba->silence_err_logs = false;
@@ -9360,8 +9371,12 @@ reinit:
 		scsi_scan_host(hba->host);
 #if defined(CONFIG_UFSFEATURE)
 		ufsf_device_check(hba);
-		ufsf_hpb_init(&hba->ufsf);
-		ufsf_tw_init(&hba->ufsf);
+		ufsf_init(&hba->ufsf);
+
+#if defined(CONFIG_UFSHPB)
+		/*temporary for hynix 2.2 tw function*/
+		if(hba->dev_info.w_manufacturer_id == 0x1AD && hba->dev_info.w_spec_version == 0x220)
+			ufsplus_hpb_status = 1;
 #endif
 		pm_runtime_put_sync(hba->dev);
 	}
@@ -9382,8 +9397,7 @@ out:
 		ufshcd_hba_exit(hba);
 	}
 #if defined(CONFIG_UFSFEATURE)
-	ufsf_hpb_reset(&hba->ufsf);
-	ufsf_tw_reset(&hba->ufsf);
+	ufsf_reset(&hba->ufsf);
 #endif
 	trace_ufshcd_init(dev_name(hba->dev), ret,
 		ktime_to_us(ktime_sub(ktime_get(), start)),
@@ -9465,6 +9479,12 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 	u32 att;
 	u8 index;
 	u8 *desc = NULL;
+#ifdef OPLUS_FEATURE_UFSPLUS
+//Jinghua.Yu@BSP.Storage.UFS 2020/06/12, Add TAG for UFS plus
+#if defined(CONFIG_UFSFEATURE)
+	u8 selector = 0x1;
+#endif
+#endif
 
 	ioctl_data = kzalloc(sizeof(struct ufs_ioctl_query_data), GFP_KERNEL);
 	if (!ioctl_data) {
@@ -9482,12 +9502,32 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		goto out_release_mem;
 	}
 
+#ifdef OPLUS_FEATURE_UFSPLUS
+//Jinghua.Yu@BSP.Storage.UFS 2020/06/12, Add TAG for UFS plus
 #if defined(CONFIG_UFSFEATURE)
+	dev_err(hba->dev,"%s: hba->dev_info.w_manufacturer_id %x\n", __func__, hba->dev_info.w_manufacturer_id);
+	switch (hba->dev_info.w_manufacturer_id) {
+	case UFS_VENDOR_SAMSUNG:
+		selector = 0x1;
+		break;
+	case UFS_VENDOR_TOSHIBA:
+	case UFS_VENDOR_SKHYNIX:
+	case UFS_VENDOR_WDC:
+	case UFS_VENDOR_MICRON:
+		selector = 0x0;
+		break;
+	default:
+		break;
+	}
+
+	dev_err(hba->dev,"%s:selector %x\n", __func__, selector);
+
 	if (ufsf_check_query(ioctl_data->opcode)) {
 		err = ufsf_query_ioctl(&hba->ufsf, lun, buffer, ioctl_data,
-				       UFSFEATURE_SELECTOR);
+				       selector);
 		goto out_release_mem;
 	}
+#endif
 #endif
 	/* verify legal parameters & send query */
 	switch (ioctl_data->opcode) {
@@ -10554,7 +10594,6 @@ static int ufshcd_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	}
 #if defined(CONFIG_UFSFEATURE)
 	ufsf_hpb_suspend(&hba->ufsf);
-	ufsf_tw_suspend(&hba->ufsf);
 #endif
 
 	ret = ufshcd_crypto_suspend(hba, pm_op);
@@ -10701,8 +10740,7 @@ enable_gating:
 	ufshcd_release_all(hba);
 	ufshcd_crypto_resume(hba, pm_op);
 #if defined(CONFIG_UFSFEATURE)
-	ufsf_hpb_resume(&hba->ufsf);
-	ufsf_tw_resume(&hba->ufsf);
+	ufsf_resume(&hba->ufsf);
 #endif
 out:
 	hba->pm_op_in_progress = 0;
@@ -10828,8 +10866,7 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	if (hba->clk_scaling.is_allowed)
 		ufshcd_resume_clkscaling(hba);
 #if defined(CONFIG_UFSFEATURE)
-	ufsf_hpb_resume(&hba->ufsf);
-	ufsf_tw_resume(&hba->ufsf);
+	ufsf_resume(&hba->ufsf);
 #endif
 	/* Set Auto-Hibernate timer if supported */
 	ufshcd_set_auto_hibern8_timer(hba);
@@ -11111,9 +11148,7 @@ EXPORT_SYMBOL(ufshcd_shutdown);
 void ufshcd_remove(struct ufs_hba *hba)
 {
 #if defined(CONFIG_UFSFEATURE)
-	ufsf_hpb_release(&hba->ufsf);
-	ufsf_tw_release(&hba->ufsf);
-//huangjianan@TECH.Storage.UFS, 2019/12/09, Add for UFS+ RUS
+	ufsf_remove(&hba->ufsf);
 	remove_ufsplus_ctrl_proc();
 #endif
 	ufs_sysfs_remove_nodes(hba->dev);
@@ -11409,8 +11444,7 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 
 	ufshcd_cmd_log_init(hba);
 #if defined(CONFIG_UFSFEATURE)
-	ufsf_hpb_set_init_state(&hba->ufsf);
-	ufsf_tw_set_init_state(&hba->ufsf);
+	ufsf_set_init_state(&hba->ufsf);
 #endif
 	async_schedule(ufshcd_async_scan, hba);
 

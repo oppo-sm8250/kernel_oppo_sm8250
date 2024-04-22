@@ -213,9 +213,9 @@ source "drivers/input/misc/Kconfig"
 
 source "drivers/input/rmi4/Kconfig"
 
-#ifdef VENDOR_EDIT
-#Ran.Chen@BSP.Fingerprint.Basic, 2018/04/25, Add for FPC driver
-source "drivers/input/oppo_fp_drivers/Kconfig"
+#ifdef OPLUS_FEATURE_FINGERPRINT
+source "drivers/input/oplus_fp_drivers/Kconfig"
+source "drivers/input/oplus_secure_drivers/Kconfig"
 #endif
 endif
 

@@ -1142,10 +1142,18 @@ int mhi_sync_power_up(struct mhi_controller *mhi_cntrl)
 	if (ret)
 		return ret;
 
+#ifndef OPLUS_BUG_STABILITY
+	//Modify for: mhi timeout 10s to 20s
 	wait_event_timeout(mhi_cntrl->state_event,
 			   MHI_IN_MISSION_MODE(mhi_cntrl->ee) ||
 			   MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state),
 			   msecs_to_jiffies(mhi_cntrl->timeout_ms));
+#else /* OPLUS_BUG_STABILITY */
+	wait_event_timeout(mhi_cntrl->state_event,
+			   MHI_IN_MISSION_MODE(mhi_cntrl->ee) ||
+			   MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state),
+			   msecs_to_jiffies(20000));
+#endif /* OPLUS_BUG_STABILITY */
 
 	if (MHI_IN_MISSION_MODE(mhi_cntrl->ee))
 		return 0;

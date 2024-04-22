@@ -1,80 +1,79 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *  Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
- *  Copyright (c) 2017-2020, Pixelworks, Inc.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, Pixelworks, Inc.
  *
- *  These files contain modifications made by Pixelworks, Inc., in 2019-2020.
+ * These files contain modifications made by Pixelworks, Inc., in 2019-2020.
  */
-
-#ifndef _DSI_IRIS5_API_H_
-#define _DSI_IRIS5_API_H_
-
-// Use Iris5 Analog bypass mode to light up panel
-// Note: input timing should be same with output timing
-//#define IRIS5_ABYP_LIGHTUP
-//#define IRIS5_MIPI_TEST
+#ifndef _DSI_IRIS_API_H_
+#define _DSI_IRIS_API_H_
 
 #include "dsi_display.h"
-#include "dsi_iris5_def.h"
 
-void iris_set_cfg_index(int index);
-
-int iris5_parse_params(struct dsi_display *display);
-void iris5_init(struct dsi_display *display, struct dsi_panel *panel);
-void iris5_deinit(struct dsi_display *display);
-void iris5_power_on(struct dsi_panel *panel);
-void iris5_reset(struct dsi_panel *panel);
-void iris5_power_off(struct dsi_panel *panel);
-void iris5_gpio_parse(struct dsi_panel *panel);
-void iris5_gpio_request(struct dsi_panel *panel);
-void iris5_gpio_free(struct dsi_panel *panel);
-int iris5_lightup(struct dsi_panel *panel, struct dsi_panel_cmd_set *on_cmds);
-int iris5_lightoff(struct dsi_panel *panel, struct dsi_panel_cmd_set *off_cmds);
-int iris5_panel_cmd_passthrough(struct dsi_panel *panel, struct dsi_panel_cmd_set *cmdset);
-void iris_register_osd_irq(void *disp);
-int iris_panel_enable(struct dsi_panel *panel, struct dsi_panel_cmd_set *on_cmds);
-int iris_panel_post_switch(struct dsi_panel *panel,
+void iris_deinit(struct dsi_display *display);
+void iris_power_on(struct dsi_panel *panel);
+void iris_reset(void);
+void iris_power_off(struct dsi_panel *panel);
+int iris_pt_send_panel_cmd(struct dsi_panel *panel,
+		struct dsi_panel_cmd_set *cmdset);
+int iris_enable(struct dsi_panel *panel, struct dsi_panel_cmd_set *on_cmds);
+int iris_disable(struct dsi_panel *panel, struct dsi_panel_cmd_set *off_cmds);
+int iris_post_switch(struct dsi_panel *panel,
 		      struct dsi_panel_cmd_set *switch_cmds,
 		      struct dsi_mode_info *mode_info);
-int iris_panel_switch(struct dsi_panel *panel,
+int iris_switch(struct dsi_panel *panel,
 		      struct dsi_panel_cmd_set *switch_cmds,
 		      struct dsi_mode_info *mode_info);
 int iris_read_status(struct dsi_display_ctrl *ctrl, struct dsi_panel *panel);
-int get_iris_status(void);
-int iris5_aod_set(struct dsi_panel *panel, bool aod);
-bool iris5_aod_get(struct dsi_panel *panel);
-int iris5_fod_set(struct dsi_panel *panel, bool fod);
-int iris5_fod_post(struct dsi_panel *panel);
+int iris_get_status(void);
+int iris_set_aod(struct dsi_panel *panel, bool aod);
+bool iris_get_aod(struct dsi_panel *panel);
+int iris_set_fod(struct dsi_panel *panel, bool fod);
+int iris_post_fod(struct dsi_panel *panel);
 
-/*
-* @Description: send continuous splash commands
-* @param type IRIS_CONT_SPLASH_LK/IRIS_CONT_SPLASH_KERNEL
-*/
 void iris_send_cont_splash(struct dsi_display *display);
+bool iris_is_pt_mode(struct dsi_panel *panel);
+void iris_prepare(struct dsi_display *display);
 
-int iris5_operate_conf(struct msm_iris_operate_value *argp);
-int iris5_operate_tool(struct msm_iris_operate_value *argp);
+int iris_update_backlight(u8 pkg_mode, u32 bl_lvl);
+void iris_control_pwr_regulator(bool on);
+int iris_panel_ctrl_read_reg(struct dsi_display_ctrl *ctrl,
+		struct dsi_panel *panel, u8 *rx_buf, int rlen,
+		struct dsi_cmd_desc *cmd);
 
-int iris5_hdr_enable_get(void);
-bool iris5_dspp_dirty(void);
-int iris5_abypass_mode_get(struct dsi_panel *panel);
-
-void iris5_display_prepare(struct dsi_display *display);
-
-int iris5_update_backlight(u8 PkgMode, u32 bl_lvl);
-int iris5_prepare_for_kickoff(void *phys_enc);
-int iris5_kickoff(void *phys_enc);
 bool iris_secondary_display_autorefresh(void *phys_enc);
-bool iris_virtual_encoder_phys(void *phys_enc);
-void iris_second_channel_pre(bool dsc_enabled);
-void iris_osd_irq_cnt_clean(void);
-void iris_osd_irq_cnt_inc(void);
-void iris5_control_pwr_regulator(bool on);
-int iris_panel_crtl_read_reg(struct dsi_display_ctrl *ctrl, struct dsi_panel *panel,
-	       u8 *rx_buf, int rlen, struct dsi_cmd_desc *cmd);
+bool iris_is_virtual_encoder_phys(void *phys_enc);
+void iris_register_osd_irq(void *disp);
+void iris_inc_osd_irq_cnt(void);
 
-int iris_check_status(u32 *arr, u32 path);
-void iris_feature_init(struct dsi_display *display);
-bool iris_get_feature(void);
+void iris_query_capability(struct dsi_panel *panel);
+bool iris_is_chip_supported(void);
+bool iris_is_softiris_supported(void);
+bool iris_is_dual_supported(void);
 
-#endif // _DSI_IRIS5_API_H_
+void iris_sde_plane_setup_csc(void *csc_ptr);
+int iris_sde_kms_iris_operate(struct msm_kms *kms,
+		u32 operate_type, struct msm_iris_operate_value *operate_value);
+void iris_sde_update_dither_depth_map(uint32_t *map);
+void iris_sde_prepare_for_kickoff(uint32_t num_phys_encs, void *phys_enc);
+void iris_sde_encoder_sync_panel_brightness(uint32_t num_phys_encs,
+		void *phys_enc);
+void iris_sde_encoder_kickoff(uint32_t num_phys_encs, void *phys_enc);
+void iris_sde_encoder_wait_for_event(uint32_t num_phys_encs,
+		void *phys_enc, uint32_t event);
+
+int msm_ioctl_iris_operate_conf(struct drm_device *dev, void *data,
+		struct drm_file *file);
+int msm_ioctl_iris_operate_tool(struct drm_device *dev, void *data,
+		struct drm_file *file);
+
+void iris_dsi_display_res_init(struct dsi_display *display);
+void iris_dsi_display_debugfs_init(struct dsi_display *display,
+		struct dentry *dir, struct dentry *dump_file);
+void iris_dsi_panel_dump_pps(struct dsi_panel_cmd_set *set);
+void iris_dsi_ctrl_dump_desc_cmd(struct dsi_ctrl *dsi_ctrl,
+		const struct mipi_dsi_msg *msg);
+
+void iris_sde_hw_sspp_setup_csc_v2(void *pctx, const void *pfmt, void *pdata);
+
+#endif // _DSI_IRIS_API_H_

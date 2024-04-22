@@ -26174,6 +26174,9 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"MultiMedia10 Mixer", "SLIM_1_TX", "SLIMBUS_1_TX"},
 	{"MultiMedia16 Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
 	{"MultiMedia16 Mixer", "SLIM_1_TX", "SLIMBUS_1_TX"},
+#ifdef OPLUS_ARCH_EXTENDS
+	{"MultiMedia16 Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
+#endif
 	{"MultiMedia5 Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
 	{"MultiMedia5 Mixer", "SLIM_8_TX", "SLIMBUS_8_TX"},
 	{"MultiMedia5 Mixer", "SLIM_9_TX", "SLIMBUS_9_TX"},
@@ -29288,6 +29291,11 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"AUDIO_REF_EC_UL1 MUX", "SEC_TDM_TX_0", "SEC_TDM_TX_0"},
 	{"AUDIO_REF_EC_UL1 MUX", "QUIN_TDM_TX_0", "QUIN_TDM_TX_0"},
 
+#ifdef OPLUS_ARCH_EXTENDS
+	{"AUDIO_REF_EC_UL1 MUX", "TERT_MI2S_RX", "TERT_MI2S_RX"},
+	{"AUDIO_REF_EC_UL1 MUX", "PRI_MI2S_RX", "PRI_MI2S_RX"},
+#endif /*OPLUS_ARCH_EXTENDS*/
+
 	{"AUDIO_REF_EC_UL10 MUX", "QUAT_TDM_TX_1", "QUAT_TDM_TX_1"},
 	{"AUDIO_REF_EC_UL10 MUX", "QUAT_TDM_RX_0", "QUAT_TDM_RX_0"},
 	{"AUDIO_REF_EC_UL10 MUX", "QUAT_TDM_RX_1", "QUAT_TDM_RX_1"},
@@ -29295,6 +29303,10 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"AUDIO_REF_EC_UL10 MUX", "TERT_TDM_TX_0", "TERT_TDM_TX_0"},
 	{"AUDIO_REF_EC_UL10 MUX", "TERT_TDM_RX_2", "TERT_TDM_RX_2"},
 	{"AUDIO_REF_EC_UL10 MUX", "SEC_TDM_TX_0", "SEC_TDM_TX_0"},
+#ifdef OPLUS_ARCH_EXTENDS
+	/* add routing control for AUDIO_REF_EC_UL10 MUX with TERT_MI2S_RX */
+	{"AUDIO_REF_EC_UL10 MUX", "TERT_MI2S_RX", "TERT_MI2S_RX"},
+#endif /* OPLUS_ARCH_EXTENDS */
 
 	{"LSM1 Mixer", "QUIN_TDM_TX_0", "QUIN_TDM_TX_0"},
 	{"LSM1 Mixer", "TERT_TDM_TX_0", "TERT_TDM_TX_0"},
@@ -29809,10 +29821,6 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	{"AUDIO_REF_EC_UL1 MUX", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"AUDIO_REF_EC_UL1 MUX", "QUAT_MI2S_TX", "QUAT_MI2S_TX"},
 
-#ifdef VENDOR_EDIT
-	{"AUDIO_REF_EC_UL1 MUX", "TERT_MI2S_RX", "TERT_MI2S_RX"},
-#endif /*OPLUS_ARCH_EXTENDS*/
-
 	{"AUDIO_REF_EC_UL2 MUX", "PRI_MI2S_TX", "PRI_MI2S_TX"},
 	{"AUDIO_REF_EC_UL2 MUX", "SEC_MI2S_TX", "SEC_MI2S_TX"},
 	{"AUDIO_REF_EC_UL2 MUX", "TERT_MI2S_TX", "TERT_MI2S_TX"},
@@ -29852,10 +29860,6 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	{"AUDIO_REF_EC_UL10 MUX", "SEC_MI2S_TX", "SEC_MI2S_TX"},
 	{"AUDIO_REF_EC_UL10 MUX", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"AUDIO_REF_EC_UL10 MUX", "QUAT_MI2S_TX", "QUAT_MI2S_TX"},
-
-#ifdef VENDOR_EDIT
-	{"AUDIO_REF_EC_UL10 MUX", "TERT_MI2S_RX", "TERT_MI2S_RX"},
-#endif /* OPLUS_ARCH_EXTENDS */
 
 	{"AUDIO_REF_EC_UL16 MUX", "PRI_MI2S_TX", "PRI_MI2S_TX"},
 	{"AUDIO_REF_EC_UL16 MUX", "SEC_MI2S_TX", "SEC_MI2S_TX"},
@@ -30142,6 +30146,7 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	{"PRI_MI2S_RX", NULL, "PRI_MI2S_RX_VI_FB_MUX"},
 #ifdef VENDOR_EDIT
 	{"TERT_MI2S_RX", NULL, "TERT_MI2S_RX_VI_FB_MUX"},
+	{"TERT_MI2S_RX_VI_FB_MUX", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 #endif /*OPLUS_ARCH_EXTENDS*/
 	{"INT4_MI2S_RX", NULL, "INT4_MI2S_RX_VI_FB_MONO_CH_MUX"},
 	{"INT4_MI2S_RX", NULL, "INT4_MI2S_RX_VI_FB_STEREO_CH_MUX"},
