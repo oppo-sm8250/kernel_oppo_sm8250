@@ -1,8 +1,8 @@
 /***************************************************************
-** Copyright (C),  2020,  OPPO Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
-** File : oppo_display_panel_power.h
-** Description : oppo display panel power control
+** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** OPLUS_BUG_STABILITY
+** File : oplus_display_panel_power.h
+** Description : oplus display panel power control
 ** Version : 1.0
 ** Date : 2020/06/13
 ** Author : Li.Sheng@MULTIMEDIA.DISPLAY.LCD
@@ -11,8 +11,8 @@
 **  <author>        <data>        <version >        <desc>
 **  Li.Sheng       2020/06/13        1.0           Build this moudle
 ******************************************************************/
-#ifndef _OPPO_DISPLAY_PANEL_POWER_H_
-#define _OPPO_DISPLAY_PANEL_POWER_H_
+#ifndef _OPLUS_DISPLAY_PANEL_POWER_H_
+#define _OPLUS_DISPLAY_PANEL_POWER_H_
 
 #include <linux/err.h>
 #include "dsi_display.h"
@@ -53,12 +53,12 @@ typedef struct panel_voltage_bak {
 	char pwr_name[20];
 }PANEL_VOLTAGE_BAK;
 
-int oppo_display_panel_set_pwr(void *data);
-int oppo_display_panel_get_pwr(void *data);
-int oplus_display_get_power_status(void *data);
-int oplus_display_set_power_status(void *data);
-int oplus_display_regulator_control(void *data);
-int __oppo_display_set_power_status(int status);
+int oplus_display_panel_set_pwr(void *data);
+int oplus_display_panel_get_pwr(void *data);
+int oplus_display_panel_get_power_status(void *data);
+int oplus_display_panel_set_power_status(void *data);
+int oplus_display_panel_regulator_control(void *data);
+int __oplus_display_set_power_status(int status);
 
-#endif /*_OPPO_DISPLAY_PANEL_POWER_H_*/
+#endif /*_OPLUS_DISPLAY_PANEL_POWER_H_*/
 

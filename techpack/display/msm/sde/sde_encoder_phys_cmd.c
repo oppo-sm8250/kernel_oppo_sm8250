@@ -31,7 +31,7 @@
 #ifdef OPLUS_BUG_STABILITY
 /*Hujie@PSW.MM.Display.Lcd.Stability, 2019-09-01, add for runing SDE_RECOVERY_HARD_RESET when pingpong timeout many times*/
 #define PP_TIMEOUT_BAD_TRIALS   10
-extern int oppo_dimlayer_fingerprint_failcount;
+extern int oplus_dimlayer_fingerprint_failcount;
 #endif
 
 /*
@@ -43,8 +43,14 @@ extern int oppo_dimlayer_fingerprint_failcount;
 #define DEFAULT_TEARCHECK_SYNC_THRESH_CONTINUE	4
 
 #define SDE_ENC_WR_PTR_START_TIMEOUT_US 20000
+#if defined(PXLW_IRIS_DUAL)
+/* decrease the polling time interval, reduce polling time */
+#define AUTOREFRESH_SEQ1_POLL_TIME      (iris_is_dual_supported() ? 1000 : 2000)
+#define AUTOREFRESH_SEQ2_POLL_TIME      (iris_is_dual_supported() ? 1000 : 25000)
+#else
 #define AUTOREFRESH_SEQ1_POLL_TIME	2000
 #define AUTOREFRESH_SEQ2_POLL_TIME	25000
+#endif
 #define AUTOREFRESH_SEQ2_POLL_TIMEOUT	1000000
 
 static inline int _sde_encoder_phys_cmd_get_idle_timeout(
@@ -78,6 +84,12 @@ static uint64_t _sde_encoder_phys_cmd_get_autorefresh_property(
 
 	if (!conn || !conn->state)
 		return 0;
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+	if (iris_is_chip_supported()) {
+		if (iris_secondary_display_autorefresh(phys_enc))
+			return 1;
+	}
+#endif
 
 	return sde_connector_get_property(conn->state,
 				CONNECTOR_PROP_AUTOREFRESH);
@@ -1770,7 +1782,15 @@ static void _sde_encoder_autorefresh_disable_seq1(
 	_sde_encoder_phys_cmd_config_autorefresh(phys_enc, 0);
 
 	do {
+#if defined(PXLW_IRIS_DUAL)
+		if (iris_is_dual_supported())
+			usleep_range(AUTOREFRESH_SEQ1_POLL_TIME,
+				AUTOREFRESH_SEQ1_POLL_TIME + 1);
+		else
+			udelay(AUTOREFRESH_SEQ1_POLL_TIME);
+#else
 		udelay(AUTOREFRESH_SEQ1_POLL_TIME);
+#endif
 		if ((trial * AUTOREFRESH_SEQ1_POLL_TIME)
 				> (KICKOFF_TIMEOUT_MS * USEC_PER_MSEC)) {
 			SDE_ERROR_CMDENC(cmd_enc,
@@ -1816,7 +1836,11 @@ static void _sde_encoder_autorefresh_disable_seq2(
 	SDE_EVT32(DRMID(phys_enc->parent), phys_enc->intf_idx - INTF_0,
 				autorefresh_status, SDE_EVTLOG_FUNC_CASE1);
 
+#if defined(PXLW_IRIS_DUAL)
+	if (!(autorefresh_status & BIT(7)) && !iris_is_dual_supported()) {
+#else
 	if (!(autorefresh_status & BIT(7))) {
+#endif
 		usleep_range(AUTOREFRESH_SEQ2_POLL_TIME,
 			AUTOREFRESH_SEQ2_POLL_TIME + 1);
 
@@ -1896,20 +1920,23 @@ static void sde_encoder_phys_cmd_trigger_start(
 		return;
 
 	/* we don't issue CTL_START when using autorefresh */
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-	if (iris_get_feature() && iris_secondary_display_autorefresh(phys_enc))
-		frame_cnt = 1;
-	else
-		frame_cnt = _sde_encoder_phys_cmd_get_autorefresh_property(phys_enc);
-#else
 	frame_cnt = _sde_encoder_phys_cmd_get_autorefresh_property(phys_enc);
-#endif
 	if (frame_cnt) {
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+		if (iris_is_chip_supported()) {
+		atomic_inc(&cmd_enc->autorefresh.kickoff_cnt);
+		_sde_encoder_phys_cmd_config_autorefresh(phys_enc, frame_cnt);
+			goto end;
+		}
+#endif
 		_sde_encoder_phys_cmd_config_autorefresh(phys_enc, frame_cnt);
 		atomic_inc(&cmd_enc->autorefresh.kickoff_cnt);
 	} else {
 		sde_encoder_helper_trigger_start(phys_enc);
 	}
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+end:
+#endif
 
 	/* wr_ptr_wait_success is set true when wr_ptr arrives */
 	cmd_enc->wr_ptr_wait_success = false;

@@ -113,7 +113,7 @@
 
 #ifdef OPLUS_BUG_STABILITY
 /*Ling.Guo@PSW.MM.Display.LCD.Feature,2020-02-02 modify for mipi hs strength */
-extern bool oppo_enhance_mipi_strength;
+extern bool oplus_enhance_mipi_strength;
 #endif
 
 static int dsi_phy_hw_v4_0_is_pll_on(struct dsi_phy_hw *phy)
@@ -340,7 +340,7 @@ static void dsi_phy_hw_dphy_enable(struct dsi_phy_hw *phy,
 		glbl_str_swi_cal_sel_ctrl = 0x00;
 		glbl_hstx_str_ctrl_0 = 0x88;
 #else
-		if (oppo_enhance_mipi_strength) {
+		if (oplus_enhance_mipi_strength) {
 			glbl_str_swi_cal_sel_ctrl = 0x01;
 			glbl_hstx_str_ctrl_0 = 0xFF;
 		} else {

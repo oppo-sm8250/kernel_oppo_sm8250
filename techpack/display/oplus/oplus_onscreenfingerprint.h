@@ -1,8 +1,8 @@
 /***************************************************************
-** Copyright (C),  2020,  OPPO Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
-** File : oppo_onscreenfingerprint.h
-** Description : oppo onscreenfingerprint feature
+** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** OPLUS_BUG_STABILITY
+** File : oplus_onscreenfingerprint.h
+** Description : oplus onscreenfingerprint feature
 ** Version : 1.0
 ** Date : 2020/04/15
 ** Author : Qianxu@MM.Display.LCD Driver
@@ -11,8 +11,8 @@
 **  <author>        <data>        <version >        <desc>
 **   Qianxu         2020/04/15        1.0           Build this moudle
 ******************************************************************/
-#ifndef _OPPO_ONSCREENFINGERPRINT_H_
-#define _OPPO_ONSCREENFINGERPRINT_H_
+#ifndef _OPLUS_ONSCREENFINGERPRINT_H_
+#define _OPLUS_ONSCREENFINGERPRINT_H_
 
 #include <drm/drm_crtc.h>
 #include "dsi_panel.h"
@@ -20,17 +20,26 @@
 #include "dsi_parser.h"
 #include "sde_encoder_phys.h"
 
-
 #define FFL_FP_LEVEL 150
 
+extern int oplus_onscreenfp_status;
 
-int oppo_get_panel_brightness(void);
+enum CUST_ALPHA_ENUM{
+	CUST_A_NO = 0,
+	CUST_A_TRANS,  /* alpha = 0, transparent */
+	CUST_A_OPAQUE, /* alpha = 255, opaque */
+};
 
-int dsi_panel_parse_oppo_fod_config(struct dsi_panel *panel);
+void oplus_set_aod_dim_alpha(int cust);
 
-int dsi_panel_parse_oppo_config(struct dsi_panel *panel);
+int oplus_get_panel_brightness(void);
+int oplus_get_panel_power_mode(void);
 
-int dsi_panel_parse_oppo_mode_config(struct dsi_display_mode *mode, struct dsi_parser_utils *utils);
+int dsi_panel_parse_oplus_fod_config(struct dsi_panel *panel);
+
+int dsi_panel_parse_oplus_config(struct dsi_panel *panel);
+
+int dsi_panel_parse_oplus_mode_config(struct dsi_display_mode *mode, struct dsi_parser_utils *utils);
 
 bool sde_crtc_get_dimlayer_mode(struct drm_crtc_state *crtc_state);
 
@@ -50,7 +59,7 @@ bool _sde_encoder_setup_dither_for_onscreenfingerprint(struct sde_encoder_phys *
 						  void *dither_cfg, int len, struct sde_hw_pingpong *hw_pp);
 
 int sde_plane_check_fingerprint_layer(const struct drm_plane_state *drm_state);
-int oplus_display_set_dimlayer_hbm(void *data);
-int oplus_display_get_dimlayer_hbm(void *data);
-
-#endif /*_OPPO_ONSCREENFINGERPRINT_H_*/
+int oplus_display_panel_set_dimlayer_hbm(void *data);
+int oplus_display_panel_get_dimlayer_hbm(void *data);
+int oplus_display_panel_notify_fp_press(void *data);
+#endif /*_OPLUS_ONSCREENFINGERPRINT_H_*/

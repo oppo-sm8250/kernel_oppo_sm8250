@@ -1,8 +1,8 @@
 /***************************************************************
-** Copyright (C),  2020,  OPPO Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
-** File : oppo_display_panel_common.c
-** Description : oppo display panel common feature
+** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** OPLUS_BUG_STABILITY
+** File : oplus_display_panel_common.c
+** Description : oplus display panel common feature
 ** Version : 1.0
 ** Date : 2020/06/13
 ** Author : Li.Sheng@MULTIMEDIA.DISPLAY.LCD
@@ -11,33 +11,46 @@
 **  <author>        <data>        <version >        <desc>
 **  Li.Sheng       2020/06/13        1.0           Build this moudle
 ******************************************************************/
-#include "oppo_display_panel_common.h"
+#include "oplus_display_panel_common.h"
 #include <linux/notifier.h>
 #include <linux/msm_drm_notify.h>
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 /*Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature*/
 #include <video/mipi_display.h>
-#include "../iris/dsi_iris5_api.h"
-#include "../iris/dsi_iris5_lightup.h"
-#include "../iris/dsi_iris5_loop_back.h"
+#include "iris/dsi_iris5_api.h"
+#include "iris/dsi_iris5_lightup.h"
+#include "iris/dsi_iris5_loop_back.h"
 #endif
 
-int oppo_debug_max_brightness = 0;
-int oppo_display_audio_ready = 0;
-char oppo_rx_reg[PANEL_TX_MAX_BUF] = {0x0};
-char oppo_rx_len = 0;
+#include "oplus_display_panel.h"
+
+int oplus_debug_max_brightness = 0;
+/* james.zhu@MULTIMEDIA.DISPLAY.LCD, 2021/02/15, oplus dither */
+int oplus_dither_enable = 0;
+int oplus_display_audio_ready = 0;
+char oplus_rx_reg[PANEL_TX_MAX_BUF] = {0x0};
+char oplus_rx_len = 0;
 int lcd_closebl_flag = 0;
 int spr_mode = 0;
 int dynamic_osc_clock = 139600;
 int mca_mode = 1;
-extern int oppo_dimlayer_hbm;
-extern int oppo_dimlayer_bl;
+extern int oplus_dimlayer_hbm;
+extern int oplus_dimlayer_bl;
+
+enum {
+	REG_WRITE = 0,
+	REG_READ,
+	REG_X,
+};
 
 DEFINE_MUTEX(oplus_mca_lock);
-DEFINE_MUTEX(oppo_spr_lock);
+DEFINE_MUTEX(oplus_spr_lock);
+
+/* james.zhu@MULTIMEDIA.DISPLAY.LCD, 2021/02/15, oplus dither */
+EXPORT_SYMBOL(oplus_dither_enable);
 
 extern int msm_drm_notifier_call_chain(unsigned long val, void *v);
-extern int __oppo_display_set_spr(int mode);
+extern int __oplus_display_set_spr(int mode);
 extern int dsi_display_spr_mode(struct dsi_display *display, int mode);
 
 int dsi_panel_set_mca(struct dsi_panel *panel)
@@ -63,7 +76,7 @@ int dsi_panel_set_mca(struct dsi_panel *panel)
 	}
 
 	if (rc) {
-		pr_err("[%s] failed to send DSI_CMD_HBM_ON cmds, rc=%d\n",
+		pr_err("[%s] failed to send DSI_CMD_MCA cmds, rc=%d\n",
 		       panel->name, rc);
 	}
 
@@ -194,12 +207,12 @@ int dsi_display_spr_mode(struct dsi_display *display, int mode) {
 	return rc;
 }
 
-int __oppo_display_set_spr(int mode) {
-	mutex_lock(&oppo_spr_lock);
+int __oplus_display_set_spr(int mode) {
+	mutex_lock(&oplus_spr_lock);
 	if(mode != spr_mode) {
 		spr_mode = mode;
 	}
-	mutex_unlock(&oppo_spr_lock);
+	mutex_unlock(&oplus_spr_lock);
 	return 0;
 }
 
@@ -303,16 +316,16 @@ done:
 	return rc;
 }
 
-int oppo_display_panel_get_id(void *buf)
+int oplus_display_panel_get_id(void *buf)
 {
 	struct dsi_display *display = get_main_display();
 	int ret = 0;
 	unsigned char read[30];
 	struct panel_id *panel_rid = buf;
 
-	if(get_oppo_display_power_status() == OPPO_DISPLAY_POWER_ON) {
+	if(get_oplus_display_power_status() == OPLUS_DISPLAY_POWER_ON) {
 		if(display == NULL) {
-			printk(KERN_INFO "oppo_display_get_panel_id and main display is null");
+			printk(KERN_INFO "oplus_display_get_panel_id and main display is null");
 			ret = -1;
 			return ret;
 		}
@@ -338,50 +351,73 @@ int oppo_display_panel_get_id(void *buf)
 		}
 		panel_rid->DC = (uint32_t)read[0];
 	} else {
-		printk(KERN_ERR	 "%s oppo_display_get_panel_id, but now display panel status is not on\n", __func__);
+		printk(KERN_ERR	 "%s oplus_display_get_panel_id, but now display panel status is not on\n", __func__);
 		return -EINVAL;
 	}
 
 	return ret;
 }
 
-int oppo_display_panel_get_max_brightness(void *buf)
+int oplus_display_panel_get_max_brightness(void *buf)
 {
 	uint32_t *max_brightness = buf;
 	struct dsi_display *display = get_main_display();
-	struct dsi_panel *panel = display->panel;
 
-	if (oppo_debug_max_brightness == 0) {
-		(*max_brightness) = panel->bl_config.bl_normal_max_level;
+	if (!display || !display->panel) {
+		pr_err("%s failed to get display\n", __func__);
+		return -EINVAL;
+	}
+
+	if (oplus_debug_max_brightness == 0) {
+		(*max_brightness) = display->panel->bl_config.brightness_normal_max_level;
 	} else {
-		(*max_brightness) = oppo_debug_max_brightness;
+		(*max_brightness) = oplus_debug_max_brightness;
 	}
 
 	return 0;
 }
 
-int oppo_display_panel_set_max_brightness(void *buf)
+int oplus_display_panel_set_max_brightness(void *buf)
 {
 	uint32_t *max_brightness = buf;
 
-	oppo_debug_max_brightness = (*max_brightness);
+	oplus_debug_max_brightness = (*max_brightness);
 
 	return 0;
 }
 
-int oppo_display_panel_get_vendor(void *buf)
+int oplus_display_panel_get_brightness(void *buf)
+{
+	uint32_t *brightness = buf;
+	struct dsi_display *display = get_main_display();
+
+	if (!display || !display->panel) {
+		pr_err("%s failed to get display\n", __func__);
+		return -EINVAL;
+	}
+
+	(*brightness) = display->panel->bl_config.bl_level;
+
+	return 0;
+}
+
+int oplus_display_panel_get_vendor(void *buf)
 {
 	struct panel_info *p_info = buf;
-	struct dsi_display *display = get_main_display();
-	char *vendor = (char *)display->panel->oppo_priv.vendor_name;
-	char *manu_name = (char *)display->panel->oppo_priv.manufacture_name;
+	struct dsi_display *display = NULL;
+	char *vendor = NULL;
+	char *manu_name = NULL;
 
+	display = get_main_display();
 	if (!display || !display->panel ||
-	    !display->panel->oppo_priv.vendor_name ||
-	    !display->panel->oppo_priv.manufacture_name) {
+	    !display->panel->oplus_priv.vendor_name ||
+	    !display->panel->oplus_priv.manufacture_name) {
 		pr_err("failed to config lcd proc device");
 		return -EINVAL;
 	}
+
+	vendor = (char *)display->panel->oplus_priv.vendor_name;
+	manu_name = (char *)display->panel->oplus_priv.manufacture_name;
 
 	memcpy(p_info->version, vendor, strlen(vendor) > 31?31:(strlen(vendor)+1));
 	memcpy(p_info->manufacture, manu_name, strlen(manu_name) > 31?31:(strlen(manu_name)+1));
@@ -389,7 +425,7 @@ int oppo_display_panel_get_vendor(void *buf)
 	return 0;
 }
 
-int oppo_display_panel_get_ccd_check(void *buf)
+int oplus_display_panel_get_ccd_check(void *buf)
 {
 	struct dsi_display *display = get_main_display();
 	struct mipi_dsi_device *mipi_device;
@@ -400,7 +436,7 @@ int oppo_display_panel_get_ccd_check(void *buf)
 		return -EINVAL;
 	}
 
-	if (get_oppo_display_power_status() != OPPO_DISPLAY_POWER_ON) {
+	if (get_oplus_display_power_status() != OPLUS_DISPLAY_POWER_ON) {
 		printk(KERN_ERR"%s display panel in off status\n", __func__);
 		return -EFAULT;
 	}
@@ -410,8 +446,9 @@ int oppo_display_panel_get_ccd_check(void *buf)
 		return -EFAULT;
 	}
 
-	if (!(display && display->panel->oppo_priv.vendor_name) ||
-		!strcmp(display->panel->oppo_priv.vendor_name, "NT37800")) {
+	if (!(display && display->panel->oplus_priv.vendor_name) ||
+		!strcmp(display->panel->oplus_priv.vendor_name, "NT37800") ||
+		!strcmp(display->panel->oplus_priv.vendor_name, "AMB655XL08")) {
 		(*ccd_check) = 0;
 		goto end;
 	}
@@ -438,7 +475,7 @@ int oppo_display_panel_get_ccd_check(void *buf)
 			DSI_CORE_CLK, DSI_CLK_ON);
 	}
 
-	if (!strcmp(display->panel->oppo_priv.vendor_name, "AMB655UV01")) {
+	if (!strcmp(display->panel->oplus_priv.vendor_name, "AMB655UV01")) {
 		{
 			char value[] = { 0x5A, 0x5A };
 			rc = mipi_dsi_dcs_write(mipi_device, 0xF0, value, sizeof(value));
@@ -480,7 +517,7 @@ int oppo_display_panel_get_ccd_check(void *buf)
 
 	mutex_unlock(&display->panel->panel_lock);
 	mutex_unlock(&display->display_lock);
-	if (!strcmp(display->panel->oppo_priv.vendor_name, "AMB655UV01")) {
+	if (!strcmp(display->panel->oplus_priv.vendor_name, "AMB655UV01")) {
 		{
 			unsigned char read[10];
 
@@ -535,27 +572,25 @@ unlock:
 	mutex_unlock(&display->panel->panel_lock);
 	mutex_unlock(&display->display_lock);
 end:
-	pr_err("[%s] ccd_check = %d\n",  display->panel->oppo_priv.vendor_name, (*ccd_check));
+	pr_err("[%s] ccd_check = %d\n",  display->panel->oplus_priv.vendor_name, (*ccd_check));
 	return 0;
 }
 
-int oppo_display_panel_get_serial_number(void *buf)
-{
-	int ret = 0, i;
-	unsigned char read[30] = {0};
+int oplus_display_panel_get_serial_number(void *buf) {
+	int ret = 0;
+	unsigned char read[30];
+	PANEL_SERIAL_INFO panel_serial_info;
 	struct panel_serial_number* panel_rnum = buf;
+	uint64_t serial_number;
 	struct dsi_display *display = get_main_display();
-	unsigned base_index = 10;
-
-	panel_rnum->date = 0;
-	panel_rnum->precise_time = 0;
+	int i;
 
 	if (!display) {
-		printk(KERN_INFO "oppo_display_get_panel_serial_number and main display is null");
+		printk(KERN_INFO "oplus_display_get_panel_serial_number and main display is null");
 		return -1;
 	}
 
-	if (get_oppo_display_power_status() != OPPO_DISPLAY_POWER_ON) {
+	if(get_oplus_display_power_status() != OPLUS_DISPLAY_POWER_ON) {
 		printk(KERN_ERR"%s display panel in off status\n", __func__);
 		return ret;
 	}
@@ -565,35 +600,81 @@ int oppo_display_panel_get_serial_number(void *buf)
 	 * retry when found panel_serial_info is abnormal.
 	 */
 	for (i = 0;i < 10; i++) {
-		ret = dsi_display_read_panel_reg(get_main_display(), 0xA1, read, 17);
-		if (ret < 0) {
+		if(!strcmp(display->panel->name, "samsung ams643ye01 amoled fhd+ panel")) {
+			mutex_lock(&display->display_lock);
+			mutex_lock(&display->panel->panel_lock);
+
+			if (display->panel->panel_initialized) {
+				if (display->config.panel_mode == DSI_OP_CMD_MODE) {
+					dsi_display_clk_ctrl(display->dsi_clk_handle,
+							DSI_ALL_CLKS, DSI_CLK_ON);
+				}
+				 {
+					char value[] = { 0x5A, 0x5A };
+					ret = mipi_dsi_dcs_write(&display->panel->mipi_device, 0xF0, value, sizeof(value));
+				 }
+				if (display->config.panel_mode == DSI_OP_CMD_MODE) {
+					dsi_display_clk_ctrl(display->dsi_clk_handle,
+							DSI_ALL_CLKS, DSI_CLK_OFF);
+				}
+				mutex_unlock(&display->panel->panel_lock);
+				mutex_unlock(&display->display_lock);
+			}
+			if(ret < 0) {
+				ret = scnprintf(buf, PAGE_SIZE,
+						"Get panel serial number failed, reason:%d", ret);
+				msleep(20);
+				continue;
+			}
+			ret = dsi_display_read_panel_reg(get_main_display(), 0xD8, read, 13);
+		} else {
+			if (!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3")) {
+				ret = dsi_display_read_panel_reg(get_main_display(), 0xA1, read, 11);
+			} else {
+				ret = dsi_display_read_panel_reg(get_main_display(), 0xA1, read, 17);
+			}
+		}
+		if(ret < 0) {
 			ret = scnprintf(buf, PAGE_SIZE,
-					"Get panel serial number failed, reason:%d", ret);
+					"Get panel serial number failed, reason:%d",ret);
 			msleep(20);
 			continue;
 		}
 
-		/*  0xA1			   11th		12th	13th	14th	15th
-		 *  HEX				0x32		0x0C	0x0B	0x29	0x37
-		 *  Bit		   [D7:D4][D3:D0] [D5:D0] [D5:D0] [D5:D0] [D5:D0]
-		 *  exp			  3	  2	   C	   B	   29	  37
-		 *  Yyyy,mm,dd	  2014   2m	  12d	 11h	 41min   55sec
-		 *  panel_rnum.data[24:21][20:16] [15:8]  [7:0]
-		 *  panel_rnum:precise_time					  [31:24] [23:16] [reserved]
+		/*  0xA1               11th        12th    13th    14th    15th
+		 *  HEX                0x32        0x0C    0x0B    0x29    0x37
+		 *  Bit           [D7:D4][D3:D0] [D5:D0] [D5:D0] [D5:D0] [D5:D0]
+		 *  exp              3      2       C       B       29      37
+		 *  Yyyy,mm,dd      2014   2m      12d     11h     41min   55sec
 		*/
-		panel_rnum->date =
-			(((read[base_index] & 0xF0) << 20)
-			|((read[base_index] & 0x0F) << 16)
-			|((read[base_index+1] & 0x1F) << 8)
-			|(read[base_index+2] & 0x1F));
+		if (!strcmp(display->panel->name, "samsung amb655xl08 amoled fhd+ panel") ||
+			!strcmp(display->panel->name, "samsung amb655x fhd cmd mode dsc dsi panel")) {
+			panel_serial_info.reg_index = 11;
+		} else if (!strcmp(display->panel->name, "samsung ams643ye01 amoled fhd+ panel")) {
+			panel_serial_info.reg_index = 7;
+		} else if (!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3")) {
+			panel_serial_info.reg_index = 4;
+		} else {
+			panel_serial_info.reg_index = 10;
+		}
+		panel_serial_info.year		= (read[panel_serial_info.reg_index] & 0xF0) >> 0x4;
+		panel_serial_info.month		= read[panel_serial_info.reg_index]	& 0x0F;
+		panel_serial_info.day		= read[panel_serial_info.reg_index + 1]	& 0x1F;
+		panel_serial_info.hour		= read[panel_serial_info.reg_index + 2]	& 0x1F;
+		panel_serial_info.minute	= read[panel_serial_info.reg_index + 3]	& 0x3F;
+		panel_serial_info.second	= read[panel_serial_info.reg_index + 4]	& 0x3F;
+		panel_serial_info.reserved[0] = read[panel_serial_info.reg_index + 5];
+		panel_serial_info.reserved[1] = read[panel_serial_info.reg_index + 6];
 
-		panel_rnum->precise_time =
-			(((read[base_index+3] & 0x3F) << 24)
-			|((read[base_index+4] & 0x3F) << 16)
-			|(read[base_index+5] << 8)
-			|(read[base_index+6]));
-
-		if (!read[base_index]) {
+		serial_number = (panel_serial_info.year		<< 56)\
+			+ (panel_serial_info.month		<< 48)\
+			+ (panel_serial_info.day		<< 40)\
+			+ (panel_serial_info.hour		<< 32)\
+			+ (panel_serial_info.minute	<< 24)\
+			+ (panel_serial_info.second	<< 16)\
+			+ (panel_serial_info.reserved[0] << 8)\
+			+ (panel_serial_info.reserved[1]);
+		if (!panel_serial_info.year) {
 			/*
 			 * the panel we use always large than 2011, so
 			 * force retry when year is 2011
@@ -602,22 +683,24 @@ int oppo_display_panel_get_serial_number(void *buf)
 			continue;
 		}
 
+		ret = scnprintf(panel_rnum->serial_number, PAGE_SIZE, "Get panel serial number: %llx\n",serial_number);
 		break;
 	}
 
-	return 0;
+	return ret;
 }
 
-int oplus_display_set_audio_ready(void *data) {
+
+int oplus_display_panel_set_audio_ready(void *data) {
 	uint32_t *audio_ready = data;
 
-	oppo_display_audio_ready = (*audio_ready);
-	printk("%s oppo_display_audio_ready = %d\n", __func__, oppo_display_audio_ready);
+	oplus_display_audio_ready = (*audio_ready);
+	printk("%s oplus_display_audio_ready = %d\n", __func__, oplus_display_audio_ready);
 
 	return 0;
 }
 
-int oplus_display_dump_info(void *data) {
+int oplus_display_panel_dump_info(void *data) {
 	int ret = 0;
 	struct dsi_display * temp_display;
 	struct display_timing_info *timing_info = data;
@@ -625,13 +708,13 @@ int oplus_display_dump_info(void *data) {
 	temp_display = get_main_display();
 
 	if (temp_display == NULL) {
-		printk(KERN_INFO "oppo_display_dump_info and main display is null");
+		printk(KERN_INFO "oplus_display_dump_info and main display is null");
 		ret = -1;
 		return ret;
 	}
 
 	if(temp_display->modes == NULL) {
-		printk(KERN_INFO "oppo_display_dump_info and display modes is null");
+		printk(KERN_INFO "oplus_display_dump_info and display modes is null");
 		ret = -1;
 		return ret;
 	}
@@ -645,14 +728,14 @@ int oplus_display_dump_info(void *data) {
 	return 0;
 }
 
-int oplus_display_get_panel_dsc(void *data) {
+int oplus_display_panel_get_dsc(void *data) {
 	int ret = 0;
 	uint32_t *reg_read = data;
 	unsigned char read[30];
 
-	if(get_oppo_display_power_status() == OPPO_DISPLAY_POWER_ON) {
+	if(get_oplus_display_power_status() == OPLUS_DISPLAY_POWER_ON) {
 		if(get_main_display() == NULL) {
-			printk(KERN_INFO "oppo_display_get_panel_dsc and main display is null");
+			printk(KERN_INFO "oplus_display_get_panel_dsc and main display is null");
 			ret = -1;
 			return ret;
 		}
@@ -673,24 +756,24 @@ int oplus_display_get_panel_dsc(void *data) {
 	return ret;
 }
 
-int oplus_display_get_closebl_flag(void *data)
+int oplus_display_panel_get_closebl_flag(void *data)
 {
 	uint32_t *closebl_flag = data;
 
 	(*closebl_flag) = lcd_closebl_flag;
-	printk(KERN_INFO "oppo_display_get_closebl_flag = %d\n", lcd_closebl_flag);
+	printk(KERN_INFO "oplus_display_get_closebl_flag = %d\n", lcd_closebl_flag);
 
 	return 0;
 }
 
-int oplus_display_set_closebl_flag(void *data)
+int oplus_display_panel_set_closebl_flag(void *data)
 {
 	uint32_t *closebl = data;
 
 	pr_err("lcd_closebl_flag = %d\n", (*closebl));
 	if (1 != (*closebl))
 		lcd_closebl_flag = 0;
-	pr_err("oppo_display_set_closebl_flag = %d\n", lcd_closebl_flag);
+	pr_err("oplus_display_set_closebl_flag = %d\n", lcd_closebl_flag);
 
 	return 0;
 }
@@ -733,7 +816,7 @@ int iris_panel_dcs_write_wrapper(struct dsi_panel *panel, void *data, size_t len
 		return rc;
 	}
 
-	rc = iris5_panel_cmd_passthrough(panel, &cmdset);
+	rc = iris_pt_send_panel_cmd(panel, &cmdset);
 	if (rc < 0) {
 		pr_err("%s: send panel command failed\n", __func__);
 		return rc;
@@ -768,7 +851,7 @@ int iris_panel_dcs_read_wrapper(struct dsi_display *display, u8 cmd, void *rbuf,
 	mutex_lock(&display->display_lock);
 	mutex_lock(&panel->panel_lock);
 
-	rc = iris5_panel_cmd_passthrough(panel, &cmdset);
+	rc = iris_pt_send_panel_cmd(panel, &cmdset);
 	mutex_unlock(&panel->panel_lock);
 	mutex_unlock(&display->display_lock);
 
@@ -790,7 +873,33 @@ int iris_panel_dcs_read_wrapper(struct dsi_display *display, u8 cmd, void *rbuf,
 }
 #endif
 
-int oplus_display_get_panel_reg(void *data) {
+int oplus_big_endian_copy(void *dest, void *src, int count)
+{
+	int index = 0, knum = 0, rc = 0;
+	uint32_t *u_dest = (uint32_t*) dest;
+	char *u_src = (char*) src;
+
+	if (dest == NULL || src == NULL) {
+		printk("%s null pointer\n", __func__);
+		return -EINVAL;
+	}
+
+	if (dest == src) {
+		return rc;
+	}
+
+	while (count > 0) {
+		u_dest[index] = ((u_src[knum] << 24) | (u_src[knum+1] << 16) | (u_src[knum+2] << 8) | u_src[knum+3]);
+		index += 1;
+		knum += 4;
+		count = count - 1;
+	}
+
+	return rc;
+}
+
+int oplus_display_panel_get_reg(void *data)
+{
 	struct dsi_display *display = get_main_display();
 	struct panel_reg_get *panel_reg = data;
 	uint32_t u32_bytes = sizeof(uint32_t)/sizeof(char);
@@ -801,15 +910,17 @@ int oplus_display_get_panel_reg(void *data) {
 
 	mutex_lock(&display->display_lock);
 
-	memcpy(panel_reg->reg_rw, oppo_rx_reg, oppo_rx_len);
-	panel_reg->lens = (oppo_rx_len%u32_bytes) == 0 ? (oppo_rx_len/u32_bytes) : ((oppo_rx_len/u32_bytes) + 1);
+	u32_bytes = oplus_rx_len%u32_bytes ? (oplus_rx_len/u32_bytes + 1) : oplus_rx_len/u32_bytes;
+	oplus_big_endian_copy(panel_reg->reg_rw, oplus_rx_reg, u32_bytes);
+	panel_reg->lens = oplus_rx_len;
 
 	mutex_unlock(&display->display_lock);
 
 	return 0;
 }
 
-int oplus_display_set_panel_reg(void *data) {
+int oplus_display_panel_set_reg(void *data)
+{
 	char reg[PANEL_TX_MAX_BUF] = {0x0};
 	char payload[PANEL_TX_MAX_BUF] = {0x0};
 	u32 index = 0, value = 0;
@@ -833,7 +944,7 @@ int oplus_display_set_panel_reg(void *data) {
 		len = reg_rw->lens;
 
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-		if (iris_get_feature() && (iris5_abypass_mode_get(get_main_display()->panel) == PASS_THROUGH_MODE))
+		if (iris_is_chip_supported() && iris_is_pt_mode(get_main_display()->panel))
 			iris_panel_dcs_read_wrapper(get_main_display(), value, reg, len);
 		else
 			dsi_display_read_panel_reg(get_main_display(), value, reg, len);
@@ -842,11 +953,11 @@ int oplus_display_set_panel_reg(void *data) {
 #endif
 
 		for (index; index < len; index++) {
-			printk("%x ", reg[index]);
+			printk("reg[%d] = %x ", index, reg[index]);
 		}
 		mutex_lock(&display->display_lock);
-		memcpy(oppo_rx_reg, reg, PANEL_TX_MAX_BUF);
-		oppo_rx_len = len;
+		memcpy(oplus_rx_reg, reg, PANEL_TX_MAX_BUF);
+		oplus_rx_len = len;
 		mutex_unlock(&display->display_lock);
 		return 0;
 	}
@@ -854,11 +965,12 @@ int oplus_display_set_panel_reg(void *data) {
 	if (reg_rw->rw_flags == REG_WRITE) {
 		memcpy(payload, reg_rw->value, reg_rw->lens);
 		reg[0] = reg_rw->cmd;
+		len = reg_rw->lens;
 		for (index; index < len; index++) {
 			reg[index + 1] = payload[index];
 		}
 
-		if(get_oppo_display_power_status() == OPPO_DISPLAY_POWER_ON) {
+		if(get_oplus_display_power_status() == OPLUS_DISPLAY_POWER_ON) {
 				/* enable the clk vote for CMD mode panels */
 			mutex_lock(&display->display_lock);
 			mutex_lock(&display->panel->panel_lock);
@@ -869,7 +981,7 @@ int oplus_display_set_panel_reg(void *data) {
 							DSI_ALL_CLKS, DSI_CLK_ON);
 				}
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
-				if (iris_get_feature() && (iris5_abypass_mode_get(display->panel) == PASS_THROUGH_MODE))
+				if (iris_is_chip_supported() && iris_is_pt_mode(display->panel))
 					ret = iris_panel_dcs_write_wrapper(display->panel, reg, len+1);
 				else
 					ret = mipi_dsi_dcs_write(&display->panel->mipi_device, reg[0],
@@ -898,11 +1010,14 @@ int oplus_display_set_panel_reg(void *data) {
 	return -1;
 }
 
-int oplus_display_notify_panel_blank(void *data) {
+int oplus_display_panel_notify_blank(void *data)
+{
 	struct msm_drm_notifier notifier_data;
 	int blank;
 	uint32_t *temp_save_user = data;
 	int temp_save = (*temp_save_user);
+
+	printk(KERN_INFO "%s oplus_display_notify_panel_blank = %d\n", __func__, temp_save);
 
 	if(temp_save == 1) {
 		blank = MSM_DRM_BLANK_UNBLANK;
@@ -922,43 +1037,45 @@ int oplus_display_notify_panel_blank(void *data) {
 	return 0;
 }
 
-int oplus_display_get_spr(void *data) {
+int oplus_display_panel_get_spr(void *data)
+{
 	uint32_t *spr_mode_user = data;
 
-	printk(KERN_INFO "oppo_display_get_spr = %d\n", spr_mode);
+	printk(KERN_INFO "oplus_display_get_spr = %d\n", spr_mode);
 	*spr_mode_user = spr_mode;
 
 	return 0;
 }
 
-int oplus_display_set_spr(void *data) {
+int oplus_display_panel_set_spr(void *data)
+{
 	uint32_t *temp_save_user = data;
 	int temp_save = (*temp_save_user);
 
-	printk(KERN_INFO "%s oppo_display_set_spr = %d\n", __func__, temp_save);
+	printk(KERN_INFO "%s oplus_display_set_spr = %d\n", __func__, temp_save);
 
-	__oppo_display_set_spr(temp_save);
-	if(get_oppo_display_power_status() == OPPO_DISPLAY_POWER_ON) {
+	__oplus_display_set_spr(temp_save);
+	if(get_oplus_display_power_status() == OPLUS_DISPLAY_POWER_ON) {
 		if(get_main_display() == NULL) {
-			printk(KERN_INFO "oppo_display_set_spr and main display is null");
+			printk(KERN_INFO "oplus_display_set_spr and main display is null");
 			return 0;
 		}
 
 		dsi_display_spr_mode(get_main_display(), spr_mode);
 	} else {
-		printk(KERN_ERR	 "%s oppo_display_set_spr = %d, but now display panel status is not on\n", __func__, temp_save);
+		printk(KERN_ERR	 "%s oplus_display_set_spr = %d, but now display panel status is not on\n", __func__, temp_save);
 	}
 	return 0;
 }
 
-int oplus_display_get_roundcorner(void *data)
+int oplus_display_panel_get_roundcorner(void *data)
 {
 	uint32_t *round_corner = data;
 	struct dsi_display *display = get_main_display();
 	bool roundcorner = true;
 
 	if (display && display->name &&
-	    !strcmp(display->name, "qcom,mdss_dsi_oppo19101boe_nt37800_1080_2400_cmd"))
+	    !strcmp(display->panel->name, "boe nt37800 amoled fhd+ panel with DSC"))
 		roundcorner = false;
 
 	*round_corner = roundcorner;
@@ -966,7 +1083,7 @@ int oplus_display_get_roundcorner(void *data)
 	return 0;
 }
 
-int oplus_display_get_dynamic_osc_clock(void *data)
+int oplus_display_panel_get_dynamic_osc_clock(void *data)
 {
 	struct dsi_display *display = get_main_display();
 	uint32_t *osc_clock = data;
@@ -987,29 +1104,21 @@ int oplus_display_get_dynamic_osc_clock(void *data)
 	return 0;
 }
 
-int oplus_display_set_dynamic_osc_clock(void *data)
+int oplus_dsi_update_dynamic_osc_clock(void)
 {
 	struct dsi_display *display = get_main_display();
-	uint32_t *osc_clk_user = data;
-	int osc_clk = *osc_clk_user;
 	int rc = 0;
+	int osc_clock_rate = dynamic_osc_clock;
 
-	if (!display) {
+	if (!display||!display->panel) {
 		pr_err("failed for: %s %d\n", __func__, __LINE__);
 		return -EINVAL;
 	}
 
-	if(get_oppo_display_power_status() != OPPO_DISPLAY_POWER_ON) {
-		printk(KERN_ERR"%s display panel in off status\n", __func__);
-		return -EFAULT;
+	if (!display->panel->oplus_priv.is_osc_support) {
+		pr_err("not support osc\n");
+		return 0;
 	}
-
-	if (display->panel->panel_mode != DSI_OP_CMD_MODE) {
-		pr_err("only supported for command mode\n");
-		return -EFAULT;
-	}
-
-	pr_info("%s: osc clk param value: '%d'\n", __func__, osc_clk);
 
 	mutex_lock(&display->display_lock);
 	mutex_lock(&display->panel->panel_lock);
@@ -1025,23 +1134,226 @@ int oplus_display_set_dynamic_osc_clock(void *data)
 				DSI_CORE_CLK, DSI_CLK_ON);
 	}
 
-	if (osc_clk == 139600) {
-		rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_OSC_CLK_MODEO0);
+	/* Gang.Wang@MULTIMEDIA.DISPLAY.LCD.Feature,2020-10-09 optimize osc adaptive */
+	if (osc_clock_rate) {
+		if (display->panel->oplus_priv.is_osc_rewrite_support &&
+			(display->panel->cur_mode->timing.clk_rate_hz == display->panel->oplus_priv.osc_rewrite_clk_rate)) {
+			if (osc_clock_rate == display->panel->oplus_priv.osc_clk_mode0_rate) {
+				rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_OSC_CLK_MODEO2);
+			} else if (osc_clock_rate == display->panel->oplus_priv.osc_clk_mode1_rate) {
+				rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_OSC_CLK_MODEO3);
+			} else {
+				pr_err("[%s]not support osc clk rate=%d\n", __func__, osc_clock_rate);
+			}
+		} else {
+			if (osc_clock_rate == display->panel->oplus_priv.osc_clk_mode0_rate) {
+				rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_OSC_CLK_MODEO0);
+			} else if (osc_clock_rate == display->panel->oplus_priv.osc_clk_mode1_rate) {
+				rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_OSC_CLK_MODEO1);
+			} else {
+				pr_err("[%s]not support osc clk rate=%d\n", __func__, osc_clock_rate);
+			}
+		}
+		if (rc) {
+			pr_err("Failed to configure osc dynamic clk\n");
+			dynamic_osc_clock = display->panel->oplus_priv.osc_clk_rate_lastest;
+		} else {
+			display->panel->oplus_priv.osc_clk_rate_lastest = osc_clock_rate;
+		}
 	} else {
-		rc = dsi_panel_tx_cmd_set(display->panel, DSI_CMD_OSC_CLK_MODEO1);
+		pr_info("[%s] osc clk rate is 0, not config !\n", __func__);
 	}
-	if (rc)
-		pr_err("Failed to configure osc dynamic clk\n");
 
 	if (display->config.panel_mode == DSI_OP_CMD_MODE) {
 		rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
 				DSI_CORE_CLK, DSI_CLK_OFF);
 	}
-	dynamic_osc_clock = osc_clk;
 
 unlock:
 	mutex_unlock(&display->panel->panel_lock);
 	mutex_unlock(&display->display_lock);
 
 	return rc;
+}
+
+int oplus_display_panel_set_dynamic_osc_clock(void *data)
+{
+	struct dsi_display *display = get_main_display();
+	uint32_t *osc_clk_user = data;
+	int osc_clk = *osc_clk_user;
+	int rc = 0;
+
+	if (!display) {
+		pr_err("failed for: %s %d\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	if(get_oplus_display_power_status() != OPLUS_DISPLAY_POWER_ON) {
+		printk(KERN_ERR"%s display panel in off status\n", __func__);
+		return -EFAULT;
+	}
+
+	if (display->panel->panel_mode != DSI_OP_CMD_MODE) {
+		pr_err("only supported for command mode\n");
+		return -EFAULT;
+	}
+
+	pr_info("%s: osc clk param value: '%d'\n", __func__, osc_clk);
+	dynamic_osc_clock = osc_clk;
+	oplus_dsi_update_dynamic_osc_clock();
+
+	return rc;
+}
+
+int oplus_display_get_softiris_color_status(void *data)
+{
+	struct softiris_color *iris_color_status = data;
+	bool color_vivid_status = false;
+	bool color_srgb_status = false;
+	bool color_softiris_status = false;
+	struct dsi_parser_utils *utils = NULL;
+	struct dsi_panel *panel = NULL;
+
+	struct dsi_display *display = get_main_display();
+	if (!display) {
+		pr_err("failed for: %s %d\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	panel = display->panel;
+	if (!panel) {
+		pr_err("failed for: %s %d\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	utils = &panel->utils;
+	if (!utils) {
+		pr_err("failed for: %s %d\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	color_vivid_status = utils->read_bool(utils->data, "oplus,color_vivid_status");
+	DSI_INFO("oplus,color_vivid_status: %s", color_vivid_status ? "true" : "false");
+
+	color_srgb_status = utils->read_bool(utils->data, "oplus,color_srgb_status");
+	DSI_INFO("oplus,color_srgb_status: %s", color_srgb_status ? "true" : "false");
+
+	color_softiris_status = utils->read_bool(utils->data, "oplus,color_softiris_status");
+	DSI_INFO("oplus,color_softiris_status: %s", color_softiris_status ? "true" : "false");
+
+	iris_color_status->color_vivid_status = (uint32_t)color_vivid_status;
+	iris_color_status->color_srgb_status = (uint32_t)color_srgb_status;
+	iris_color_status->color_softiris_status = (uint32_t)color_softiris_status;
+
+	return 0;
+}
+
+int oplus_display_panel_get_id2(void)
+{
+	struct dsi_display *display = get_main_display();
+	int ret = 0;
+	unsigned char read[30];
+
+	if(get_oplus_display_power_status() == OPLUS_DISPLAY_POWER_ON) {
+		if(display == NULL) {
+			printk(KERN_INFO "oplus_display_get_panel_id and main display is null");
+			return 0;
+		}
+
+		if (!strcmp(display->panel->oplus_priv.vendor_name, "S6E3HC3")) {
+			ret = dsi_display_read_panel_reg(display, 0xDB, read, 1);
+			if (ret < 0) {
+				pr_err("failed to read DB ret=%d\n", ret);
+				return -EINVAL;
+			}
+			ret = (int)read[0];
+		}
+	} else {
+		printk(KERN_ERR	 "%s oplus_display_get_panel_id, but now display panel status is not on\n", __func__);
+		return 0;
+	}
+
+	return ret;
+}
+
+int oplus_display_panel_hbm_lightspot_check(void)
+{
+	int rc = 0;
+	char value[] = { 0xE0 };
+	char value1[] = { 0x0F, 0xFF };
+	struct dsi_display *display = get_main_display();
+	struct mipi_dsi_device *mipi_device;
+
+	if (!display || !display->panel) {
+		pr_err("failed for: %s %d\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	if (get_oplus_display_power_status() != OPLUS_DISPLAY_POWER_ON) {
+		printk(KERN_ERR"%s display panel in off status\n", __func__);
+		return -EFAULT;
+	}
+
+	mipi_device = &display->panel->mipi_device;
+
+	mutex_lock(&display->display_lock);
+	mutex_lock(&display->panel->panel_lock);
+
+	if (!dsi_panel_initialized(display->panel)) {
+		pr_err("%s, dsi_panel_initialized failed\n", __func__);
+		rc = -EINVAL;
+		goto unlock;
+	}
+
+	rc = dsi_display_cmd_engine_enable(display);
+
+	if (rc) {
+		pr_err("%s, cmd engine enable failed\n", __func__);
+		rc = -EINVAL;
+		goto unlock;
+	}
+
+	/* enable the clk vote for CMD mode panels */
+	if (display->config.panel_mode == DSI_OP_CMD_MODE) {
+		dsi_display_clk_ctrl(display->dsi_clk_handle,
+				     DSI_CORE_CLK, DSI_CLK_ON);
+	}
+
+	rc = mipi_dsi_dcs_write(mipi_device, 0x53, value, sizeof(value));
+	usleep_range(1000, 1100);
+	rc = mipi_dsi_dcs_write(mipi_device, 0x51, value1, sizeof(value1));
+	usleep_range(1000, 1100);
+	pr_err("[%s] hbm_lightspot_check successfully\n",  display->panel->oplus_priv.vendor_name);
+
+	if (display->config.panel_mode == DSI_OP_CMD_MODE) {
+		rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
+					  DSI_CORE_CLK, DSI_CLK_OFF);
+	}
+
+	dsi_display_cmd_engine_disable(display);
+
+unlock:
+
+	mutex_unlock(&display->panel->panel_lock);
+	mutex_unlock(&display->display_lock);
+	return 0;
+}
+
+/* james.zhu@MULTIMEDIA.DISPLAY.LCD, 2021/02/15, oplus dither */
+int oplus_display_get_dither_status(void *buf)
+{
+	uint32_t *dither_enable = buf;
+	*dither_enable = oplus_dither_enable;
+
+	return 0;
+}
+
+int oplus_display_set_dither_status(void *buf)
+{
+	uint32_t *dither_enable = buf;
+	oplus_dither_enable = *dither_enable;
+	pr_err("debug for %s, buf = [%s], oplus_dither_enable = %d\n",
+	       __func__, buf, oplus_dither_enable);
+
+	return 0;
 }

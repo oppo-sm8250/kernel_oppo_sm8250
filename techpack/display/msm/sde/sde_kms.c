@@ -61,8 +61,8 @@
 #include "sde_trace.h"
 #ifdef OPLUS_BUG_STABILITY
 /* QianXu@MM.Display.LCD.Stability, 2020/3/31, for decoupling display driver */
-#include "oppo_display_private_api.h"
-#include "oppo_onscreenfingerprint.h"
+#include "oplus_display_private_api.h"
+#include "oplus_onscreenfingerprint.h"
 #endif
 
 /* defines for secure channel call */
@@ -1432,7 +1432,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.clk_ctrl = dsi_display_clk_ctrl,
 #ifdef OPLUS_BUG_STABILITY
 /* QianXu@MM.Display.LCD.Stability, 2020/3/31, for decoupling display driver */
-		.set_power = dsi_display_oppo_set_power,
+		.set_power = dsi_display_oplus_set_power,
 #else
 		.set_power = dsi_display_set_power,
 #endif
@@ -3107,22 +3107,6 @@ end:
 	return 0;
 }
 
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-static int sde_kms_iris5_operate(struct msm_kms *kms,
-		u32 operate_type, struct msm_iris_operate_value *operate_value)
-{
-	int ret = -EINVAL;
-
-	if (operate_type == DRM_MSM_IRIS_OPERATE_CONF) {
-		ret = iris5_operate_conf(operate_value);
-	} else if (operate_type == DRM_MSM_IRIS_OPERATE_TOOL) {
-		ret = iris5_operate_tool(operate_value);
-	}
-
-	return ret;
-}
-#endif // OPLUS_FEATURE_PXLW_IRIS5
-
 static const struct msm_kms_funcs kms_funcs = {
 	.hw_init         = sde_kms_hw_init,
 	.postinit        = sde_kms_postinit,
@@ -3153,8 +3137,8 @@ static const struct msm_kms_funcs kms_funcs = {
 	.get_address_space_device = _sde_kms_get_address_space_device,
 	.postopen = _sde_kms_post_open,
 	.check_for_splash = sde_kms_check_for_splash,
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-	.iris5_operate = sde_kms_iris5_operate,
+#if defined(OPLUS_FEATURE_PXLW_IRIS5) || defined(CONFIG_PXLW_SOFT_IRIS)
+	.iris_operate = iris_sde_kms_iris_operate,
 #endif
 	.get_mixer_count = sde_kms_get_mixer_count,
 };

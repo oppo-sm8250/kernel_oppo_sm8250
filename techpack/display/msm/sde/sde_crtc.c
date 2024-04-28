@@ -47,12 +47,18 @@
 */
 #include <linux/msm_drm_notify.h>
 #include <linux/notifier.h>
-#include "oppo_display_private_api.h"
-#include "oppo_onscreenfingerprint.h"
+#include "oplus_display_private_api.h"
+#include "oplus_onscreenfingerprint.h"
+#include "oplus_aod.h"
 
-extern int oppo_dimlayer_fingerprint_failcount;
-extern int oppo_underbrightness_alpha;
+extern int oplus_dimlayer_fingerprint_failcount;
+extern int oplus_underbrightness_alpha;
 extern int msm_drm_notifier_call_chain(unsigned long val, void *v);
+extern int oplus_request_power_status;
+#endif
+
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+extern int igc_lut_update;
 #endif
 
 #define SDE_PSTATES_MAX (SDE_STAGE_MAX * 4)
@@ -1519,10 +1525,10 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 				SDE_EVT32(pstate->stage, cstate->fingerprint_dim_layer->stage, zpos_max);
 				if (pstate->stage == cstate->fingerprint_dim_layer->stage) {
 					is_dim_valid = false;
-					oppo_dimlayer_fingerprint_failcount++;
+					oplus_dimlayer_fingerprint_failcount++;
 					SDE_ERROR("Skip fingerprint_dim_layer as it shared plane stage %d %d\n",
 							pstate->stage, cstate->fingerprint_dim_layer->stage);
-					SDE_EVT32(pstate->stage, cstate->fingerprint_dim_layer->stage, zpos_max, oppo_dimlayer_fingerprint_failcount);
+					SDE_EVT32(pstate->stage, cstate->fingerprint_dim_layer->stage, zpos_max, oplus_dimlayer_fingerprint_failcount);
 				}
 			}
 			if (is_dim_valid) {
@@ -2510,9 +2516,8 @@ static void sde_crtc_frame_event_work(struct kthread_work *work)
 	SDE_ATRACE_END("crtc_frame_event");
 }
 #ifdef OPLUS_BUG_STABILITY
-/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-07-25 support onscreenfinger */
-extern u32 oppo_onscreenfp_vblank_count;
-extern ktime_t oppo_onscreenfp_pressed_time;
+extern u32 oplus_onscreenfp_vblank_count;
+extern ktime_t oplus_onscreenfp_pressed_time;
 #endif /* OPLUS_BUG_STABILITY */
 void sde_crtc_complete_commit(struct drm_crtc *crtc,
 		struct drm_crtc_state *old_state)
@@ -2550,7 +2555,7 @@ void sde_crtc_complete_commit(struct drm_crtc *crtc,
 			notifier_data.data = &blank;
 
 			if (cstate->fingerprint_defer_sync) {
-				u32 target_vblank = oppo_onscreenfp_vblank_count + 1;
+				u32 target_vblank = oplus_onscreenfp_vblank_count + 1;
 				ktime_t vblanktime, exp_ktime;
 				u32 current_vblank;
 				int ret;
@@ -2561,8 +2566,8 @@ void sde_crtc_complete_commit(struct drm_crtc *crtc,
 				 * possible hbm setting insert hardware te irq and soft vblank update
 				 * cause vblank calc error, add 4ms check to avoid this scene
 				 */
-				if (current_vblank == (oppo_onscreenfp_vblank_count + 1)) {
-					exp_ktime = ktime_add_ms(oppo_onscreenfp_pressed_time, 4);
+				if (current_vblank == (oplus_onscreenfp_vblank_count + 1)) {
+					exp_ktime = ktime_add_ms(oplus_onscreenfp_pressed_time, 4);
 					if (ktime_compare_safe(exp_ktime, vblanktime) > 0) {
 						target_vblank++;
 						pr_err("hbm setting may hit into hardware irq and soft update, wait one more vblank\n");
@@ -3381,6 +3386,9 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct sde_crtc_state *cstate;
 	struct sde_kms *sde_kms;
 	int idle_time = 0;
+#ifdef OPLUS_BUG_STABILITY
+	struct dsi_display *display = get_main_display();
+#endif /*OPLUS_BUG_STABILITY*/
 
 	if (!crtc || !crtc->dev || !crtc->dev->dev_private) {
 		SDE_ERROR("invalid crtc\n");
@@ -3418,6 +3426,14 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 
 	event_thread = &priv->event_thread[crtc->index];
 	idle_time = sde_crtc_get_property(cstate, CRTC_PROP_IDLE_TIMEOUT);
+#ifdef OPLUS_BUG_STABILITY
+	if (display && display->panel) {
+		if (display->panel->oplus_priv.dfps_idle_off)
+			idle_time = 0;
+	} else {
+		pr_err("%s : display or display->panel is NULL\n", __func__);
+	}
+#endif /*OPLUS_BUG_STABILITY*/
 
 	/*
 	 * If no mixers has been allocated in sde_crtc_atomic_check(),
@@ -4702,15 +4718,14 @@ static int _sde_crtc_check_secure_state(struct drm_crtc *crtc,
 /* Gou shengjun@PSW.MM.Display.LCD.Feature,2018-11-21
  * Add for OnScreenFingerprint
 */
-extern int oppo_onscreenfp_status;
 extern int lcd_closebl_flag_fp;
-extern int oppo_dimlayer_hbm;
-extern int oppo_dimlayer_bl_alpha_value;
-extern int oppo_dimlayer_bl_enable;
-extern bool oppo_ffl_trigger_finish;
-extern int oppo_dimlayer_bl;
-extern ktime_t oppo_backlight_time;
-extern u32 oppo_backlight_delta;
+extern int oplus_dimlayer_hbm;
+extern int oplus_dimlayer_bl_alpha_value;
+extern int oplus_dimlayer_bl_enable;
+extern bool oplus_ffl_trigger_finish;
+extern int oplus_dimlayer_bl;
+extern ktime_t oplus_backlight_time;
+extern u32 oplus_backlight_delta;
 
 static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		struct plane_state *pstates, int cnt)
@@ -4720,8 +4735,9 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 	int aod_index = -1;
 	int zpos = INT_MAX;
 	int mode;
-	int fp_mode = oppo_onscreenfp_status;
-	int dimlayer_hbm = oppo_dimlayer_hbm;
+	int panel_power_mode;
+	int fp_mode = oplus_onscreenfp_status;
+	int dimlayer_hbm = oplus_dimlayer_hbm;
 	int dimlayer_bl = 0;
 	int i;
 
@@ -4740,27 +4756,27 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 	if (!is_dsi_panel(cstate->base.crtc))
 		return 0;
 
-	if (oppo_dimlayer_bl_enable) {
-		int backlight = oppo_get_panel_brightness();
+	if (oplus_dimlayer_bl_enable) {
+		int backlight = oplus_get_panel_brightness();
 
-		if (backlight > 1 && backlight < oppo_dimlayer_bl_alpha_value &&
-		    oppo_ffl_trigger_finish == true && !dimlayer_hbm) {
+		if (backlight > 1 && backlight < oplus_dimlayer_bl_alpha_value &&
+		    oplus_ffl_trigger_finish == true && !dimlayer_hbm) {
 			ktime_t now = ktime_get();
-			ktime_t delta = ktime_sub(now, oppo_backlight_time);
+			ktime_t delta = ktime_sub(now, oplus_backlight_time);
 
-			if (oppo_backlight_delta > 9) {
-				if (oppo_dimlayer_bl == 0 && ktime_to_ns(delta) > 25000000)
-					oppo_dimlayer_bl = 1;
+			if (oplus_backlight_delta > 9) {
+				if (oplus_dimlayer_bl == 0 && ktime_to_ns(delta) > 25000000)
+					oplus_dimlayer_bl = 1;
 			} else {
-				oppo_dimlayer_bl = 1;
+				oplus_dimlayer_bl = 1;
 			}
-			if (oppo_dimlayer_bl)
+			if (oplus_dimlayer_bl)
 				dimlayer_bl = 1;
 		} else {
-			oppo_dimlayer_bl = 0;
+			oplus_dimlayer_bl = 0;
 		}
 	} else {
-		oppo_dimlayer_bl = 0;
+		oplus_dimlayer_bl = 0;
 	}
 
 	if (fppressed_index >= 0) {
@@ -4784,39 +4800,67 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 		}
 
 		if (lcd_closebl_flag_fp) {
-			oppo_underbrightness_alpha = 0;
+			oplus_underbrightness_alpha = 0;
 			cstate->fingerprint_dim_layer = NULL;
 			cstate->fingerprint_mode = false;
 			return 0;
 		}
 
-		if (dimlayer_hbm)
+		if (dimlayer_hbm && (oplus_get_panel_brightness() != 0)) {
+#if defined(OPLUS_FEATURE_PXLW_IRIS5)
+			struct dsi_display *display = get_main_display();
+
+			if (display == NULL || display->panel == NULL)
+				return false;
+
+			if ((!strcmp(display->panel->oplus_priv.vendor_name, "AMB655UV01") && (display->panel->oplus_priv.is_oplus_project))) {
+				//if pw set panel brightness,need delay hbm on&dimming layer to next frame.
+				if(igc_lut_update == 1) {
+					igc_lut_update = 0;
+					return 0;
+				}
+			}
+#endif
 			cstate->fingerprint_mode = true;
+		}
 		else
 			cstate->fingerprint_mode = false;
 
 		SDE_DEBUG("debug for get cstate->fingerprint_mode = %d\n", cstate->fingerprint_mode);
+		panel_power_mode = oplus_get_panel_power_mode();
 
 		if (aod_index >= 0) {
-			if (zpos > pstates[aod_index].stage)
-				zpos = pstates[aod_index].stage;
-			pstates[aod_index].stage++;
-		}
-		if (fppressed_index >= 0) {
-			if (zpos > pstates[fppressed_index].stage)
-				zpos = pstates[fppressed_index].stage;
-			pstates[fppressed_index].stage++;
+			/* set dimlayer alpha transparent, appear AOD layer by force */
+			if (((fp_index >= 0) || (fppressed_index < 0)) &&
+				((panel_power_mode == SDE_MODE_DPMS_LP1) || (panel_power_mode == SDE_MODE_DPMS_LP2))) {
+				oplus_set_aod_dim_alpha(CUST_A_TRANS);
+			}
+			if (((fp_index >= 0) || (fppressed_index < 0)) &&
+				(panel_power_mode == SDE_MODE_DPMS_ON)) {
+				oplus_set_aod_dim_alpha(CUST_A_OPAQUE);
+			}
+			/*
+			 * set dimlayer alpha opaque, disappear AOD layer by force when pressed down
+			 * and SDE_MODE_DPMS_LP1/SDE_MODE_DPMS_LP2
+			 */
+			if (((fp_mode == 1) && (panel_power_mode != SDE_MODE_DPMS_ON))
+				|| (oplus_request_power_status == OPLUS_DISPLAY_POWER_ON))
+				oplus_set_aod_dim_alpha(CUST_A_OPAQUE);
+
+		} else { /* when screen on, restore dimlayer alpha */
+			if (oplus_get_panel_brightness() != 0)
+				oplus_set_aod_dim_alpha(CUST_A_NO);
 		}
 		if (fp_index >= 0) {
 			if (zpos > pstates[fp_index].stage)
 				zpos = pstates[fp_index].stage;
-			pstates[fp_index].stage++;
+		}
+		if (fppressed_index >= 0) {
+			if (zpos > pstates[fppressed_index].stage)
+				zpos = pstates[fppressed_index].stage;
 		}
 
 		for (i = 0; i < cnt; i++) {
-			if (i == fp_index || i == fppressed_index ||
-			    i == aod_index)
-				continue;
 			if (pstates[i].stage >= zpos) {
 				pstates[i].stage++;
 			}
@@ -4844,7 +4888,8 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 
 		SDE_DEBUG("debug for get cstate->fingerprint_pressed = %d\n", cstate->fingerprint_pressed);
 	} else {
-		oppo_underbrightness_alpha = 0;
+		oplus_underbrightness_alpha = 0;
+		oplus_set_aod_dim_alpha(CUST_A_NO);
 		cstate->fingerprint_dim_layer = NULL;
 		cstate->fingerprint_mode = false;
 		cstate->fingerprint_pressed = false;

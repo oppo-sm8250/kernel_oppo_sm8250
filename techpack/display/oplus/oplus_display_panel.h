@@ -1,8 +1,8 @@
 /***************************************************************
-** Copyright (C),  2020,  OPPO Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
-** File : oppo_display_panel.h
-** Description : oppo display panel char dev  /dev/oppo_panel
+** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** OPLUS_BUG_STABILITY
+** File : oplus_display_panel.h
+** Description : oplus display panel char dev  /dev/oplus_panel
 ** Version : 1.0
 ** Date : 2020/06/13
 ** Author : Li.Sheng@MULTIMEDIA.DISPLAY.LCD
@@ -11,8 +11,8 @@
 **  <author>        <data>        <version >        <desc>
 **  Li.Sheng       2020/06/13        1.0           Build this moudle
 ******************************************************************/
-#ifndef _OPPO_DISPLAY_PANEL_H_
-#define _OPPO_DISPLAY_PANEL_H_
+#ifndef _OPLUS_DISPLAY_PANEL_H_
+#define _OPLUS_DISPLAY_PANEL_H_
 
 #include <linux/fs.h>
 #include <linux/printk.h>
@@ -25,27 +25,26 @@
 #include <linux/sysfs.h>
 #include <linux/module.h>
 #include <linux/init.h>
-#include "oppo_display_panel_power.h"
-#include "oppo_display_panel_seed.h"
-#include "oppo_display_panel_common.h"
-#include "oppo_ffl.h"
-#include "oppo_aod.h"
-#include "oppo_dc_diming.h"
+#include <linux/cdev.h>
+/*#include <oplus_display_dc.h>
+ *#include <oplus_display_common.h>
+ *#include <oplus_display_alwaysondisplay.h>
+ #include <oplus_display_onscreenfingerprint.h>*/
 
-#define OPPO_PANEL_NAME "oplus_display"
-#define OPPO_PANEL_CLASS_NAME "oplus_display_class"
+#define OPLUS_PANEL_NAME "oplus_display"
+#define OPLUS_PANEL_CLASS_NAME "oplus_display_class"
 
-#define OPPO_PANEL_IOCTL_BASE			'o'
+#define OPLUS_PANEL_IOCTL_BASE			'o'
 
-#define PANEL_IO(nr)			_IO(OPPO_PANEL_IOCTL_BASE, nr)
-#define PANEL_IOR(nr, type)		_IOR(OPPO_PANEL_IOCTL_BASE, nr, type)
-#define PANEL_IOW(nr, type)		_IOW(OPPO_PANEL_IOCTL_BASE, nr, type)
-#define PANEL_IOWR(nr, type)		_IOWR(OPPO_PANEL_IOCTL_BASE, nr, type)
+#define PANEL_IO(nr)			_IO(OPLUS_PANEL_IOCTL_BASE, nr)
+#define PANEL_IOR(nr, type)		_IOR(OPLUS_PANEL_IOCTL_BASE, nr, type)
+#define PANEL_IOW(nr, type)		_IOW(OPLUS_PANEL_IOCTL_BASE, nr, type)
+#define PANEL_IOWR(nr, type)		_IOWR(OPLUS_PANEL_IOCTL_BASE, nr, type)
 
 #define PANEL_IOCTL_NR(n)       _IOC_NR(n)
 #define PANEL_IOCTL_SIZE(n)		_IOC_SIZE(n)
 
-typedef int oppo_panel_feature(void *data);
+typedef int oplus_panel_feature(void *data);
 
 static dev_t dev_num = 0;
 static struct class *panel_class;
@@ -53,15 +52,47 @@ static struct device *panel_dev;
 static int panel_ref = 0;
 static struct cdev panel_cdev;
 
+#define APOLLO_BACKLIGHT_LENS 4096*9 //units: bytes 9pages
+
+enum APOLLO_BL_ID : int {
+	APOLLO_BL_4096 = 4096,
+	APOLLO_BL_8192 = 8192,
+};
+
+struct oplus_apollo_backlight_list {
+	bool bl_fix; //for 4096/8192 fix
+	int bl_id_lens;    //1 for 4096, 2 for 8192;
+	int bl_level_last;
+	int bl_index_last;
+	int buf_size;
+	void *vaddr; //dmabuf virtual address
+	unsigned short *apollo_bl_list;
+	unsigned short *panel_bl_list;
+	struct dma_buf *dmabuf;
+};
+
+struct apollo_backlight_map_value
+{
+	int index; //backlight index
+	int bl_level; //the value of the index
+	int apollo_bl_level;
+};
 struct panel_ioctl_desc {
 	unsigned int cmd;
-	oppo_panel_feature *func;
+	oplus_panel_feature *func;
 	const char *name;
 };
 
-/*oppo ioctl case start*/
+struct softiris_color
+{
+	uint32_t color_vivid_status;
+	uint32_t color_srgb_status;
+	uint32_t color_softiris_status;
+};
+
+/*oplus ioctl case start, please keep pace with DisplayPanelInterface.cpp*/
 #define PANEL_COMMOND_BASE 0x00
-#define PANEL_COMMOND_MAX  0x29
+#define PANEL_COMMOND_MAX  0xBC
 
 #define PANEL_IOCTL_SET_POWER				  PANEL_IOW(0x01, struct panel_vol_set)
 #define PANEL_IOCTL_GET_POWER				  PANEL_IOWR(0x02, struct panel_vol_get)
@@ -103,6 +134,24 @@ struct panel_ioctl_desc {
 #define PANEL_IOCTL_GET_ROUNDCORNER	          PANEL_IOWR(0x26, unsigned int)
 #define PANEL_IOCTL_SET_DYNAMIC_OSC_CLOCK	  PANEL_IOW(0x27, unsigned int)
 #define PANEL_IOCTL_GET_DYNAMIC_OSC_CLOCK	  PANEL_IOWR(0x28, unsigned int)
-/*oppo ioctl case end*/
+#define PANEL_IOCTL_SET_FP_PRESS              PANEL_IOW(0x29, unsigned int)
+#define PANEL_IOCTL_SET_OPLUS_BRIGHTNESS      PANEL_IOW(0x2A, unsigned int)
+#define PANEL_IOCTL_GET_OPLUS_BRIGHTNESS      PANEL_IOWR(0x2B, unsigned int)
+#define PANEL_IOCTL_SET_LCM_CABC              PANEL_IOW(0x2C, unsigned int)
+#define PANEL_IOCTL_GET_LCM_CABC              PANEL_IOWR(0x2D, unsigned int)
+#define PANEL_IOCTL_SET_AOD_AREA              PANEL_IOW(0x2E, struct panel_aod_area_para)
+#define PANEL_IOCTL_GET_OPLUS_MAXBRIGHTNESS   PANEL_IOWR(0x2F, unsigned int)
 
-#endif /*_OPPO_DISPLAY_PANEL_H_*/
+#define PANEL_IOCTL_SET_APOLLO_BACKLIGHT      PANEL_IOW(0x51, struct apollo_backlight_map_value)
+#define PANEL_IOCTL_GET_SOFTIRIS_COLOR        PANEL_IOWR(0x53, struct softiris_color)
+#define PANEL_IOCTL_SET_DITHER_STATUS        PANEL_IOWR(0x54, unsigned int)
+#define PANEL_IOCTL_GET_DITHER_STATUS        PANEL_IOWR(0x55, unsigned int)
+#ifdef OPLUS_FEATURE_ADFR
+#define PANEL_IOCTL_SET_TE_REFCOUNT_ENABLE	  PANEL_IOW(0x56, unsigned int)
+#define PANEL_IOCTL_GET_TE_REFCOUNT_ENABLE	  PANEL_IOWR(0x57, unsigned int)
+#endif
+#define PANEL_IOCTL_SET_CABC_STATUS              PANEL_IOW(0x59, unsigned int)
+#define PANEL_IOCTL_GET_CABC_STATUS              PANEL_IOWR(0x5A, unsigned int)
+/*oplus ioctl case end*/
+
+#endif /*_OPLUS_DISPLAY_PANEL_H_*/

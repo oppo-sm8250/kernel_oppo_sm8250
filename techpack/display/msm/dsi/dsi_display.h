@@ -23,7 +23,7 @@
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
  * Add for save select panel and give different feature
 */
-#include "oppo_dsi_support.h"
+#include "oplus_dsi_support.h"
 #endif /*OPLUS_BUG_STABILITY*/
 
 #define MAX_DSI_CTRLS_PER_DISPLAY             2
@@ -286,6 +286,12 @@ struct dsi_display {
 #endif
 	bool queue_cmd_waits;
 	struct workqueue_struct *dma_cmd_workq;
+
+#ifdef OPLUS_BUG_STABILITY
+	struct completion switch_te_gate;
+	bool vsync_switch_pending;
+#endif
+
 };
 
 int dsi_display_dev_probe(struct platform_device *pdev);

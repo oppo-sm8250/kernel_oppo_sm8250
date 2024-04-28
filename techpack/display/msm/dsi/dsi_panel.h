@@ -24,8 +24,8 @@
 /* Gou shengjun@PSW.MM.Display.LCD.Stability,2018/11/21
  * Add for save display panel power status at oppo display management
 */
-#include "oppo_dsi_support.h"
-struct oppo_brightness_alpha {
+#include "oplus_dsi_support.h"
+struct oplus_brightness_alpha {
 	u32 brightness;
 	u32 alpha;
 };
@@ -139,8 +139,9 @@ struct dsi_backlight_config {
 	u32 bl_scale;
 	u32 bl_scale_sv;
 	bool bl_inverted_dbv;
-	u32 bl_dcs_subtype;
-
+#ifdef OPLUS_BUG_STABILITY
+	u32 bl_lvl_backup;
+#endif /* OPLUS_BUG_STABILITY */
 	int en_gpio;
 	/* PWM params */
 	struct pwm_device *pwm_bl;
@@ -165,19 +166,11 @@ struct dsi_panel_reset_config {
 	int disp_en_gpio;
 	int lcd_mode_sel_gpio;
 	u32 mode_sel_state;
-#if defined(OPLUS_FEATURE_PXLW_IRIS5)
-// Pixelworks@MULTIMEDIA.DISPLAY, 2020/06/02, Iris5 Feature
-	int iris_rst_gpio;
-	int abyp_gpio;
-	int abyp_status_gpio;
-	int iris_osd_gpio;
-	bool iris_osd_autorefresh;
-	int iris_vdd_gpio;
-#endif
 #ifdef OPLUS_BUG_STABILITY
 /*Ling.Guo@PSW.MM.Display.LCD.Feature,2019-11-11 add for panel vout 1.5V*/
 	int panel_vout_gpio;
 	int panel_te_esd_gpio;
+	int panel_vddr_aod_en_gpio;
 #endif
 };
 
@@ -205,14 +198,38 @@ struct drm_panel_esd_config {
 
 #ifdef OPLUS_BUG_STABILITY
 /*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-11-07 add for oppo custom info */
-struct dsi_panel_oppo_privite {
+struct dsi_panel_oplus_privite {
 	const char *vendor_name;
 	const char *manufacture_name;
 	bool skip_mipi_last_cmd;
-	struct oppo_brightness_alpha *bl_remap;
+	struct oplus_brightness_alpha *bl_remap;
 	int bl_remap_count;
 	bool is_pxlw_iris5;
 	bool bl_interpolate_nosub;
+	bool bl_interpolate_remap_nosub;
+	bool bl_interpolate_alpha_dc_nosub;
+	bool is_oplus_project;
+	bool dfps_idle_off;
+	bool aod_on_fod_off;
+#ifdef OPLUS_FEATURE_AOD_RAMLESS
+	bool is_aod_ramless;
+#endif /* OPLUS_FEATURE_AOD_RAMLESS */
+#ifdef CONFIG_REGULATOR_TPS65132
+	bool is_tps65132_support;
+#endif /* CONFIG_REGULATOR_TPS65132 */
+	bool is_osc_support;
+	u32 osc_clk_mode0_rate;
+	u32 osc_clk_mode1_rate;
+	u32 osc_clk_rate_lastest;
+	bool is_osc_rewrite_support;
+	u32 osc_rewrite_clk_rate;
+	bool is_90fps_switch;
+	bool is_dc_seed_support;
+	bool gamma_switch_enable;
+	bool lcd_cabc_support;
+	bool low_light_adjust_gamma_support;
+	bool low_light_gamma_is_adjusted;
+	u32 low_light_adjust_gamma_level;
 };
 #endif /* OPLUS_BUG_STABILITY */
 
@@ -272,10 +289,15 @@ struct dsi_panel {
 	bool is_hbm_enabled;
 	/* Fix aod flash problem */
 	bool need_power_on_backlight;
-/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-10-30 add for fod brightness */
-	struct oppo_brightness_alpha *ba_seq;
+	struct oplus_brightness_alpha *ba_seq;
 	int ba_count;
-	struct dsi_panel_oppo_privite oppo_priv;
+	struct oplus_brightness_alpha *dc_ba_seq;
+	int dc_ba_count;
+
+	struct dsi_panel_oplus_privite oplus_priv;
+	int panel_id2;
+	atomic_t esd_pending;
+	bool is_dc_set_color_mode;
 #endif
 
 	int panel_test_gpio;

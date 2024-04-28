@@ -17,10 +17,16 @@
 #include "sde_crtc.h"
 #include "sde_rm.h"
 #ifdef OPLUS_BUG_STABILITY
-#include "oppo_display_private_api.h"
+#include "oplus_display_private_api.h"
+#include "oplus_dc_diming.h"
 #endif
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 #include "../../iris/dsi_iris5_api.h"
+#endif
+
+#ifdef OPLUS_BUG_STABILITY
+extern u32 g_new_bk_level;
+static DEFINE_SPINLOCK(g_bk_lock);
 #endif
 
 #define BL_NODE_NAME_SIZE 32
@@ -73,9 +79,8 @@ static const struct drm_prop_enum_list e_frame_trigger_mode[] = {
 };
 
 #ifdef OPLUS_BUG_STABILITY
-/*Mark.Yao@PSW.MM.Display.LCD.Feature,2019-11-04 add for global hbm */
-extern int oppo_debug_max_brightness;
-extern int oppo_seed_backlight;
+extern int oplus_debug_max_brightness;
+extern int oplus_seed_backlight;
 #endif
 
 static int sde_backlight_device_update_status(struct backlight_device *bd)
@@ -105,19 +110,19 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	bl_lvl = mult_frac(brightness, display->panel->bl_config.bl_max_level,
 			display->panel->bl_config.brightness_max_level);
 #else
-	if (oppo_debug_max_brightness) {
-		bl_lvl = mult_frac(brightness, oppo_debug_max_brightness,
+	if (oplus_debug_max_brightness) {
+		bl_lvl = mult_frac(brightness, oplus_debug_max_brightness,
 			display->panel->bl_config.brightness_max_level);
 	} else if (brightness == 0) {
 		bl_lvl = 0;
 	} else {
-		if (display->panel->oppo_priv.bl_remap && display->panel->oppo_priv.bl_remap_count) {
+		if (display->panel->oplus_priv.bl_remap && display->panel->oplus_priv.bl_remap_count) {
 			int i = 0;
-			int count = display->panel->oppo_priv.bl_remap_count;
-			struct oppo_brightness_alpha *lut = display->panel->oppo_priv.bl_remap;
+			int count = display->panel->oplus_priv.bl_remap_count;
+			struct oplus_brightness_alpha *lut = display->panel->oplus_priv.bl_remap;
 
-			for (i = 0; i < display->panel->oppo_priv.bl_remap_count; i++){
-				if (display->panel->oppo_priv.bl_remap[i].brightness >= brightness)
+			for (i = 0; i < display->panel->oplus_priv.bl_remap_count; i++){
+				if (display->panel->oplus_priv.bl_remap[i].brightness >= brightness)
 					break;
 			}
 
@@ -128,7 +133,7 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 			else
 				bl_lvl = interpolate(brightness, lut[i-1].brightness,
 						lut[i].brightness, lut[i-1].alpha,
-						lut[i].alpha, display->panel->oppo_priv.bl_interpolate_nosub);
+						lut[i].alpha, display->panel->oplus_priv.bl_interpolate_nosub);
 		} else if (brightness > display->panel->bl_config.brightness_normal_max_level) {
 			bl_lvl = interpolate(brightness,
 					display->panel->bl_config.brightness_normal_max_level,
@@ -158,9 +163,28 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 			msm_mode_object_event_notify(&c_conn->base.base,
 				c_conn->base.dev, &event, (u8 *)&brightness);
 		}
+#ifdef OPLUS_BUG_STABILITY
+		if (is_support_panel_backlight_smooths(display->panel->oplus_priv.vendor_name)) {
+				if ((bl_lvl >= 2) && (bl_lvl <= 200)) {
+					spin_lock(&g_bk_lock);
+					g_new_bk_level = bl_lvl;
+					spin_unlock(&g_bk_lock);
+				} else {
+					spin_lock(&g_bk_lock);
+					g_new_bk_level = bl_lvl;
+					spin_unlock(&g_bk_lock);
+					rc = c_conn->ops.set_backlight(&c_conn->base,
+					c_conn->display, bl_lvl);
+					c_conn->unset_bl_level = 0;
+				}
+		} else {
+#endif
 		rc = c_conn->ops.set_backlight(&c_conn->base,
 				c_conn->display, bl_lvl);
 		c_conn->unset_bl_level = 0;
+#ifdef OPLUS_BUG_STABILITY
+		}
+#endif
 	}
 
 	return rc;
@@ -876,6 +900,10 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 	if (c_conn->connector_type == DRM_MODE_CONNECTOR_DSI) {
 		display = (struct dsi_display *)c_conn->display;
 		display->queue_cmd_waits = true;
+	#ifdef OPLUS_BUG_STABILITY
+		if (display->config.panel_mode == DSI_OP_VIDEO_MODE)
+			display->queue_cmd_waits = false;
+	#endif /* OPLUS_BUG_STABILITY */
 	}
 
 	rc = _sde_connector_update_dirty_properties(connector);

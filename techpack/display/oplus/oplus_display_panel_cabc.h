@@ -1,8 +1,8 @@
 /***************************************************************
-** Copyright (C),  2020,  OPPO Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
-** File : oppo_display_panel_seed.h
-** Description : oppo display panel seed feature
+** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+**
+** File : oplus_display_panel_cabc.h
+** Description : oplus display panel cabc feature
 ** Version : 1.0
 ** Date : 2020/06/13
 ** Author : Li.Sheng@MULTIMEDIA.DISPLAY.LCD
@@ -11,8 +11,8 @@
 **  <author>        <data>        <version >        <desc>
 **  Li.Sheng       2020/06/13        1.0           Build this moudle
 ******************************************************************/
-#ifndef _OPPO_DISPLAY_PANEL_SEED_H_
-#define _OPPO_DISPLAY_PANEL_SEED_H_
+#ifndef _OPLUS_DISPLAY_PANEL_CABC_H_
+#define _OPLUS_DISPLAY_PANEL_CABC_H_
 
 #include <linux/err.h>
 #include "dsi_display.h"
@@ -24,12 +24,18 @@
 #include "dsi_pwr.h"
 #include "sde_dbg.h"
 
-int oppo_display_panel_get_seed(void *data);
-int oppo_display_panel_set_seed(void *data);
-int oppo_dsi_update_seed_mode(void);
-int __oppo_display_set_seed(int mode);
-int dsi_panel_seed_mode(struct dsi_panel *panel, int mode);
-int dsi_panel_seed_mode_unlock(struct dsi_panel *panel, int mode);
-int dsi_display_seed_mode(struct dsi_display *display, int mode);
+enum {
+	CABC_MODE_OFF = 0,
+	CABC_MODE_1 = 1,
+	CABC_MODE_2,
+	CABC_MODE_3,
+	CABC_EXIT_SPECIAL = 8,
+	CABC_ENTER_SPECIAL = 9,
+};
 
-#endif
+extern u32 oplus_last_backlight;
+
+int oplus_display_panel_get_cabc(void *data);
+int oplus_display_panel_set_cabc(void *data);
+
+#endif  /* _OPLUS_DISPLAY_PANEL_CABC_H_ */

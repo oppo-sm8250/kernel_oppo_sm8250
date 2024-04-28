@@ -1,8 +1,8 @@
 /***************************************************************
-** Copyright (C),  2020,  OPPO Mobile Comm Corp.,  Ltd
-** VENDOR_EDIT
-** File : oppo_ffl.c
-** Description : oppo ffl feature
+** Copyright (C),  2020,  OPLUS Mobile Comm Corp.,  Ltd
+** OPLUS_BUG_STABILITY
+** File : oplus_ffl.c
+** Description : oplus ffl feature
 ** Version : 1.0
 ** Date : 2020/04/23
 ** Author : Qianxu@MM.Display.LCD Driver
@@ -14,8 +14,9 @@
 
 #include <linux/mutex.h>
 #include "dsi_display.h"
-#include "oppo_dsi_support.h"
-#include "oppo_onscreenfingerprint.h"
+#include "oplus_dsi_support.h"
+#include "oplus_onscreenfingerprint.h"
+/*#include <soc/oplus/system/oplus_mm_kevent.h>*/
 
 #define FFL_LEVEL_START 2
 #define FFL_LEVEL_END  236
@@ -26,38 +27,39 @@
 #define FFL_TRIGGLE_CONTROL 1
 #define FFL_EXIT_FULLY_CONTROL 2
 
-bool oppo_ffl_trigger_finish = true;
+bool oplus_ffl_trigger_finish = true;
 bool ffl_work_running = false;
 int is_ffl_enable = FFL_EXIT_CONTROL;
-struct task_struct *oppo_ffl_thread;
-struct kthread_worker oppo_ffl_worker;
-struct kthread_work oppo_ffl_work;
-static DEFINE_MUTEX(oppo_ffl_lock);
+struct task_struct *oplus_ffl_thread;
+struct kthread_worker oplus_ffl_worker;
+struct kthread_work oplus_ffl_work;
+static DEFINE_MUTEX(oplus_ffl_lock);
 
 
-void oppo_ffl_set(int enable)
+void oplus_ffl_set(int enable)
 {
 	unsigned char payload[150] = "";
 
-	mutex_lock(&oppo_ffl_lock);
+	mutex_lock(&oplus_ffl_lock);
 
 	if(enable != is_ffl_enable) {
 		pr_debug("set_ffl_setting need change is_ffl_enable\n");
 		is_ffl_enable = enable;
 		if ((is_ffl_enable ==FFL_TRIGGLE_CONTROL) && ffl_work_running){
-			oppo_ffl_trigger_finish = false;
-			kthread_queue_work(&oppo_ffl_worker, &oppo_ffl_work);
+			oplus_ffl_trigger_finish = false;
+			kthread_queue_work(&oplus_ffl_worker, &oplus_ffl_work);
 		}
 	}
 
-	mutex_unlock(&oppo_ffl_lock);
+	mutex_unlock(&oplus_ffl_lock);
 
 	if ((is_ffl_enable ==FFL_TRIGGLE_CONTROL) && ffl_work_running) {
 		scnprintf(payload, sizeof(payload), "fflset@@%d", enable);
+		/*upload_mm_fb_kevent_to_atlas(OPLUS_DISPLAY_EVENTID_FFLSET, payload);*/
 	}
 }
 
-int oppo_display_panel_get_ffl(void *buf)
+int oplus_display_panel_get_ffl(void *buf)
 {
 	unsigned int *enable = buf;
 
@@ -66,17 +68,17 @@ int oppo_display_panel_get_ffl(void *buf)
 	return 0;
 }
 
-int oppo_display_panel_set_ffl(void *buf)
+int oplus_display_panel_set_ffl(void *buf)
 {
 	unsigned int *enable = buf;
 
-	printk(KERN_INFO "%s oppo_set_ffl_setting = %d\n", __func__, (*enable));
-	oppo_ffl_set(*enable);
+	printk(KERN_INFO "%s oplus_set_ffl_setting = %d\n", __func__, (*enable));
+	oplus_ffl_set(*enable);
 
 	return 0;
 }
 
-void oppo_ffl_setting_thread(struct kthread_work *work)
+void oplus_ffl_setting_thread(struct kthread_work *work)
 {
 	struct dsi_display *display = get_main_display();
 	int index =0;
@@ -84,7 +86,7 @@ void oppo_ffl_setting_thread(struct kthread_work *work)
 	int system_backlight_target;
 	int rc;
 
-	if (get_oppo_display_power_status() == OPPO_DISPLAY_POWER_OFF)
+	if (get_oplus_display_power_status() == OPLUS_DISPLAY_POWER_OFF)
 		return;
 
 	if (is_ffl_enable != FFL_TRIGGLE_CONTROL)
@@ -159,7 +161,7 @@ void oppo_ffl_setting_thread(struct kthread_work *work)
 	mutex_lock(&display->panel->panel_lock);
 	system_backlight_target = display->panel->bl_config.bl_level;
 	dsi_panel_set_backlight(display->panel, system_backlight_target);
-	oppo_ffl_trigger_finish = true;
+	oplus_ffl_trigger_finish = true;
 	mutex_unlock(&display->panel->panel_lock);
 
 	rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
@@ -170,53 +172,53 @@ void oppo_ffl_setting_thread(struct kthread_work *work)
 	}
 }
 
-void oppo_start_ffl_thread(void)
+void oplus_start_ffl_thread(void)
 {
-	mutex_lock(&oppo_ffl_lock);
+	mutex_lock(&oplus_ffl_lock);
 
 	ffl_work_running = true;
 	if (is_ffl_enable == FFL_TRIGGLE_CONTROL) {
-		oppo_ffl_trigger_finish = false;
-		kthread_queue_work(&oppo_ffl_worker, &oppo_ffl_work);
+		oplus_ffl_trigger_finish = false;
+		kthread_queue_work(&oplus_ffl_worker, &oplus_ffl_work);
 	}
 
-	mutex_unlock(&oppo_ffl_lock);
+	mutex_unlock(&oplus_ffl_lock);
 }
 
-void oppo_stop_ffl_thread(void)
+void oplus_stop_ffl_thread(void)
 {
-	mutex_lock(&oppo_ffl_lock);
+	mutex_lock(&oplus_ffl_lock);
 
-	oppo_ffl_trigger_finish = true;
+	oplus_ffl_trigger_finish = true;
 	ffl_work_running = false;
-	kthread_flush_worker(&oppo_ffl_worker);
+	kthread_flush_worker(&oplus_ffl_worker);
 
-	mutex_unlock(&oppo_ffl_lock);
+	mutex_unlock(&oplus_ffl_lock);
 }
 
-int oppo_ffl_thread_init(void)
+int oplus_ffl_thread_init(void)
 {
-	kthread_init_worker(&oppo_ffl_worker);
-	kthread_init_work(&oppo_ffl_work, &oppo_ffl_setting_thread);
-	oppo_ffl_thread = kthread_run(kthread_worker_fn,
-				      &oppo_ffl_worker, "oppo_ffl");
+	kthread_init_worker(&oplus_ffl_worker);
+	kthread_init_work(&oplus_ffl_work, &oplus_ffl_setting_thread);
+	oplus_ffl_thread = kthread_run(kthread_worker_fn,
+				      &oplus_ffl_worker, "oplus_ffl");
 
-	if (IS_ERR(oppo_ffl_thread)) {
-		pr_err("fail to start oppo_ffl_thread\n");
-		oppo_ffl_thread = NULL;
+	if (IS_ERR(oplus_ffl_thread)) {
+		pr_err("fail to start oplus_ffl_thread\n");
+		oplus_ffl_thread = NULL;
 		return -1;
 	}
 
 	return 0;
 }
 
-void oppo_ffl_thread_exit(void)
+void oplus_ffl_thread_exit(void)
 {
-	if (oppo_ffl_thread) {
+	if (oplus_ffl_thread) {
 		is_ffl_enable = FFL_EXIT_FULLY_CONTROL;
-		kthread_flush_worker(&oppo_ffl_worker);
-		kthread_stop(oppo_ffl_thread);
-		oppo_ffl_thread = NULL;
+		kthread_flush_worker(&oplus_ffl_worker);
+		kthread_stop(oplus_ffl_thread);
+		oplus_ffl_thread = NULL;
 	}
 }
 
